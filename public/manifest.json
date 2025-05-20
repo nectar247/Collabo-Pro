@@ -1,0 +1,21 @@
+{
+  "name": "Shop4Vouchers",
+  "short_name": "V4V",
+  "description": "Discover the best deals and vouchers from trusted brands",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#16C47F",
+  "theme_color": "#16C47F",
+  "icons": [
+    {
+      "src": "/icon-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/icon-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}

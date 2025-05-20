@@ -1,0 +1,95 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+
+@layer base {
+    .prose {
+        @apply text-black;
+    }
+    
+    .prose h1, .prose h2, .prose h3, .prose h4, .prose h5, .prose h6 {
+        @apply text-white;
+    }
+    
+    .prose p {
+        @apply text-white;
+    }
+
+
+
+    .prose2 {
+        @apply text-white;
+    }
+    
+    .prose2 h1, .prose2 h2, .prose2 h3, .prose2 h4, .prose2 h5, .prose2 h6 {
+        @apply text-black;
+    }
+    
+    .prose2 p {
+        @apply text-black;
+    }
+    
+
+
+    .prose a {
+        @apply text-primary hover:text-primary-dark;
+    }
+    
+    .prose ul, .prose ol {
+        @apply text-gray-300;
+    }
+    
+    .prose blockquote {
+        @apply border-l-4 border-primary bg-white/5 px-4 py-2 my-4;
+    }
+    
+    .prose code {
+        @apply bg-white/10 px-1 py-0.5 rounded;
+    }
+    
+    .prose pre {
+        @apply bg-white/10 p-4 rounded-lg;
+    }
+    
+    .prose img {
+        @apply rounded-lg;
+    }
+}
+
+.ProseMirror ul {
+    list-style-type: disc;
+    padding-left: 1.5em;
+}
+.ProseMirror ul li {
+    margin: 0.5em 0;
+}
+.ProseMirror p, .prose p {
+    margin: 0.5em 0;
+}
+.blog-content p {
+    margin-bottom: 18px;
+}
+.clip-star {
+    clip-path: polygon(
+        50% 0%, 61% 35%, 98% 35%, 
+        68% 57%, 79% 91%, 50% 70%, 
+        21% 91%, 32% 57%, 2% 35%, 
+        39% 35%
+    );
+}
+.clip-ribbon {
+    position: relative;
+    clip-path: polygon(0% 0%, 100% 0%, 90% 50%, 100% 100%, 0% 100%, 10% 50%);
+}
+.fold-corner-1 {
+    position: absolute;
+    z-index: 1;
+    display: block;
+    width: 40px;
+    height: 45px;
+    border-radius: 4px;
+    background-image: linear-gradient(66deg, #af47d2, #af47d2 59%, transparent 50%);
+    transition: transform .2s, background-position .2s;
+    transform: rotate(135deg) translateY(-6px) scaleX(-0.925);
+}

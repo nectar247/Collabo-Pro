@@ -1,0 +1,232 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+     // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return get(/databases/$(database)/documents/profiles/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    function isAccountLocked(userId) {
+      let profile = get(/databases/$(database)/documents/profiles/$(userId)).data;
+      return profile.lockedUntil != null && profile.lockedUntil > request.time;
+    }
+
+    function isWithinLoginAttempts(userId) {
+      let settings = get(/databases/$(database)/documents/settings/system).data;
+      let profile = get(/databases/$(database)/documents/profiles/$(userId)).data;
+      return profile.loginAttempts < settings.security.maxLoginAttempts;
+    }
+
+    // Profiles collection
+    match /profiles/{userId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow write: if isAuthenticated() && (isOwner(userId) || isAdmin());
+    }
+    
+    // Saved Deals collection
+    match /deals_saved/{dealId} {
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow write: if isAuthenticated() && (isOwner(userId) || isAdmin());
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+
+    // Deals collection
+    match /deals/{dealId} {
+      allow read: if true;  // Public read access
+      allow write: if isAuthenticated() && isAdmin(); // Only admin can write
+    }
+    
+    // Categories collection
+    match /categories/{categoryId} {
+      allow read: if true;  // Public read access
+      allow write: if isAuthenticated() && isAdmin(); // Only admin can write
+    }
+
+    // Cart collection
+    match /cart/{cartId} {
+      allow read: if isAuthenticated() && isOwner(resource.data.userId);
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && isOwner(resource.data.userId);
+    }
+
+    // Brands collection
+    match /brands/{brandId} {
+      allow read: if true;  // Public read access
+      allow write: if isAuthenticated() && isAdmin(); // Only admin can write
+    }
+
+    // Blog posts collection
+    match /blog_posts/{postId} {
+      allow read: if true;  // Public read access
+      allow write: if isAuthenticated() && isAdmin(); // Only admin can write
+    }
+    
+    // Reviews collection
+    match /reviews/{reviewId} {
+      allow read: if true;  // Anyone can read reviews
+      allow create: if isAuthenticated();  // Authenticated users can create reviews
+      allow update: if isAuthenticated() && (
+        isOwner(resource.data.userId) ||  // Review owner can update
+        isAdmin() ||  // Admin can update
+        // Allow incrementing helpful count by any authenticated user
+        (request.resource.data.diff(resource.data).affectedKeys().hasOnly(['helpful', 'updatedAt']))
+      );
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+    
+    // Search history collection
+    match /search_history/{searchId} {
+      allow read: if true;  // Allow public read access to search history
+      allow write: if true; // Allow public write access for recording searches
+    }
+
+    // Newsletter subscribers collection
+    match /newsletter_subscribers/{subscriberId} {
+      allow read: if true;
+      allow create: if true; // Anyone can subscribe
+      allow update, delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Analytics collection
+    match /analytics/{docId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // Sessions collection (for tracking user sessions)
+    match /sessions/{sessionId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow update: if isAuthenticated() && isOwner(resource.data.userId);
+      allow delete: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+    }
+
+    // Transactions collection
+    match /transactions/{transactionId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isOwner(request.resource.data.userId);
+      allow update: if isAuthenticated() && isAdmin();
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Settings collection
+    match /settings/{settingId} {
+      allow read: if true;  // Allow public read for basic settings
+      allow write: if isAuthenticated() && isAdmin(); // Only admin can modify settings
+    }
+    
+    // Audit logs collection
+    match /audit_logs/{logId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Audit logs should never be modified or deleted
+    }
+
+    // System notifications collection
+    match /system_notifications/{notificationId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated() && isAdmin();
+      allow update: if isAuthenticated() && isAdmin();
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+
+    // Rate limiting collection
+    match /rate_limits/{limitId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // API keys collection
+    match /api_keys/{keyId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // Email templates collection
+    match /email_templates/{templateId} {
+      allow read: if isAuthenticated() && isAdmin();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // System configuration collection
+    match /system_config/{configId} {
+      allow read: if true; // Public read for basic config
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // Maintenance mode collection
+    match /maintenance/{docId} {
+      allow read: if true; // Public read to check maintenance status
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // User roles collection
+    match /roles/{roleId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // User permissions collection
+    match /permissions/{permissionId} {
+      allow read: if isAuthenticated();
+      allow write: if isAuthenticated() && isAdmin();
+    }
+
+    // Activity logs collection
+    match /activity_logs/{logId} {
+      allow read: if isAuthenticated() && (isOwner(resource.data.userId) || isAdmin());
+      allow create: if isAuthenticated();
+      allow update, delete: if false; // Activity logs should never be modified or deleted
+    }
+    
+    // Login attempts collection
+    match /login_attempts/{attemptId} {
+      allow read: if isAuthenticated() && (
+        isOwner(resource.data.userId) || 
+        isAdmin()
+      );
+      allow create: if true;  // Allow creating login attempts
+      allow update: if isAuthenticated() && isAdmin();
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+    // Content collection
+    match /content/{contentId} {
+      allow read: if true;  // Public read access
+      allow write: if isAuthenticated() && isAdmin(); // Only admin can modify content
+    }
+    
+    // FAQ collection
+    match /faqs/{faqsId} {
+      allow read: if true;  // Public read access
+      allow write: if isAuthenticated() && isAdmin(); // Only admin can modify
+    }
+
+    
+    // About collection
+    match /about/{docId} {
+      allow read: if true;  // Public read access
+      allow write: if isAuthenticated() && isAdmin(); // Only admin can modify
+    }
+    
+    // Media files collection
+    match /media_files/{fileId} {
+      allow read: if true;  // Public read access for media files
+      allow create: if isAuthenticated() && isAdmin();
+      allow update: if isAuthenticated() && isAdmin();
+      allow delete: if isAuthenticated() && isAdmin();
+    }
+    
+  }
+}
