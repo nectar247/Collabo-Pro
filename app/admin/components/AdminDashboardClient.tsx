@@ -20,7 +20,7 @@ import { useAuth, useBrands, useCategories, useDeals, useDynamicLinks, useSettin
 import Preloader from "@/components/loaders/preloader";
 import Link from "next/link";
 
-export default function adclient() {
+export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState("analytics");
 
   const { user, isAdmin, loading: userLoading } = useAuth();
