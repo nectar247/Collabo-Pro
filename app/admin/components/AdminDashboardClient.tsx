@@ -1,15 +1,23 @@
 "use client";
 
 import { useState, Suspense } from "react";
-import { Shield, BarChart3, Users, ShoppingBag, Tag, Settings, FileText, File, Grid2X2, ChevronRight } from "lucide-react";
 import dynamic from "next/dynamic";
+import { Shield, BarChart3, Users, ShoppingBag, Tag, Settings, FileText, File, Grid2X2, ChevronRight } from "lucide-react";
 import Navigation from "@/components/navigation";
-import Footer from '@/components/footer';
-import { useAuth } from '@/lib/firebase/hooks';
+import Footer from "@/components/footer";
 import Preloader from "@/components/loaders/preloader";
 import Link from "next/link";
 
-// 🧠 Lazy load heavy components
+import {
+  useAuth,
+  useBrands,
+  useCategories,
+  useDeals,
+  useDynamicLinks,
+  useSettings,
+} from "@/lib/firebase/hooks";
+
+// Lazy load the heavy admin tab components
 const AnalyticsOverview = dynamic(() => import("@/components/admin/AnalyticsOverview"), { ssr: false });
 const DealManagement = dynamic(() => import("@/components/admin/DealManagement"), { ssr: false });
 const CategoryManagement = dynamic(() => import("@/components/admin/CategoryManagement"), { ssr: false });
@@ -22,7 +30,13 @@ const SettingsManagement = dynamic(() => import("@/components/admin/SettingsMana
 
 export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState("analytics");
+
   const { user, isAdmin, loading: userLoading } = useAuth();
+  const { settings: settings__, loading: settLoading } = useSettings();
+  const { categories, loading: loadingCategories } = useCategories();
+  const { allBrands, featuredBrands, loading: loadingBrands } = useBrands({ limit: 20 });
+  const { trendingDeals, loading: loadingDeals } = useDeals();
+  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   const tabs = [
     { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -56,6 +70,10 @@ export default function AdminDashboardClient() {
     );
   }
 
+  if (loadingCategories || loadingBrands || loadingDeals || settLoading || loadingDynamicLinks) {
+    return <Preloader text="Loading..." />;
+  }
+
   return (
     <>
       <Navigation />
@@ -77,14 +95,18 @@ export default function AdminDashboardClient() {
                 onClick={() => setActiveTab(tab.id)}
                 className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
                   activeTab === tab.id
-                    ? 'bg-primary/100 dark:bg-primary/20 border border-primary/30'
-                    : 'bg-primary/20 dark:bg-white/10 border border-white/20 hover:bg-white/20'
+                    ? "bg-primary/100 dark:bg-primary/20 border border-primary/30"
+                    : "bg-primary/20 dark:bg-white/10 border border-white/20 hover:bg-white/20"
                 }`}
               >
-                <tab.icon className={`h-4 w-4 ${
-                  activeTab === tab.id ? 'text-white' : 'text-primary dark:text-white'
-                }`} />
-                <span className={`${activeTab === tab.id ? `text-white` : `text-primary`} dark:text-white ms-1`}>{tab.label}</span>
+                <tab.icon
+                  className={`h-4 w-4 ${
+                    activeTab === tab.id ? "text-white" : "text-primary dark:text-white"
+                  }`}
+                />
+                <span className={`${activeTab === tab.id ? "text-white" : "text-primary"} dark:text-white ms-1`}>
+                  {tab.label}
+                </span>
               </button>
             ))}
           </div>
@@ -92,20 +114,31 @@ export default function AdminDashboardClient() {
           {/* Lazy Loaded Content Area */}
           <div className="bg-primary/100 dark:bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-6">
             <Suspense fallback={<Preloader text="Loading tab..." />}>
-              {activeTab === 'analytics' && <AnalyticsOverview />}
-              {activeTab === 'categories' && <CategoryManagement />}
-              {activeTab === 'deals' && <DealManagement />}
-              {activeTab === 'brands' && <BrandManagement />}
-              {activeTab === 'blog' && <BlogManagement />}
-              {activeTab === 'users' && <UserManagement />}
-              {activeTab === 'content' && <ContentManagement />}
-              {activeTab === 'media' && <MediaManagement />}
-              {activeTab === 'settings' && <SettingsManagement />}
+              {activeTab === "analytics" && <AnalyticsOverview />}
+              {activeTab === "categories" && <CategoryManagement />}
+              {activeTab === "deals" && <DealManagement />}
+              {activeTab === "brands" && <BrandManagement />}
+              {activeTab === "blog" && <BlogManagement />}
+              {activeTab === "users" && <UserManagement />}
+              {activeTab === "content" && <ContentManagement />}
+              {activeTab === "media" && <MediaManagement />}
+              {activeTab === "settings" && <SettingsManagement />}
             </Suspense>
           </div>
         </div>
       </main>
-      <Footer />
+
+      {/* ✅ Fixed Footer props */}
+      <Footer
+        categories={categories}
+        loadingCategories={loadingCategories}
+        brands={featuredBrands}
+        loadingBrands={loadingBrands}
+        settings={settings__}
+        settLoading={settLoading}
+        dynamicLinks={dynamicLinks}
+        loadingDynamicLinks={loadingDynamicLinks}
+      />
     </>
   );
 }
