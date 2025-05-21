@@ -37,7 +37,6 @@ const nextConfig = {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', '@radix-ui/react-dialog'],
     outputFileTracingRoot: path.resolve(__dirname), // Ensures proper file tracing
-    serverActions: true,
   },
   matcher: ['/admin/:path*', '/dashboard/:path*', '/:path*/settings/:path*', '/:path*/settings'],
   compiler: {
