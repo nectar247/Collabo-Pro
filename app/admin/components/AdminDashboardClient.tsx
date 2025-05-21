@@ -1,37 +1,28 @@
 "use client";
 
-import { useState } from "react";
-import { motion } from "framer-motion";
+import { useState, Suspense } from "react";
 import { Shield, BarChart3, Users, ShoppingBag, Tag, Settings, FileText, File, Grid2X2, ChevronRight } from "lucide-react";
-import AnalyticsOverview from "@/components/admin/AnalyticsOverview";
-import DealManagement from "@/components/admin/DealManagement";
-import CategoryManagement from "@/components/admin/CategoryManagement";
-import UserManagement from "@/components/admin/UserManagement";
-import ContentManagement from "@/components/admin/ContentManagement";
-import BrandManagement from "@/components/admin/BrandManagement";
-import BlogManagement from "@/components/admin/BlogManagement";
-import MediaManagement from "@/components/admin/MediaManagement";
-import SettingsManagement from "@/components/admin/SettingsManagement";
-
-
+import dynamic from "next/dynamic";
 import Navigation from "@/components/navigation";
 import Footer from '@/components/footer';
-import { useAuth, useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
+import { useAuth } from '@/lib/firebase/hooks';
 import Preloader from "@/components/loaders/preloader";
 import Link from "next/link";
 
+// 🧠 Lazy load heavy components
+const AnalyticsOverview = dynamic(() => import("@/components/admin/AnalyticsOverview"), { ssr: false });
+const DealManagement = dynamic(() => import("@/components/admin/DealManagement"), { ssr: false });
+const CategoryManagement = dynamic(() => import("@/components/admin/CategoryManagement"), { ssr: false });
+const UserManagement = dynamic(() => import("@/components/admin/UserManagement"), { ssr: false });
+const ContentManagement = dynamic(() => import("@/components/admin/ContentManagement"), { ssr: false });
+const BrandManagement = dynamic(() => import("@/components/admin/BrandManagement"), { ssr: false });
+const BlogManagement = dynamic(() => import("@/components/admin/BlogManagement"), { ssr: false });
+const MediaManagement = dynamic(() => import("@/components/admin/MediaManagement"), { ssr: false });
+const SettingsManagement = dynamic(() => import("@/components/admin/SettingsManagement"), { ssr: false });
+
 export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState("analytics");
-
   const { user, isAdmin, loading: userLoading } = useAuth();
-
-  const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: 20
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   const tabs = [
     { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -45,10 +36,8 @@ export default function AdminDashboardClient() {
     { id: "settings", label: "Settings", icon: Settings }
   ];
 
-  if (userLoading) {
-    return <Preloader text="Loading profile..." />;
-  }
-  
+  if (userLoading) return <Preloader text="Loading profile..." />;
+
   if (!user || !isAdmin) {
     return (
       <div className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black flex items-center justify-center">
@@ -64,12 +53,6 @@ export default function AdminDashboardClient() {
           </Link>
         </div>
       </div>
-    );
-  }
-
-  if (loadingCategories || loadingBrands || loadingDeals || settLoading || loadingDynamicLinks) {
-    return (
-      <Preloader text="Loading..." />
     );
   }
 
@@ -106,30 +89,23 @@ export default function AdminDashboardClient() {
             ))}
           </div>
 
-          {/* Content Area */}
+          {/* Lazy Loaded Content Area */}
           <div className="bg-primary/100 dark:bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-6">
-            {activeTab === 'analytics' && <AnalyticsOverview />}
-            {activeTab === 'categories' && <CategoryManagement />}
-            {activeTab === 'deals' && <DealManagement />}
-            {activeTab === 'brands' && <BrandManagement />}
-            {activeTab === 'blog' && <BlogManagement />}
-            {activeTab === 'users' && <UserManagement />}
-            {activeTab === 'content' && <ContentManagement />}
-            {activeTab === 'media' && <MediaManagement />}
-            {activeTab === 'settings' && <SettingsManagement />}
+            <Suspense fallback={<Preloader text="Loading tab..." />}>
+              {activeTab === 'analytics' && <AnalyticsOverview />}
+              {activeTab === 'categories' && <CategoryManagement />}
+              {activeTab === 'deals' && <DealManagement />}
+              {activeTab === 'brands' && <BrandManagement />}
+              {activeTab === 'blog' && <BlogManagement />}
+              {activeTab === 'users' && <UserManagement />}
+              {activeTab === 'content' && <ContentManagement />}
+              {activeTab === 'media' && <MediaManagement />}
+              {activeTab === 'settings' && <SettingsManagement />}
+            </Suspense>
           </div>
         </div>
       </main>
-      <Footer 
-        categories={categories} 
-        loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings__} 
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
+      <Footer />
     </>
   );
 }
