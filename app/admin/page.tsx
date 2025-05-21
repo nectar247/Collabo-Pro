@@ -9,6 +9,7 @@ export const fetchCache = 'force-no-store'; // optional, disables caching
 export default async function AdminPage() {
   const token = cookies().get('authToken')?.value;
   console.log('Admin token on server:', token);
+
   if (!token) {
     redirect('/sign-in');
   }

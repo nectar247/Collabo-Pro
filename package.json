@@ -3,10 +3,10 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "predeploy": "npm run build && ls .next/server/app/admin",
-    "dev": "next dev",
     "build": "next build",
-    "start": "next start",
+    "start": "node .next/standalone/server.js",
+    "dev": "next dev",
+    "predeploy": "npm run build && ls .next/server/app/admin",
     "lint": "next lint",
     "load-data": "npx tsx scripts/loadSampleData.ts"
   },
