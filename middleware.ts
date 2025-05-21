@@ -7,7 +7,8 @@ export const config = {
     '/admin/:path*',
     '/dashboard/:path*',
     '/:path*/settings/:path*',
-    '/:path*/settings'
+    '/:path*/settings',
+    '/((?!api|_next/static|favicon.ico).*)'
   ],
 }
 
