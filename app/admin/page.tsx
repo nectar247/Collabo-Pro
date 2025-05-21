@@ -1,21 +1,14 @@
-import { cookies } from 'next/headers';
-import { redirect } from 'next/navigation';
-import AdminDashboardClient from './components/AdminDashboardClient'
-
-
-export const dynamic = 'force-dynamic';
-export const fetchCache = 'force-no-store';
-
-export default function AdminPageWrapper() {
-  return <AdminPage />;
-}
-
-async function AdminPage() {
-  const token = cookies().get('authToken')?.value;
-
-  if (!token) {
-    redirect('/sign-in');
-  }
-
-  return <AdminDashboardClient />;
+// app/admin/page.tsx
+export default function AdminPage() {
+  return (
+    <div>
+      <h1>Simplest Possible Admin</h1>
+      <p>If this works, the issue is in your components</p>
+      <ul>
+        <li>No auth</li>
+        <li>No imports</li>
+        <li>Pure HTML</li>
+      </ul>
+    </div>
+  );
 }
