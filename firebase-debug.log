@@ -1,0 +1,85 @@
+[debug] [2025-05-21T18:38:25.543Z] ----------------------------------------------------------------------
+[debug] [2025-05-21T18:38:25.549Z] Command:       /Users/dcsn/.nvm/versions/node/v20.19.2/bin/node /Users/dcsn/.nvm/versions/node/v20.19.2/bin/firebase deploy
+[debug] [2025-05-21T18:38:25.550Z] CLI Version:   14.4.0
+[debug] [2025-05-21T18:38:25.550Z] Platform:      darwin
+[debug] [2025-05-21T18:38:25.550Z] Node Version:  v20.19.2
+[debug] [2025-05-21T18:38:25.550Z] Time:          Wed May 21 2025 19:38:25 GMT+0100 (Irish Standard Time)
+[debug] [2025-05-21T18:38:25.550Z] ----------------------------------------------------------------------
+[debug] 
+[debug] [2025-05-21T18:38:25.654Z] > command requires scopes: ["email","openid","https://www.googleapis.com/auth/cloudplatformprojects.readonly","https://www.googleapis.com/auth/firebase","https://www.googleapis.com/auth/cloud-platform"]
+[debug] [2025-05-21T18:38:25.654Z] > authorizing via signed-in user (olejemedickson@gmail.com)
+[debug] [2025-05-21T18:38:25.654Z] [iam] checking project vouched4vouchers for permissions ["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]
+[debug] [2025-05-21T18:38:25.655Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:25.655Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:25.656Z] >>> [apiv2][query] POST https://cloudresourcemanager.googleapis.com/v1/projects/vouched4vouchers:testIamPermissions [none]
+[debug] [2025-05-21T18:38:25.656Z] >>> [apiv2][(partial)header] POST https://cloudresourcemanager.googleapis.com/v1/projects/vouched4vouchers:testIamPermissions x-goog-quota-user=projects/vouched4vouchers
+[debug] [2025-05-21T18:38:25.656Z] >>> [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/vouched4vouchers:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-05-21T18:38:26.452Z] <<< [apiv2][status] POST https://cloudresourcemanager.googleapis.com/v1/projects/vouched4vouchers:testIamPermissions 200
+[debug] [2025-05-21T18:38:26.452Z] <<< [apiv2][body] POST https://cloudresourcemanager.googleapis.com/v1/projects/vouched4vouchers:testIamPermissions {"permissions":["datastore.indexes.create","datastore.indexes.delete","datastore.indexes.list","datastore.indexes.update","firebase.projects.get","firebasehosting.sites.update"]}
+[debug] [2025-05-21T18:38:26.453Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:26.453Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:26.453Z] >>> [apiv2][query] GET https://firebase.googleapis.com/v1beta1/projects/vouched4vouchers [none]
+[debug] [2025-05-21T18:38:26.857Z] <<< [apiv2][status] GET https://firebase.googleapis.com/v1beta1/projects/vouched4vouchers 200
+[debug] [2025-05-21T18:38:26.857Z] <<< [apiv2][body] GET https://firebase.googleapis.com/v1beta1/projects/vouched4vouchers {"projectId":"vouched4vouchers","projectNumber":"611170509618","displayName":"Vouched4Vouchers","name":"projects/vouched4vouchers","resources":{"hostingSite":"vouched4vouchers"},"state":"ACTIVE","etag":"1_bbeb5451-77f1-43dc-9d9a-ae9ea47228be"}
+[info] 
+[info] === Deploying to 'vouched4vouchers'...
+[info] 
+[info] i  deploying firestore, hosting 
+[info] i  firestore: reading indexes from firestore.indexes.json... 
+[info] i  cloud.firestore: checking lib/firebase/rules.txt for compilation errors... 
+[debug] [2025-05-21T18:38:26.862Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:26.862Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:26.862Z] >>> [apiv2][query] POST https://firebaserules.googleapis.com/v1/projects/vouched4vouchers:test [none]
+[debug] [2025-05-21T18:38:26.862Z] >>> [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/vouched4vouchers:test [omitted]
+[debug] [2025-05-21T18:38:27.290Z] <<< [apiv2][status] POST https://firebaserules.googleapis.com/v1/projects/vouched4vouchers:test 200
+[debug] [2025-05-21T18:38:27.290Z] <<< [apiv2][body] POST https://firebaserules.googleapis.com/v1/projects/vouched4vouchers:test {"issues":[{"sourcePosition":{"fileName":"lib/firebase/rules.txt","line":17,"column":14,"currentOffset":419,"endOffset":433},"description":"Unused function: isAccountLocked.","severity":"WARNING"},{"sourcePosition":{"fileName":"lib/firebase/rules.txt","line":18,"column":21,"currentOffset":465,"endOffset":467},"description":"Invalid function name: get.","severity":"WARNING"},{"sourcePosition":{"fileName":"lib/firebase/rules.txt","line":19,"column":67,"currentOffset":594,"endOffset":600},"description":"Invalid variable name: request.","severity":"WARNING"},{"sourcePosition":{"fileName":"lib/firebase/rules.txt","line":22,"column":14,"currentOffset":628,"endOffset":648},"description":"Unused function: isWithinLoginAttempts.","severity":"WARNING"},{"sourcePosition":{"fileName":"lib/firebase/rules.txt","line":23,"column":22,"currentOffset":681,"endOffset":683},"description":"Invalid function name: get.","severity":"WARNING"},{"sourcePosition":{"fileName":"lib/firebase/rules.txt","line":24,"column":21,"currentOffset":761,"endOffset":763},"description":"Invalid function name: get.","severity":"WARNING"},{"sourcePosition":{"fileName":"lib/firebase/rules.txt","line":36,"column":52,"currentOffset":1237,"endOffset":1242},"description":"Invalid variable name: userId.","severity":"WARNING"},{"sourcePosition":{"fileName":"lib/firebase/rules.txt","line":37,"column":53,"currentOffset":1312,"endOffset":1317},"description":"Invalid variable name: userId.","severity":"WARNING"}]}
+[warn] ⚠  [W] 17:14 - Unused function: isAccountLocked. 
+[warn] ⚠  [W] 18:21 - Invalid function name: get. 
+[warn] ⚠  [W] 19:67 - Invalid variable name: request. 
+[warn] ⚠  [W] 22:14 - Unused function: isWithinLoginAttempts. 
+[warn] ⚠  [W] 23:22 - Invalid function name: get. 
+[warn] ⚠  [W] 24:21 - Invalid function name: get. 
+[warn] ⚠  [W] 36:52 - Invalid variable name: userId. 
+[warn] ⚠  [W] 37:53 - Invalid variable name: userId. 
+[info] ✔  cloud.firestore: rules file lib/firebase/rules.txt compiled successfully 
+[debug] [2025-05-21T18:38:27.294Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:27.294Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:27.295Z] >>> [apiv2][query] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/vouched4vouchers/versions [none]
+[debug] [2025-05-21T18:38:27.295Z] >>> [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/vouched4vouchers/versions {"status":"CREATED","labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2025-05-21T18:38:28.972Z] <<< [apiv2][status] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/vouched4vouchers/versions 200
+[debug] [2025-05-21T18:38:28.972Z] <<< [apiv2][body] POST https://firebasehosting.googleapis.com/v1beta1/projects/-/sites/vouched4vouchers/versions {"name":"projects/611170509618/sites/vouched4vouchers/versions/5c7ef1c7cdf8e9b4","status":"CREATED","config":{},"labels":{"deployment-tool":"cli-firebase"}}
+[debug] [2025-05-21T18:38:28.973Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:28.973Z] Checked if tokens are valid: true, expires at: 1747855712505
+[info] i  firestore: deploying indexes... 
+[debug] [2025-05-21T18:38:28.975Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:28.975Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:28.977Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/vouched4vouchers/releases pageSize=10&pageToken=
+[debug] [2025-05-21T18:38:28.978Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/vouched4vouchers/databases/(default)/collectionGroups/-/indexes [none]
+[debug] [2025-05-21T18:38:29.172Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/vouched4vouchers/releases 200
+[debug] [2025-05-21T18:38:29.172Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/vouched4vouchers/releases {"releases":[{"name":"projects/vouched4vouchers/releases/cloud.firestore","rulesetName":"projects/vouched4vouchers/rulesets/f47155e3-ad63-4035-a02f-476b576422d0","createTime":"2025-01-15T13:47:40.370726Z","updateTime":"2025-05-21T18:32:53.063128Z"},{"name":"projects/vouched4vouchers/releases/firebase.storage/vouched4vouchers.firebasestorage.app","rulesetName":"projects/vouched4vouchers/rulesets/ab9404f6-95b9-42ca-86f8-07ed489a54fa","createTime":"2025-01-20T23:17:52.885498Z","updateTime":"2025-05-17T04:32:44.910584Z"}]}
+[debug] [2025-05-21T18:38:29.197Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:29.197Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:29.197Z] >>> [apiv2][query] GET https://firebaserules.googleapis.com/v1/projects/vouched4vouchers/rulesets/f47155e3-ad63-4035-a02f-476b576422d0 [none]
+[debug] [2025-05-21T18:38:29.218Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/vouched4vouchers/databases/(default)/collectionGroups/-/indexes 200
+[debug] [2025-05-21T18:38:29.218Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/vouched4vouchers/databases/(default)/collectionGroups/-/indexes {"indexes":[{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/brands/indexes/CICAgNiav4AK","queryScope":"COLLECTION","fields":[{"fieldPath":"status","order":"ASCENDING"},{"fieldPath":"brandimg","order":"ASCENDING"},{"fieldPath":"activeDeals","order":"DESCENDING"},{"fieldPath":"rawData.primaryRegion.countryCode","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/reviews/indexes/CICAgJim14AK","queryScope":"COLLECTION","fields":[{"fieldPath":"itemId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/cart/indexes/CICAgOjXh4EK","queryScope":"COLLECTION","fields":[{"fieldPath":"userId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/brands/indexes/CICAgNiroIEK","queryScope":"COLLECTION","fields":[{"fieldPath":"brandimg","order":"ASCENDING"},{"fieldPath":"rawData.primaryRegion.countryCode","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/faqs/indexes/CICAgJj7z4EK","queryScope":"COLLECTION","fields":[{"fieldPath":"category","order":"ASCENDING"},{"fieldPath":"order","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/brands/indexes/CICAgNjpgYIK","queryScope":"COLLECTION","fields":[{"fieldPath":"brandimg","order":"ASCENDING"},{"fieldPath":"status","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/content/indexes/CICAgJjF9oIK","queryScope":"COLLECTION","fields":[{"fieldPath":"status","order":"ASCENDING"},{"fieldPath":"order","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/brands/indexes/CICAgLiIkYMK","queryScope":"COLLECTION","fields":[{"fieldPath":"status","order":"ASCENDING"},{"fieldPath":"name","order":"ASCENDING"},{"fieldPath":"__name__","order":"ASCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/deals/indexes/CICAgJiUpoMK","queryScope":"COLLECTION","fields":[{"fieldPath":"expiresAt","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/brands/indexes/CICAgNi47oMK","queryScope":"COLLECTION","fields":[{"fieldPath":"status","order":"ASCENDING"},{"fieldPath":"rawData.primaryRegion.countryCode","order":"ASCENDING"},{"fieldPath":"activeDeals","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/deals/indexes/CICAgJjFvYoK","queryScope":"COLLECTION","fields":[{"fieldPath":"status","order":"ASCENDING"},{"fieldPath":"expiresAt","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/deals/indexes/CICAgNirtJAK","queryScope":"COLLECTION","fields":[{"fieldPath":"category","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/deals/indexes/CICAgJjFqZMK","queryScope":"COLLECTION","fields":[{"fieldPath":"createdAt","order":"DESCENDING"},{"fieldPath":"expiresAt","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"},{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/deals_saved/indexes/CICAgNjp5ZMK","queryScope":"COLLECTION","fields":[{"fieldPath":"userId","order":"ASCENDING"},{"fieldPath":"createdAt","order":"DESCENDING"},{"fieldPath":"__name__","order":"DESCENDING"}],"state":"READY","density":"SPARSE_ALL"}]}
+[debug] [2025-05-21T18:38:29.218Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:29.218Z] Checked if tokens are valid: true, expires at: 1747855712505
+[debug] [2025-05-21T18:38:29.218Z] >>> [apiv2][query] GET https://firestore.googleapis.com/v1/projects/vouched4vouchers/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* [none]
+[debug] [2025-05-21T18:38:29.286Z] <<< [apiv2][status] GET https://firestore.googleapis.com/v1/projects/vouched4vouchers/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* 200
+[debug] [2025-05-21T18:38:29.286Z] <<< [apiv2][body] GET https://firestore.googleapis.com/v1/projects/vouched4vouchers/databases/(default)/collectionGroups/-/fields?filter=indexConfig.usesAncestorConfig=false OR ttlConfig:* {"fields":[{"name":"projects/vouched4vouchers/databases/(default)/collectionGroups/__default__/fields/*","indexConfig":{"indexes":[{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"ASCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","order":"DESCENDING"}],"state":"READY"},{"queryScope":"COLLECTION","fields":[{"fieldPath":"*","arrayConfig":"CONTAINS"}],"state":"READY"}]}}]}
+[info] i  firestore: The following indexes are defined in your project but are not present in your firestore indexes file:
+	(brands) -- (status,ASCENDING) (brandimg,ASCENDING) (activeDeals,DESCENDING) (rawData.primaryRegion.countryCode,ASCENDING) 
+	(reviews) -- (itemId,ASCENDING) (createdAt,DESCENDING) 
+	(cart) -- (userId,ASCENDING) (createdAt,DESCENDING) 
+	(brands) -- (brandimg,ASCENDING) (rawData.primaryRegion.countryCode,ASCENDING) 
+	(faqs) -- (category,ASCENDING) (order,ASCENDING) 
+	(brands) -- (brandimg,ASCENDING) (status,ASCENDING) 
+	(content) -- (status,ASCENDING) (order,ASCENDING) 
+	(brands) -- (status,ASCENDING) (name,ASCENDING) 
+	(deals) -- (expiresAt,ASCENDING) (createdAt,DESCENDING) 
+	(brands) -- (status,ASCENDING) (rawData.primaryRegion.countryCode,ASCENDING) (activeDeals,DESCENDING) 
+	(deals) -- (status,ASCENDING) (expiresAt,ASCENDING) (createdAt,DESCENDING) 
+	(deals) -- (createdAt,DESCENDING) (expiresAt,DESCENDING)  
+[debug] [2025-05-21T18:38:29.405Z] <<< [apiv2][status] GET https://firebaserules.googleapis.com/v1/projects/vouched4vouchers/rulesets/f47155e3-ad63-4035-a02f-476b576422d0 200
+[debug] [2025-05-21T18:38:29.405Z] <<< [apiv2][body] GET https://firebaserules.googleapis.com/v1/projects/vouched4vouchers/rulesets/f47155e3-ad63-4035-a02f-476b576422d0 [omitted]
+[info] i  firestore: latest version of lib/firebase/rules.txt already up to date, skipping upload... 

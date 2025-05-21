@@ -72,64 +72,74 @@ export default function AdminDashboardClient() {
       <Preloader text="Loading..." />
     );
   }
-
   return (
-    <>
-      <Navigation />
-      <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-8">
-        <div className="container mx-auto px-4">
-          <div className="mb-8">
-            <div className="flex items-center gap-3 mb-2">
-              <Shield className="h-6 w-6 text-primary" />
-              <h1 className="text-3xl font-bold text-primary dark:text-white">Admin Dashboard</h1>
-            </div>
-            <p className="text-gray-800 dark:text-gray-400">Manage your platform and monitor performance</p>
-          </div>
-
-          {/* Navigation Tabs */}
-          <div className="flex overflow-x-auto space-x-4 mb-8 pb-2">
-            {tabs.map((tab) => (
-              <button
-                key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
-                className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
-                  activeTab === tab.id
-                    ? 'bg-primary/100 dark:bg-primary/20 border border-primary/30'
-                    : 'bg-primary/20 dark:bg-white/10 border border-white/20 hover:bg-white/20'
-                }`}
-              >
-                <tab.icon className={`h-4 w-4 ${
-                  activeTab === tab.id ? 'text-white' : 'text-primary dark:text-white'
-                }`} />
-                <span className={`${activeTab === tab.id ? `text-white` : `text-primary`} dark:text-white ms-1`}>{tab.label}</span>
-              </button>
-            ))}
-          </div>
-
-          {/* Content Area */}
-          <div className="bg-primary/100 dark:bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-6">
-            {activeTab === 'analytics' && <AnalyticsOverview />}
-            {activeTab === 'categories' && <CategoryManagement />}
-            {activeTab === 'deals' && <DealManagement />}
-            {activeTab === 'brands' && <BrandManagement />}
-            {activeTab === 'blog' && <BlogManagement />}
-            {activeTab === 'users' && <UserManagement />}
-            {activeTab === 'content' && <ContentManagement />}
-            {activeTab === 'media' && <MediaManagement />}
-            {activeTab === 'settings' && <SettingsManagement />}
-          </div>
-        </div>
-      </main>
-      <Footer 
-        categories={categories} 
-        loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings__} 
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
-    </>
+    <div>
+      <h1>Simplest Possible Admin</h1>
+      <p>If this works, the issue is in your components</p>
+      <ul>
+        <li>No auth</li>
+        <li>No imports</li>
+        <li>Pure HTML</li>
+      </ul>
+    </div>
   );
+  // return (
+  //   <>
+  //     <Navigation />
+  //     <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-8">
+  //       <div className="container mx-auto px-4">
+  //         <div className="mb-8">
+  //           <div className="flex items-center gap-3 mb-2">
+  //             <Shield className="h-6 w-6 text-primary" />
+  //             <h1 className="text-3xl font-bold text-primary dark:text-white">Admin Dashboard</h1>
+  //           </div>
+  //           <p className="text-gray-800 dark:text-gray-400">Manage your platform and monitor performance</p>
+  //         </div>
+
+  //         {/* Navigation Tabs */}
+  //         <div className="flex overflow-x-auto space-x-4 mb-8 pb-2">
+  //           {tabs.map((tab) => (
+  //             <button
+  //               key={tab.id}
+  //               onClick={() => setActiveTab(tab.id)}
+  //               className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
+  //                 activeTab === tab.id
+  //                   ? 'bg-primary/100 dark:bg-primary/20 border border-primary/30'
+  //                   : 'bg-primary/20 dark:bg-white/10 border border-white/20 hover:bg-white/20'
+  //               }`}
+  //             >
+  //               <tab.icon className={`h-4 w-4 ${
+  //                 activeTab === tab.id ? 'text-white' : 'text-primary dark:text-white'
+  //               }`} />
+  //               <span className={`${activeTab === tab.id ? `text-white` : `text-primary`} dark:text-white ms-1`}>{tab.label}</span>
+  //             </button>
+  //           ))}
+  //         </div>
+
+  //         {/* Content Area */}
+  //         <div className="bg-primary/100 dark:bg-white/10 backdrop-blur-xl rounded-xl border border-white/20 p-6">
+  //           {activeTab === 'analytics' && <AnalyticsOverview />}
+  //           {activeTab === 'categories' && <CategoryManagement />}
+  //           {activeTab === 'deals' && <DealManagement />}
+  //           {activeTab === 'brands' && <BrandManagement />}
+  //           {activeTab === 'blog' && <BlogManagement />}
+  //           {activeTab === 'users' && <UserManagement />}
+  //           {activeTab === 'content' && <ContentManagement />}
+  //           {activeTab === 'media' && <MediaManagement />}
+  //           {activeTab === 'settings' && <SettingsManagement />}
+  //         </div>
+  //       </div>
+  //     </main>
+  //     <Footer 
+  //       categories={categories} 
+  //       loadingCategories={loadingCategories}
+  //       brands={featuredBrands} 
+  //       loadingBrands={loadingBrands}
+  //       settings={settings__} 
+  //       settLoading={settLoading}
+  //       dynamicLinks={dynamicLinks}
+  //       loadingDynamicLinks={loadingDynamicLinks}
+  //     />
+  //   </>
+  // );
 }
