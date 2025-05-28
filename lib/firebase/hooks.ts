@@ -372,7 +372,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
 
         // Update category name in all associated deals
         const updatePromises = dealsSnapshot.docs.map((dealDoc) =>
-          updateDoc(doc(db, "deals", dealDoc.id), {
+          updateDoc(doc(db, "deals_fresh", dealDoc.id), {
             category: data.name, // Update category name in deals
             updatedAt: serverTimestamp(),
           })
