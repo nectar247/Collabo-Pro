@@ -179,7 +179,7 @@ export function useProfile() {
   // Function to get a single deal
   const getDeal = async (id: string): Promise<Deal | null> => {
     try {
-      const dealDoc = await getDoc(doc(db, 'deals', id));
+      const dealDoc = await getDoc(doc(db, 'deals_fresh', id));
       if (!dealDoc.exists()) return null;
       let brandDetails = await getBrandDetails(dealDoc.data().brand);
       return { id: dealDoc.id, brandDetails, ...dealDoc.data() } as Deal;
@@ -367,7 +367,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         }
 
         // Query all deals associated with the category
-        const dealsQuery = query(collection(db, "deals"), where("category", "==", existingCategory.name));
+        const dealsQuery = query(collection(db, "deals_fresh"), where("category", "==", existingCategory.name));
         const dealsSnapshot = await getDocs(dealsQuery);
 
         // Update category name in all associated deals
@@ -475,7 +475,7 @@ export function useDeals(options: UseDealsOptions = {}) {
     const countryCode = getRegionFromHost(window.location.hostname);
 
     // Build query
-    let dealsQuery = query(collection(db, 'deals'));
+    let dealsQuery = query(collection(db, "deals_fresh"));
 
     // Add filters
     if (category) {
@@ -586,7 +586,7 @@ export function useDeals(options: UseDealsOptions = {}) {
       try {
         setLoading(true);
   
-        let dealQuery: Query = collection(db, 'deals');
+        let dealQuery: Query = collection(db, "deals_fresh");
   
         const filters: any[] = [];
   
@@ -648,7 +648,7 @@ export function useDeals(options: UseDealsOptions = {}) {
 
 
   
-        const countSnap = await getCountFromServer(query(collection(db, 'deals'), ...filters));
+        const countSnap = await getCountFromServer(query(collection(db, "deals_fresh"), ...filters));
         const total = countSnap.data().count;
 
         // console.log(filtered);
@@ -686,8 +686,9 @@ export function useDeals(options: UseDealsOptions = {}) {
       setLoading(true);
     try {
       let dealsQuery = query(
-          collection(db, "deals"),
+          collection(db, "deals_fresh"),
           where("status", "==", "active"),
+          where("joined", "==", true),
           where("expiresAt", ">", Timestamp.now()),
           orderBy("expiresAt"),
           orderBy("createdAt", "desc"),
@@ -779,7 +780,7 @@ export function useDeals(options: UseDealsOptions = {}) {
 
   const addDeal = async (dealData: Omit<Deal, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => {
     try {
-      const docRef = await addDoc(collection(db, 'deals'), {
+      const docRef = await addDoc(collection(db, "deals_fresh"), {
         ...dealData,
         // status: 'active',
         createdAt: serverTimestamp(),
@@ -794,7 +795,7 @@ export function useDeals(options: UseDealsOptions = {}) {
 
   const updateDeal = async (dealId: string, data: Partial<Deal>) => {
     try {
-      await updateDoc(doc(db, 'deals', dealId), {
+      await updateDoc(doc(db, 'deals_fresh', dealId), {
         ...data,
         updatedAt: serverTimestamp()
       });
@@ -806,7 +807,7 @@ export function useDeals(options: UseDealsOptions = {}) {
 
   const toggleDealStatus = async (dealId: string, currentStatus: 'active' | 'inactive') => {
     try {
-      await updateDoc(doc(db, 'deals', dealId), {
+      await updateDoc(doc(db, 'deals_fresh', dealId), {
         status: currentStatus === 'active' ? 'inactive' : 'active',
         updatedAt: serverTimestamp()
       });
@@ -818,7 +819,7 @@ export function useDeals(options: UseDealsOptions = {}) {
 
   const deleteDeal = async (dealId: string) => {
     try {
-      await deleteDoc(doc(db, 'deals', dealId));
+      await deleteDoc(doc(db, 'deals_fresh', dealId));
     } catch (error) {
       console.error('Error deleting deal:', error);
       throw error;
@@ -859,7 +860,7 @@ export function useDeal(dealId: string) {
     }
 
     const unsubscribe = onSnapshot(
-      doc(db, 'deals', dealId),
+      doc(db, 'deals_fresh', dealId),
       (doc) => {
         if (doc.exists()) {
           setDeal({ id: doc.id, ...doc.data() } as Deal);
@@ -1025,7 +1026,7 @@ export function useCart() {
           const items = await Promise.all(
             snapshot.docs.map(async (doc__) => {
               const data = doc__.data();
-              const dealDoc = await getDoc(doc(db, 'deals', data.dealId));
+              const dealDoc = await getDoc(doc(db, 'deals_fresh', data.dealId));
               return {
                 id: doc__.id,
                 ...data,
@@ -1442,7 +1443,7 @@ export function useBrands(options: UseBrandsOptions = {}) {
       }
   
       // Query all deals associated with the brand
-      const dealsQuery = query(collection(db, "deals"), where("brand", "==", brandDealsExist.name));
+      const dealsQuery = query(collection(db, "deals_fresh"), where("brand", "==", brandDealsExist.name));
       const dealsSnapshot = await getDocs(dealsQuery);
   
       // Update each matching deal

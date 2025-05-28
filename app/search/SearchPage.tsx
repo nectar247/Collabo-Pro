@@ -42,7 +42,7 @@ export default function SearchPage() {
       try {
 
         let dealsQuery = query(
-          collection(db, "deals"),
+          collection(db, "deals_fresh"),
           where("status", "==", "active"),
           where("expiresAt", ">", new Date()),
           orderBy("expiresAt"),

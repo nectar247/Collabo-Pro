@@ -39,7 +39,7 @@ export default function BrandPage() {
       try {
         // Simplified query to avoid composite index requirement
         let dealsQuery = query(
-          collection(db, "deals"),
+          collection(db, "deals_fresh"),
           where("brand", "==", brand),
           where("status", "==", "active"),
         );

@@ -66,7 +66,7 @@ export default function AnalyticsOverview() {
 
         // Fetch active deals
         const dealsQuery = query(
-          collection(db, 'deals'),
+          collection(db, 'deals_fresh'),
           where('status', '==', 'active')
         );
         const dealsSnapshot = await getDocs(dealsQuery);

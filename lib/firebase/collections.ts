@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 // Collection references
-export const dealsCollection = collection(db, 'deals');
+export const dealsCollection = collection(db, 'deals_fresh');
 export const profilesCollection = collection(db, 'profiles');
 export const savedDealsCollection = collection(db, 'deals_saved');
 export const brandsCollection = collection(db, 'brands');
@@ -72,6 +72,8 @@ export interface Deal {
   terms: any;
   brandDetails: any;
   status: "active" | "inactive";
+  rawData: any;
+  joined: boolean;
 }
 
 export interface Brand {
