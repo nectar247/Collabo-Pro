@@ -89,7 +89,7 @@
     width: 40px;
     height: 45px;
     border-radius: 4px;
-    background-image: linear-gradient(66deg, #af47d2, #af47d2 59%, transparent 50%);
+    background-image: linear-gradient(66deg, #8520F7, #8520F7 59%, transparent 50%);
     transition: transform .2s, background-position .2s;
     transform: rotate(135deg) translateY(-6px) scaleX(-0.925);
 }
