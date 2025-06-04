@@ -17,6 +17,7 @@
 
 # production
 /build
+/api-codes
 
 # misc
 .DS_Store
