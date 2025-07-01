@@ -1201,14 +1201,14 @@ type FetchAdminBrandsOptions = {
 
 export function useBrands(options: UseBrandsOptions = {}) {
   const [featuredBrands, setFeaturedBrands] = useState<Brand[]>([]);
+  const [featuredBrandss, setFeaturedBrandss] = useState<Brand[]>([]);
   const [allBrands, setAllBrands] = useState<Brand[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   
   const [adminBrands, setAdminBrands] = useState<Brand[]>([]);
   const [totalBrandsCount, setTotalBrandsCount] = useState<number>(0);
-
-  const fetchFeaturedBrands = useCallback(async () => {
+  const fetchFeaturedBrandss = useCallback(async () => {
     try {
       setLoading(true);
       const countryCode = getRegionFromHost(window.location.hostname);
@@ -1238,13 +1238,46 @@ export function useBrands(options: UseBrandsOptions = {}) {
               b.rawData?.primaryRegion?.countryCode === countryCode
             )
 
-      setFeaturedBrands(countryFiltered as any);
+      setFeaturedBrandss(countryFiltered as any);
     } catch (err) {
       setError(err as Error);
     } finally {
       setLoading(false);
     }
   }, []);
+//This is the footer populater random brands
+const fetchFeaturedBrands = useCallback(async () => {
+  try {
+    setLoading(true);
+
+    const snapshot = await getDocs(query(
+      collection(db, 'brands'),
+      limit(50)
+    ));
+
+    // 1. Map to plain objects
+    const all = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Brand) }));
+
+    // 2. Filter to only “active” with deals
+    const activeFiltered = all.filter(b => b.status === 'active' && b.activeDeals > 0);
+
+    // 3. Shuffle (Fisher–Yates)
+    for (let i = activeFiltered.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [activeFiltered[i], activeFiltered[j]] = [activeFiltered[j], activeFiltered[i]];
+    }
+
+    // 4. (Optional) If you only want, say, 10 featured brands:
+    // const randomlyPicked = activeFiltered.slice(0, 10);
+
+    setFeaturedBrands(activeFiltered);
+  } catch (err) {
+    setError(err as Error);
+  } finally {
+    setLoading(false);
+  }
+}, []);
+
   const fetchAllBrands = useCallback(async () => {
     try {
       setLoading(true);
@@ -1378,6 +1411,9 @@ export function useBrands(options: UseBrandsOptions = {}) {
     fetchFeaturedBrands();
   }, []);
   useEffect(() => {
+    fetchFeaturedBrandss();
+  }, []);
+  useEffect(() => {
     fetchAllBrands();
   }, []);
   useEffect(() => {
@@ -1497,6 +1533,7 @@ export function useBrands(options: UseBrandsOptions = {}) {
 
   return {
     featuredBrands,
+    featuredBrandss,
     allBrands,
     loading,
     error,

@@ -71,7 +71,7 @@ export default function Footer(
             </ul>
           </div>
           
-          {/* <div>
+          <div>
             <h3 className="text-lg font-semibold mb-4">Top Brands</h3>
             <ul className="space-y-2">
               {brands.length === 0 && loadingBrands ? (
@@ -89,30 +89,7 @@ export default function Footer(
                 </li>
               ))}
             </ul>
-          </div> */}
-          <div>
-            <h3 className="text-lg font-semibold mb-4">Top Brands</h3>
-            <ul className="space-y-2">
-              {brands.length === 0 && loadingBrands && <FooterSingleLoading />}
-
-              {/** Shuffle & pick 10 on each render/page load: **/}
-              {[...brands]                   // make a copy so you don’t mutate props
-                .sort(() => Math.random() - 0.5)  // random sort
-                .slice(0, 10)                     // first 10 of the shuffled array
-                .map((brand) => (
-                  <li key={brand.id}>
-                    <Link
-                      href={'/brands/' + encodeURIComponent(brand.name)}
-                      className="text-gray-400 hover:text-secondary transition-colors"
-                    >
-                      {brand.name}
-                    </Link>
-                  </li>
-                ))
-              }
-            </ul>
           </div>
-
           <div>
             <h3 className="text-lg font-semibold mb-4">Help</h3>
             <ul className="space-y-2">
