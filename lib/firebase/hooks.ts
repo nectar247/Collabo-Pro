@@ -1211,7 +1211,7 @@ export function useBrands(options: UseBrandsOptions = {}) {
   const fetchFeaturedBrandss = useCallback(async () => {
     try {
       setLoading(true);
-      const countryCode = getRegionFromHost(window.location.hostname);
+      // const countryCode = getRegionFromHost(window.location.hostname);
 
       // console.log("got here", true);
       const snapshot = await getDocs(query(
@@ -1232,13 +1232,13 @@ export function useBrands(options: UseBrandsOptions = {}) {
         .filter((b: any) => b.status === 'active' && b.activeDeals > 0)
         .sort((a: any, b: any) => b.activeDeals - a.activeDeals) as any;
 
-      const countryFiltered = activeFiltered
-            .filter((b: any) => 
-              ! b.rawData?.primaryRegion?.countryCode || 
-              b.rawData?.primaryRegion?.countryCode === countryCode
-            )
+      // const countryFiltered = activeFiltered
+      //       .filter((b: any) => 
+      //         ! b.rawData?.primaryRegion?.countryCode || 
+      //         b.rawData?.primaryRegion?.countryCode === countryCode
+      //       )
 
-      setFeaturedBrandss(countryFiltered as any);
+      setFeaturedBrandss(activeFiltered as any);
     } catch (err) {
       setError(err as Error);
     } finally {
@@ -1485,7 +1485,7 @@ const fetchFeaturedBrands = useCallback(async () => {
   
       // Update each matching deal
       const updatePromises = dealsSnapshot.docs.map((dealDoc) =>
-        updateDoc(doc(db, "deals", dealDoc.id), {
+        updateDoc(doc(db, "deals_fresh", dealDoc.id), {
           brand: data.name, // Update brand name in deals
           updatedAt: serverTimestamp(),
         })
