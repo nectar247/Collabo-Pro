@@ -19,7 +19,7 @@ export default function Home() {
   const { settings, loading: settLoading } = useSettings();
 
   const { categories, loading: loadingCategories } = useCategories();
-  const { featuredBrands, loading: loadingBrands } = useBrands();
+  const { allBrands, featuredBrands, loading: loadingBrands } = useBrands();
   const { trendingDeals, loading: loadingDeals } = useDeals();
   const { links: dynamicLinks, loading: loadingDynamicLinks, error } = useDynamicLinks();
   const [popularSearches, setPopularSearches] = useState<string[]>([]);
@@ -91,7 +91,7 @@ export default function Home() {
       <Footer 
         categories={categories} 
         loadingCategories={loadingCategories}
-        brands={featuredBrands} 
+        brands={allBrands} 
         loadingBrands={loadingBrands}
         settings={settings} 
         settLoading={settLoading}

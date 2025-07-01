@@ -20,6 +20,7 @@ export default function BrandManagement() {
   const [showFilters, setShowFilters] = useState(false);
   const [activeDealsOnly, setActiveDealsOnly] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
+  const [countryCode, setCountryCode] = useState('all');
 
   // PAGINATION 
   const [currentPage, setCurrentPage] = useState(1);
@@ -116,6 +117,7 @@ export default function BrandManagement() {
     fetchAdminBrands({
       searchTerm: searchQuery,
       status: selectedStatus,
+      countryCode,
       activeDealsOnly,
       selectedStatus,
       page: currentPage,
@@ -126,6 +128,7 @@ export default function BrandManagement() {
     selectedStatus, 
     currentPage, 
     fetchAdminBrands, 
+    countryCode, 
     itemsPerPage, 
     activeDealsOnly
   ]);
@@ -455,6 +458,24 @@ export default function BrandManagement() {
                   <option value="all">All</option>
                   <option value="active">Active</option>
                   <option value="inactive">Inactive</option>
+                </select>
+              </div>
+
+              {/* Geography Filter */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Country
+                </label>
+                <select
+                  value={countryCode}
+                  onChange={(e) =>
+                    setCountryCode(e.target.value as string)
+                  }
+                  className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
+                >
+                  <option value="all">All</option>
+                  <option value="GB">United Kingdom</option>
+                  <option value="US">United States</option>
                 </select>
               </div>
 

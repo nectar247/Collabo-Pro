@@ -1189,10 +1189,10 @@ interface UseBrandsOptions {
   orderByField?: keyof Brand;
   orderDirection?: 'asc' | 'desc';
 }
-
 type FetchAdminBrandsOptions = {
   searchTerm?: string;
   status?: string;
+  countryCode?: string;
   activeDealsOnly?: string;
   selectedStatus?: string;
   page?: number;
@@ -1211,7 +1211,9 @@ export function useBrands(options: UseBrandsOptions = {}) {
   const fetchFeaturedBrands = useCallback(async () => {
     try {
       setLoading(true);
+      const countryCode = getRegionFromHost(window.location.hostname);
 
+      // console.log("got here", true);
       const snapshot = await getDocs(query(
         collection(db, 'brands'),
         where('brandimg', '!=', ''),
@@ -1228,19 +1230,25 @@ export function useBrands(options: UseBrandsOptions = {}) {
 
       const activeFiltered = all
         .filter((b: any) => b.status === 'active' && b.activeDeals > 0)
-        .sort((a: any, b: any) => b.activeDeals - a.activeDeals) as Brand[];
+        .sort((a: any, b: any) => b.activeDeals - a.activeDeals) as any;
 
-      setFeaturedBrands(activeFiltered);
+      const countryFiltered = activeFiltered
+            .filter((b: any) => 
+              ! b.rawData?.primaryRegion?.countryCode || 
+              b.rawData?.primaryRegion?.countryCode === countryCode
+            )
+
+      setFeaturedBrands(countryFiltered as any);
     } catch (err) {
       setError(err as Error);
     } finally {
       setLoading(false);
     }
   }, []);
-
   const fetchAllBrands = useCallback(async () => {
     try {
       setLoading(true);
+      const countryCode = getRegionFromHost(window.location.hostname);
 
       const snapshot = await getDocs(query(
         collection(db, 'brands'),
@@ -1253,24 +1261,28 @@ export function useBrands(options: UseBrandsOptions = {}) {
           id: doc.id, ...data, 
         };
       });
-
+      // DEBUG:
+      console.log("🛠️ fetchAllBrands — raw docs:", all);  
       const activeFiltered = all
         .filter((b: any) => b.status === 'active' && b.activeDeals > 0)
-        .sort((a: any, b: any) => b.activeDeals - a.activeDeals) as Brand[];
+        .sort((a: any, b: any) => b.activeDeals - a.activeDeals) as any;
 
-      setAllBrands(activeFiltered);
+      const countryFiltered = activeFiltered
+            .filter((b: any) => !b.rawData?.primaryRegion?.countryCode || b.rawData?.primaryRegion?.countryCode === countryCode)
+
+      setAllBrands(countryFiltered as any);
     } catch (err) {
       setError(err as Error);
     } finally {
       setLoading(false);
     }
   }, []);
-
   const fetchAdminBrands = useCallback(
     async (options: FetchAdminBrandsOptions = {}) => {
       const {
         searchTerm = '',
         status,
+        countryCode,
         activeDealsOnly,
         selectedStatus,
         page = 1,
@@ -1281,9 +1293,10 @@ export function useBrands(options: UseBrandsOptions = {}) {
         setLoading(true);
   
         let brandQuery: Query = collection(db, 'brands');
+  
         const filters: any[] = [];
   
-        if (status && status !== 'all') {
+        if (status && status != 'all') {
           filters.push(where('status', '==', status));
         }
   
@@ -1293,7 +1306,7 @@ export function useBrands(options: UseBrandsOptions = {}) {
             where('name', '<=', searchTerm + '\uf8ff')
           );
         }
-  
+
         brandQuery = query(
           brandQuery,
           ...filters,
@@ -1302,35 +1315,55 @@ export function useBrands(options: UseBrandsOptions = {}) {
         );
   
         const snapshot = await getDocs(brandQuery);
+  
         const startIdx = (page - 1) * pageSize;
         const pagedDocs = snapshot.docs.slice(startIdx, startIdx + pageSize);
   
         const all = pagedDocs.map((doc) => {
           const data = doc.data();
-          return { id: doc.id, ...data } as Brand;
+          return { id: doc.id, ...data };
         });
   
+
+
+
+
+
+
+
+
         let filtered = all;
         if (activeDealsOnly && activeDealsOnly !== 'all') {
-          if (activeDealsOnly === 'active') {
+          if(activeDealsOnly === 'active')
             filtered = filtered.filter((b: any) => b.activeDeals > 0);
-          }
-          if (activeDealsOnly === 'inactive') {
-            filtered = filtered.filter((b: any) => b.activeDeals === 0);
-          }
+          if(activeDealsOnly === 'inactive')
+            filtered = filtered.filter((b: any) => b.activeDeals == 0);
         }
         if (selectedStatus && selectedStatus !== 'all') {
           filtered = filtered.filter((b: any) => b.status === selectedStatus);
         }
+        if (countryCode && countryCode !== 'all') {
+          filtered = filtered.filter((b: any) => 
+            !b.rawData?.primaryRegion?.countryCode || 
+            b.rawData?.primaryRegion?.countryCode === countryCode
+          );
+        }
         filtered = filtered.sort((a: any, b: any) => b.activeDeals - a.activeDeals);
+
+
+
+
+
+
+
+
+
+
   
-        const countSnap = await getCountFromServer(query(
-          collection(db, 'brands'),
-          ...filters
-        ));
+        const countSnap = await getCountFromServer(query(collection(db, 'brands'), ...filters));
         const total = countSnap.data().count;
   
-        setAdminBrands(filtered);
+        setAdminBrands(filtered as any);
         setTotalBrandsCount(total);
       } catch (err) {
         setError(err as Error);
@@ -1344,11 +1377,9 @@ export function useBrands(options: UseBrandsOptions = {}) {
   useEffect(() => {
     fetchFeaturedBrands();
   }, []);
-
   useEffect(() => {
     fetchAllBrands();
   }, []);
-
   useEffect(() => {
     fetchAdminBrands();
   }, []);
@@ -1360,15 +1391,14 @@ export function useBrands(options: UseBrandsOptions = {}) {
       if (!brandDoc.exists()) return null;
       return { 
         id: brandDoc.id, 
-        ...(brandDoc.data() as Brand),
-      };
+        ...brandDoc.data(),
+      } as Brand;
     } catch (err) {
       console.error('Error fetching brand:', err);
       setError(err as Error);
       return null;
     }
   };
-
   const addBrand = async (brandData: Omit<Brand, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       // Check if brand with the same name exists
@@ -1385,6 +1415,7 @@ export function useBrands(options: UseBrandsOptions = {}) {
         ...brandData,
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp(),
+        // status: 'active'
       });
       return docRef.id;
     } catch (error) {
@@ -1392,77 +1423,71 @@ export function useBrands(options: UseBrandsOptions = {}) {
       throw error;
     }
   };
-
   const updateBrand = async (brandId: string, data: Partial<Brand>) => {
     try {
       // Fetch the brand details
-      const existing = await getBrand(brandId);
-      if (!existing) {
-        throw new Error('Brand not found.');
+      let brandDealsExist = await getBrand(brandId);
+      
+      if (!brandDealsExist) {
+        throw new Error("Brand not found.");
       }
   
       // If the brand name is being changed, check if the new name already exists
-      if (data.name && data.name !== existing.name) {
-        const brandsRef = collection(db, 'brands');
-        const nameQuery = query(brandsRef, where('name', '==', data.name));
+      if (data.name && data.name !== brandDealsExist.name) {
+        const brandsRef = collection(db, "brands");
+        const nameQuery = query(brandsRef, where("name", "==", data.name));
         const nameSnapshot = await getDocs(nameQuery);
 
         if (!nameSnapshot.empty) {
-          throw new Error('Brand name already exists. Choose a different name.');
+          throw new Error("Brand name already exists. Choose a different name.");
         }
       }
   
       // Query all deals associated with the brand
-      const dealsQuery = query(
-        collection(db, 'deals_fresh'),
-        where('brand', '==', existing.name)
-      );
+      const dealsQuery = query(collection(db, "deals_fresh"), where("brand", "==", brandDealsExist.name));
       const dealsSnapshot = await getDocs(dealsQuery);
   
       // Update each matching deal
       const updatePromises = dealsSnapshot.docs.map((dealDoc) =>
-        updateDoc(doc(db, 'deals', dealDoc.id), {
+        updateDoc(doc(db, "deals", dealDoc.id), {
           brand: data.name, // Update brand name in deals
           updatedAt: serverTimestamp(),
         })
       );
+  
       await Promise.all(updatePromises);
   
       // Update the brand document
-      await updateDoc(doc(db, 'brands', brandId), {
+      await updateDoc(doc(db, "brands", brandId), {
         ...data,
         updatedAt: serverTimestamp(),
       });
+  
+      // console.log("Brand and associated deals updated successfully.");
     } catch (error) {
-      console.error('Error updating brand:', error);
+      console.error("Error updating brand:", error);
       throw error;
     }
   };
-
   const deleteBrand = async (brandId: string) => {
     try {
-      const existing = await getBrand(brandId);
-      if (!existing) throw new Error('Brand not found.');
-
-      if (!existing.activeDeals) {
+      let brandDealsExist = await getBrand(brandId);
+      // console.log(brandDealsExist?.activeDeals);
+      if(!brandDealsExist?.activeDeals)
         await deleteDoc(doc(db, 'brands', brandId));
-      } else {
-        throw new Error('Brand cannot be deleted as deals exist for brand!');
+      else {
+        throw ('Brand cannot be deleted as deals exist for brand!');
       }
     } catch (error) {
       console.error('Error deleting brand:', error);
       throw error;
     }
   };
-
-  const toggleBrandStatus = async (
-    brandId: string,
-    currentStatus: 'active' | 'inactive'
-  ) => {
+  const toggleBrandStatus = async (brandId: string, currentStatus: 'active' | 'inactive') => {
     try {
       await updateDoc(doc(db, 'brands', brandId), {
         status: currentStatus === 'active' ? 'inactive' : 'active',
-        updatedAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
       });
     } catch (error) {
       console.error('Error toggling brand status:', error);
@@ -1480,12 +1505,12 @@ export function useBrands(options: UseBrandsOptions = {}) {
     updateBrand,
     deleteBrand,
     toggleBrandStatus,
+
     adminBrands,
     totalBrandsCount,
-    fetchAdminBrands,
+    fetchAdminBrands
   };
 }
-
 
 // Blog Posts hook
 export function useBlogPosts() {

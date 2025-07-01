@@ -20,7 +20,7 @@ const TrendingDeals = ({
                         <div className="p-2 rounded-xl bg-gradient-to-br from-primary/20 to-primary/5 backdrop-blur-xl light:border shadow-lg">
                             <Flame className="h-5 w-5 text-tertiary" />
                         </div>
-                        <h2 className="text-xl md:text-2xl font-bold text-primary dark:text-white">Hot Right Now</h2>
+                        <h2 className="text-xl md:text-2xl font-bold text-primary dark:text-white">Hot Trending Deals</h2>
                     </div>
                     <Link
                     href="/deals" 
