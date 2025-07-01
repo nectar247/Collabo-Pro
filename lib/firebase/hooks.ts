@@ -227,7 +227,6 @@ export function useProfile() {
     }
   };
   
-
   return { profile, savedDeals, savedUnsaveDeals, loading, error };
 }
 
@@ -556,21 +555,6 @@ export function useDeals(options: UseDealsOptions = {}) {
     
   }, [options.category, options.brand, options.limit, options.orderByField, options.orderDirection]);
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
   const fetchAdminDeals = useCallback(
     async (options: FetchAdminDealsOptions = {}) => {
       const {
@@ -638,16 +622,6 @@ export function useDeals(options: UseDealsOptions = {}) {
         }
         filtered = filtered.sort((a: any, b: any) => b.activeDeals - a.activeDeals);
 
-
-
-
-
-
-
-
-
-
-  
         const countSnap = await getCountFromServer(query(collection(db, "deals_fresh"), ...filters));
         const total = countSnap.data().count;
 
@@ -666,18 +640,6 @@ export function useDeals(options: UseDealsOptions = {}) {
   useEffect(() => {
     fetchAdminDeals();
   }, []);
-
-
-
-
-
-
-
-
-
-
-
-
 
 
   // Function to fetch deals with pagination
@@ -1256,7 +1218,14 @@ const fetchFeaturedBrands = useCallback(async () => {
     ));
 
     // 1. Map to plain objects
-    const all = snapshot.docs.map(doc => ({ id: doc.id, ...(doc.data() as Brand) }));
+    const all = snapshot.docs.map(doc => {
+      // Treat doc.data() as Brand *without* id
+      const data = doc.data() as Omit<Brand, 'id'>;
+      return {
+        id: doc.id, 
+        ...data
+      };
+    });
 
     // 2. Filter to only “active” with deals
     const activeFiltered = all.filter(b => b.status === 'active' && b.activeDeals > 0);
@@ -1281,7 +1250,7 @@ const fetchFeaturedBrands = useCallback(async () => {
   const fetchAllBrands = useCallback(async () => {
     try {
       setLoading(true);
-      const countryCode = getRegionFromHost(window.location.hostname);
+      // const countryCode = getRegionFromHost(window.location.hostname);
 
       const snapshot = await getDocs(query(
         collection(db, 'brands'),
@@ -1300,10 +1269,10 @@ const fetchFeaturedBrands = useCallback(async () => {
         .filter((b: any) => b.status === 'active' && b.activeDeals > 0)
         .sort((a: any, b: any) => b.activeDeals - a.activeDeals) as any;
 
-      const countryFiltered = activeFiltered
-            .filter((b: any) => !b.rawData?.primaryRegion?.countryCode || b.rawData?.primaryRegion?.countryCode === countryCode)
+      // const countryFiltered = activeFiltered
+      //       .filter((b: any) => !b.rawData?.primaryRegion?.countryCode || b.rawData?.primaryRegion?.countryCode === countryCode)
 
-      setAllBrands(countryFiltered as any);
+      setAllBrands(activeFiltered as any);
     } catch (err) {
       setError(err as Error);
     } finally {
