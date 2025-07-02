@@ -23,7 +23,7 @@ export function generateMetadata({
 
   // Security headers
   const securityHeaders = {
-    'Content-Security-Policy': "default-src 'self'; img-src 'self' https://ui.awin.com https://awin.com https://awin1.com https://a1.awin1.com https://images.unsplash.com data:; script-src 'unsafe-inline' https://www.googletagmanager.com https://www.dwin2.com https://cdn.trendii.com https://assets.trendii.com https://beeswax.trendii.com https://ingress.trendii.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;",
+    'Content-Security-Policy': "default-src 'self'; img-src 'self' https://ui.awin.com https://apis.google.com https://awin.com https://awin1.com https://a1.awin1.com https://images.unsplash.com data:; script-src 'unsafe-inline' https://www.googletagmanager.com https://www.dwin2.com https://cdn.trendii.com https://assets.trendii.com https://beeswax.trendii.com https://ingress.trendii.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com;",
     'X-Frame-Options': 'DENY',
     'X-Content-Type-Options': 'nosniff',
     'Referrer-Policy': 'strict-origin-when-cross-origin',
