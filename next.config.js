@@ -51,12 +51,15 @@ const nextConfig = {
           {
             key: 'Content-Security-Policy',
             value: [
-              `default-src 'self'`,
-              `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.trendii.com https://www.googletagmanager.com https://www.dwin2.com https://apis.google.com`,
-              `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://tm.trendii.com`,
-              `img-src 'self' https://ui.awin.com https://awin.com https://awin1.com https://a1.awin1.com https://images.unsplash.com https://firebasestorage.googleapis.com data:`,
+              `default-src 'self' https://vouched4vouchers.firebaseapp.com`,
+              `script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://*.trendii.com https://www.googletagmanager.com https://www.dwin2.com https://*.firebaseapp.com https://apis.google.com`,
+              `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.trendii.com https://www.googletagmanager.com https://www.dwin2.com https://*.firebaseapp.com https://apis.google.com`,
+              `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.firebaseapp.com https://tm.trendii.com`,
+              `img-src 'self' https://ui.awin.com https://awin.com https://awin1.com https://a1.awin1.com https://images.unsplash.com https://*.firebaseapp.com https://firebasestorage.googleapis.com data:`,
               `font-src 'self' https://fonts.gstatic.com https://tm.trendii.com`,
-              `connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://beeswax.trendii.com https://ingress.trendii.com https://tm.trendii.com`,
+              `connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://beeswax.trendii.com https://ingress.trendii.com https://tm.trendii.com https://*.firebaseapp.com`,
+              `frame-src 'self' https://vouched4vouchers.firebaseapp.com`,
+              `child-src 'self' https://vouched4vouchers.firebaseapp.com`,
             ].join('; ')
           }
         ]

@@ -61,7 +61,6 @@ const FilteredBrands = ({
                                         priority
                                     />
                                 </div>
-                                
                                 <div className="relative -mt-8 ml-4">
                                     <div className="w-[64px] h-[64px] flex items-center justify-center rounded-md border bg-white/90 overflow-hidden">
                                         <Image
@@ -69,33 +68,32 @@ const FilteredBrands = ({
                                         alt={`${brand.name} logo`}
                                         width={58}
                                         height={58}
-                                        className="object-contain transition-transform duration-500 group-hover:scale-110"
+                                        className="object-contain w-auto h-auto transition-transform duration-500 group-hover:scale-110"
                                         />
                                     </div>
                                 </div>
-                                
-                                <div className="p-4 pt-2">
-                                <div className="flex items-start justify-between mb-3">
-                                    <div>
-                                    <h2 className="text-sm font-semibold text-primary dark:text-white">{brand.name}</h2>
-                                    <p className="text-gray-600 dark:text-gray-400 text-xs">
-                                        {truncateText(brand.description, 20)}
-                                    </p>
+                                <div className="p-4 pt-2 text-right">
+                                    <div className="flex items-start justify-between mb-3">
+                                        <div>
+                                        <h2 className="text-sm font-semibold text-primary dark:text-white">{brand.name}</h2>
+                                        {/* <p className="text-gray-600 dark:text-gray-400 text-xs">
+                                            {truncateText(brand.description, 20)}
+                                        </p> */}
+                                        </div>
+                                        {brand.activeDeals && (
+                                        <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm clip-star p-2 font-bold">
+                                            {brand.activeDeals}
+                                        </span>
+                                        )}
                                     </div>
-                                    {brand.activeDeals && (
-                                    <span className="px-3 py-1 bg-primary/10 text-primary rounded-full text-sm clip-star p-2 font-bold">
-                                        {brand.activeDeals}
-                                    </span>
-                                    )}
-                                </div>
 
-                                <Link
-                                    href={`/brands/${encodeURIComponent(brand.name)}`}
-                                    className="inline-flex items-center text-sm text-primary hover:text-primary-dark transition-colors group/link font-medium"
-                                >
-                                    View Deals
-                                    <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover/link:translate-x-1" />
-                                </Link>
+                                    <Link
+                                        href={`/brands/${encodeURIComponent(brand.name)}`}
+                                        className="inline-flex items-center text-sm text-primary hover:text-primary-dark transition-colors group/link font-medium"
+                                    >
+                                        View Deals
+                                        <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover/link:translate-x-1" />
+                                    </Link>
                                 </div>
                             </motion.div>
                             ))}

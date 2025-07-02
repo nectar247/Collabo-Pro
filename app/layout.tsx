@@ -22,15 +22,6 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <meta
-          httpEquiv="Content-Security-Policy"
-            content="default-src 'self'; 
-                  script-src 'self' 'unsafe-eval' 'unsafe-inline' https://www.googletagmanager.com https://apis.google.com https://www.dwin2.com https://cdn.trendii.com https://assets.trendii.com https://beeswax.trendii.com https://ingress.trendii.com; 
-                  style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://tm.trendii.com;
-                  img-src 'self' https://ui.awin.com https://awin1.com https://a1.awin1.com https://awin.com https://images.unsplash.com https://firebasestorage.googleapis.com data: https://tm.trendii.com;
-                  font-src 'self' https://fonts.gstatic.com https://tm.trendii.com;
-                  connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://beeswax.trendii.com https://ingress.trendii.com https://tm.trendii.com;"
-        />
         <meta property="og:image" content="/icon-512x512.png" />
         <meta property="og:image:alt" content="Shop4Vouchers Logo" />
         <meta property="og:image:type" content="image/svg+xml" />
