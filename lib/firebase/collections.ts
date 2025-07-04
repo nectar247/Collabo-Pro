@@ -46,6 +46,7 @@ export interface Profile {
 export interface Category {
   id: string;
   name: string;
+  slug: string;
   description: string;
   dealCount: number;
   icon: string;

@@ -59,9 +59,9 @@ export default function Footer(
               ) : null}
               {categories.slice(0, 10).map((category, i) => (
                 <li key={i}>
-                  <Link 
-                    key={i}
-                    href={'/categories/' + encodeURIComponent(category.name)}
+                  <Link
+                    key={category.id}
+                    href={`/categories/${category.slug}`} // Use the slug field directly
                     className="text-gray-400 hover:text-secondary transition-colors"
                   >
                     {category.name}
