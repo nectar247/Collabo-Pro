@@ -14,9 +14,10 @@ interface SerializedDeal {
   category?: string;
   title?: string;
   status?: string;
-  createdAt?: string | { seconds: number; nanoseconds: number };
-  updatedAt?: string | { seconds: number; nanoseconds: number };
-  expiresAt?: string | { seconds: number; nanoseconds: number };
+  createdAt?: { seconds: number; nanoseconds: number };
+  updatedAt?: { seconds: number; nanoseconds: number };
+  expiresAt?: { seconds: number; nanoseconds: number };
+  startsAt?: { seconds: number; nanoseconds: number };
   [key: string]: any;
 }
 
@@ -49,32 +50,9 @@ export default function CategoryPageClient({
 
   // Convert serialized deals back to proper format for DealCard1
   const categoryDeals = initialDeals.map(deal => {
-    const convertedDeal = { ...deal };
-    
-    // Convert ISO strings back to Firestore timestamp format if needed by DealCard1
-    if (deal.createdAt && typeof deal.createdAt === 'string') {
-      const date = new Date(deal.createdAt);
-      convertedDeal.createdAt = {
-        seconds: Math.floor(date.getTime() / 1000),
-        nanoseconds: (date.getTime() % 1000) * 1000000
-      };
-    }
-    if (deal.updatedAt && typeof deal.updatedAt === 'string') {
-      const date = new Date(deal.updatedAt);
-      convertedDeal.updatedAt = {
-        seconds: Math.floor(date.getTime() / 1000),
-        nanoseconds: (date.getTime() % 1000) * 1000000
-      };
-    }
-    if (deal.expiresAt && typeof deal.expiresAt === 'string') {
-      const date = new Date(deal.expiresAt);
-      convertedDeal.expiresAt = {
-        seconds: Math.floor(date.getTime() / 1000),
-        nanoseconds: (date.getTime() % 1000) * 1000000
-      };
-    }
-    
-    return convertedDeal as any; // Type assertion for DealCard1 compatibility
+    // Since we're now passing plain timestamp objects from server,
+    // we can use them directly without conversion
+    return { ...deal } as any; // Type assertion for DealCard1 compatibility
   });
 
   // Calculate deal statistics

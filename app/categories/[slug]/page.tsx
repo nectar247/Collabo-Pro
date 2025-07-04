@@ -54,8 +54,6 @@ export default async function DynamicPage({ params }: { params: { slug: string }
   try {
     const decodedSlug = decodeURIComponent(params.slug);
     
-    console.log('Server-side: Fetching deals for category:', decodedSlug);
-    
     // Option 1: Try exact category match first (most efficient)
     let categoryDeals: any[] = [];
     
@@ -69,17 +67,13 @@ export default async function DynamicPage({ params }: { params: { slug: string }
         id: doc.id,
         ...doc.data()
       }));
-      
-      console.log('Server-side: Exact match found', categoryDeals.length, 'deals');
     } catch (exactError) {
-      console.log('Server-side: Exact match failed, trying flexible matching');
+      // Silently continue to flexible matching
     }
     
     // Option 2: If no exact matches, fall back to flexible matching
     // Only do this if exact match returned no results
     if (categoryDeals.length === 0) {
-      console.log('Server-side: No exact matches, fetching all deals for flexible matching');
-      
       // Get all deals and filter (only as fallback)
       const allDealsSnapshot = await getDocs(collection(db, 'deals_fresh'));
       const allDeals = allDealsSnapshot.docs.map(doc => {
@@ -94,8 +88,6 @@ export default async function DynamicPage({ params }: { params: { slug: string }
       categoryDeals = allDeals.filter(deal => 
         doesCategoryMatch(deal.category, decodedSlug)
       );
-      
-      console.log('Server-side: Flexible matching found', categoryDeals.length, 'deals');
     }
 
     // If still no deals found, check if category exists in categories collection
@@ -107,29 +99,53 @@ export default async function DynamicPage({ params }: { params: { slug: string }
       });
       
       if (!categoryExists) {
-        console.log('Server-side: Category does not exist');
         notFound();
       }
-      
-      console.log('Server-side: Category exists but no deals found');
     }
 
     // Convert Firestore timestamps to serializable format
     const serializedDeals = categoryDeals.map(deal => {
-      const serializedDeal: any = { ...deal };
+      // Use JSON.parse(JSON.stringify()) to completely strip all methods and convert to plain objects
+      const fullySerializedDeal = JSON.parse(JSON.stringify(deal));
       
-      // Handle Firestore timestamps - convert to ISO strings for serialization
-      if (deal.createdAt && typeof deal.createdAt === 'object' && 'seconds' in deal.createdAt) {
-        serializedDeal.createdAt = new Date(deal.createdAt.seconds * 1000).toISOString();
-      }
-      if (deal.updatedAt && typeof deal.updatedAt === 'object' && 'seconds' in deal.updatedAt) {
-        serializedDeal.updatedAt = new Date(deal.updatedAt.seconds * 1000).toISOString();
-      }
-      if (deal.expiresAt && typeof deal.expiresAt === 'object' && 'seconds' in deal.expiresAt) {
-        serializedDeal.expiresAt = new Date(deal.expiresAt.seconds * 1000).toISOString();
-      }
+      // Function to safely convert Firestore timestamps to plain objects
+      const convertTimestamp = (timestamp: any) => {
+        if (!timestamp) return null;
+        if (typeof timestamp === 'object' && timestamp.seconds !== undefined) {
+          return {
+            seconds: Number(timestamp.seconds),
+            nanoseconds: Number(timestamp.nanoseconds || 0)
+          };
+        }
+        return timestamp;
+      };
       
-      return serializedDeal;
+      // Recursively find and convert all timestamp-like objects
+      const convertTimestampsRecursively = (obj: any): any => {
+        if (!obj || typeof obj !== 'object') return obj;
+        
+        if (Array.isArray(obj)) {
+          return obj.map(convertTimestampsRecursively);
+        }
+        
+        const result: any = {};
+        for (const [key, value] of Object.entries(obj)) {
+          if (value && typeof value === 'object') {
+            // Check if this looks like a Firestore timestamp
+            if ('seconds' in value && typeof value.seconds === 'number') {
+              result[key] = convertTimestamp(value);
+            } else {
+              result[key] = convertTimestampsRecursively(value);
+            }
+          } else {
+            result[key] = value;
+          }
+        }
+        return result;
+      };
+      
+      // Apply timestamp conversion to the fully serialized deal
+      return convertTimestampsRecursively(fullySerializedDeal);
     });
 
     console.log('Server-side: Returning', serializedDeals.length, 'serialized deals');
