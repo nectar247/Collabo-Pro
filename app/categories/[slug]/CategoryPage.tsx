@@ -15,12 +15,24 @@ import Navigation from "@/components/navigation";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useSettings, useDynamicLinks } from '@/lib/firebase/hooks';
 
+// Type for deals from Firestore
+interface CategoryDeal {
+  id: string;
+  category?: string;
+  title?: string;
+  status?: string;
+  expiresAt?: {
+    seconds: number;
+  };
+  [key: string]: any; // Allow other dynamic properties
+}
+
 export default function CategoryPage({ slug, content_ }: { slug: string, content_: any }) {
   const params = useParams();
   const category = decodeURIComponent(params.slug as string);
   
   // Direct state management for category deals
-  const [categoryDeals, setCategoryDeals] = useState<any[]>([]);
+  const [categoryDeals, setCategoryDeals] = useState<CategoryDeal[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
@@ -86,10 +98,13 @@ export default function CategoryPage({ slug, content_ }: { slug: string, content
         const dealsRef = collection(db, 'deals_fresh');
         const snapshot = await getDocs(dealsRef);
         
-        const allDeals = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        }));
+        const allDeals: CategoryDeal[] = snapshot.docs.map(doc => {
+          const data = doc.data();
+          return {
+            id: doc.id,
+            ...data
+          } as CategoryDeal;
+        });
 
         // Filter for the specific category with enhanced matching
         const filtered = allDeals.filter(deal => 
@@ -155,7 +170,7 @@ export default function CategoryPage({ slug, content_ }: { slug: string, content
               </div>
               
               {/* Deal status summary */}
-              {/* <div className="mt-12 text-center">
+              <div className="mt-12 text-center">
                 <div className="inline-flex gap-3 bg-white dark:bg-gray-800 rounded-lg p-4 shadow-sm">
                   <div className="flex items-center gap-2">
                     <div className="w-3 h-3 bg-green-500 rounded-full"></div>
@@ -179,7 +194,7 @@ export default function CategoryPage({ slug, content_ }: { slug: string, content
                     </span>
                   </div>
                 </div>
-              </div> */}
+              </div>
             </>
           ) : (
             <div className="text-center py-12">
