@@ -34,7 +34,7 @@ const TrendingDeals = ({
                         href="/deals" 
                         className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-2 group"
                         >
-                        View all deals
+                        View more deals
                         <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
                     </Link>
                 </div>
