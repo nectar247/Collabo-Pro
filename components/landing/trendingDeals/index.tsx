@@ -22,19 +22,21 @@ const TrendingDeals = ({
                         </div>
                         <h2 className="text-xl md:text-2xl font-bold text-primary dark:text-white">Hot Trending Deals</h2>
                     </div>
-                    <Link
-                    href="/deals" 
-                    className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-2 group"
-                    >
-                    View All
-                    <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                    </Link>
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-2 gap-8">
                     {trendingDeals.map((deal) => (
                         <DealCard1 deal={deal} key={deal.id} />
                     ))}
+                </div>
+                <div className="mt-5 flex justify-end">
+                    <Link
+                        href="/deals" 
+                        className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-2 group"
+                        >
+                        View all deals
+                        <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                    </Link>
                 </div>
             </div>
         </section>

@@ -73,10 +73,6 @@ export default function Home() {
           trendingDeals={trendingDeals} 
           loadingDeals={loadingDeals}
         />
-        
-        <div className="bg-bgPrimary dark:bg-gradient-to-b dark:from-gray-800 dark:to-gray-900 text-right pr-6 sm:pr-12">
-          <a href="/deals" className="text-center bg-secondary text-white p-2 rounded-lg hover:bg-secondary-dark transition">View all Deals</a>
-        </div>
 
         {/* Categories Section */}
         <CategoriesSection
