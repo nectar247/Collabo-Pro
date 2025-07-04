@@ -136,7 +136,7 @@ async function loadSampleData() {
     // Load deals
     console.log('Loading deals...');
     for (const deal of sampleDeals) {
-      await addDoc(collection(db, 'deals'), deal);
+      await addDoc(collection(db, 'deals_fresh'), deal);
     }
     console.log('Deals loaded successfully!');
 

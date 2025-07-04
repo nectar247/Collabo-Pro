@@ -1,6 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
+import { useEffect, useState } from 'react';
 import { useParams } from 'next/navigation';
 import { motion } from 'framer-motion';
 import { Tag, ArrowLeft } from 'lucide-react';
@@ -11,30 +12,39 @@ import { DealCard1 } from '@/components/deals/card';
 
 import Navigation from "@/components/navigation";
 import Footer from '@/components/footer';
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
+import { useBrands, useCategories, useCategoryDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
-export default function CategoryPage({ slug, content_ }: { slug: string, content_: any }) {
+
+export default function CategoryPage({ slug, content_ }: { slug: string | string[], content_: any }) {
   const params = useParams();
-  const { allPublicDeals: deals, loading, error } = useDeals();
-  const category = decodeURIComponent(params.slug as string);
-
-  console.log(deals);
   
-  // Filter deals by category
-  const categoryDeals = deals.filter(deal => 
-    deal.category.split(' ').join('').toLowerCase() == category.split(' ').join('').toLowerCase()
-  );
+  // Ensure category is always a string (take first item if array)
+  const category = Array.isArray(params.slug) 
+    ? params.slug[0] 
+    : params.slug;
+
+  // Decode the category name
+  const decodedCategory = decodeURIComponent(category);
+
+  // Consistent loading text for both SSR and client-side
+  const loadingText = "Loading deals...";
+
+  // Use the new useCategoryDeals hook
+  const { deals: categoryDeals, loading, error } = useCategoryDeals({
+    category: decodedCategory,
+    limit: 100
+  });
 
   const { settings, loading: settLoading } = useSettings();
   const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
   const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
     limit: null
   });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
   const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
-  if (loading) {
-    return <Preloader text="Loading deals..." />;
+  // Handle both SSR and client-side loading states consistently
+  if (typeof window === 'undefined' || loading) {
+    return <Preloader text={loadingText} />;
   }
 
   if (error) {
@@ -57,10 +67,10 @@ export default function CategoryPage({ slug, content_ }: { slug: string, content
               </Link>
               <div>
                 <h1 className="text-3xl font-bold text-primary dark:text-white capitalize">
-                  {category} Deals
+                  {decodedCategory} Deals
                 </h1>
                 <p className="text-gray-800 dark:text-gray-400 mt-2">
-                  Discover the best {category.toLowerCase()} deals and discounts
+                  Discover the best {decodedCategory.toLowerCase()} deals and discounts
                 </p>
               </div>
             </div>
@@ -78,7 +88,7 @@ export default function CategoryPage({ slug, content_ }: { slug: string, content
               <Tag className="h-16 w-16 text-gray-600 mx-auto mb-4" />
               <h2 className="text-2xl font-semibold text-primary dark:text-white mb-2">No deals found</h2>
               <p className="text-gray-400 mb-8">
-                We couldn&apos;t find any deals in the {category.toLowerCase()} category at the moment.
+                We couldn&apos;t find any deals in the {decodedCategory.toLowerCase()} category at the moment.
               </p>
               <Link
                 href="/deals"

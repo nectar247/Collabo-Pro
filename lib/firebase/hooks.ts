@@ -474,7 +474,10 @@ export function useDeals(options: UseDealsOptions = {}) {
     const countryCode = getRegionFromHost(window.location.hostname);
 
     // Build query
-    let dealsQuery = query(collection(db, "deals_fresh"));
+    let dealsQuery = query(
+      collection(db, "deals_fresh"),
+      where("category", "==", options.category || "Automotive")
+    );
 
     // Add filters
     if (category) {
@@ -2133,3 +2136,68 @@ export function useMediaFiles() {
 }
 
 // Rest of the hooks remain the same...
+
+
+// New category hook
+interface UseCategoryDealsOptions {
+  category: string;
+  limit?: number;
+  orderByField?: string;
+  orderDirection?: 'asc' | 'desc';
+}
+
+export function useCategoryDeals(options: UseCategoryDealsOptions) {
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<Error | null>(null);
+
+  useEffect(() => {
+    const {
+      category,
+      limit: queryLimit = 50,
+      orderByField = 'createdAt',
+      orderDirection = 'desc'
+    } = options;
+
+    try {
+      // Build the query
+      const dealsQuery = query(
+        collection(db, "deals_fresh"),
+        where("category", "==", category),
+        orderBy(orderByField, orderDirection),
+        limit(queryLimit) // Make sure to use the imported limit function
+      );
+
+      const unsubscribe = onSnapshot(
+        dealsQuery,
+        (snapshot) => {
+          const dealsData = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data(),
+          })) as Deal[];
+          
+          setDeals(dealsData);
+          setLoading(false);
+          console.log(`Fetched ${dealsData.length} deals for category ${category}`);
+        },
+        (err) => {
+          console.error("Error fetching deals:", err);
+          setError(err as Error);
+          setLoading(false);
+        }
+      );
+
+      return unsubscribe;
+    } catch (err) {
+      console.error("Error setting up query:", err);
+      setError(err as Error);
+      setLoading(false);
+    }
+  }, [options.category, options.limit, options.orderByField, options.orderDirection]);
+
+  return {
+    deals,
+    loading,
+    error
+  };
+}

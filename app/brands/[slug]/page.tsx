@@ -5,7 +5,7 @@ import BrandPage from './BrandPage';
 
 export default async function DynamicPage({ params }: { params: { slug: string } }) {
   try {
-    const contentSnapshot = await getDocs(collection(db, 'deals'));
+    const contentSnapshot = await getDocs(collection(db, 'deals_fresh'));
     const content = contentSnapshot.docs
       .find(doc => doc.data().brand.toLowerCase() === decodeURIComponent(params.slug).toLowerCase())?.data() || null;
 

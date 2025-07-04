@@ -18,7 +18,7 @@
 # production
 /build
 /api-codes
-
+/app/test
 # misc
 .DS_Store
 *.pem
