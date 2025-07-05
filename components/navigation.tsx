@@ -337,8 +337,6 @@ export default function Navigation() {
           </AnimatePresence>
         </div>
       </header>
-
-      <SearchDialog isOpen={isSearchOpen} onClose={() => setIsSearchOpen(false)} />
     </>
   );
 }

@@ -10,6 +10,7 @@ import FilteredBrands from '@/components/landing/filteredBrands';
 import CategoriesSection from '@/components/landing/categories';
 import TrendingDeals from '@/components/landing/trendingDeals';
 import SearchesSection from '@/components/landing/searches';
+import SearchDialog from '@/components/search/SearchDialog'; // Add this import
 import { useEffect, useState } from 'react';
 import { getPopularSearches } from '@/lib/firebase/search';
 
@@ -24,6 +25,9 @@ export default function Home() {
   const { links: dynamicLinks, loading: loadingDynamicLinks, error } = useDynamicLinks();
   const [popularSearches, setPopularSearches] = useState<string[]>([]);
   const [loadingSearches, setLoadingSearches] = useState<boolean>(true);
+  
+  // Add search modal state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   // console.log(trendingDeals)
 
@@ -60,6 +64,7 @@ export default function Home() {
           popularSearches={popularSearches}
           setPopularSearches={setPopularSearches}
           loadingSearches={loadingSearches}
+          onOpenSearch={() => setIsSearchOpen(true)} // Add this prop
         />
 
         {/* Brands Section */}
@@ -88,6 +93,7 @@ export default function Home() {
         />
 
       </div>
+      
       <Footer 
         categories={categories} 
         loadingCategories={loadingCategories}
@@ -97,6 +103,12 @@ export default function Home() {
         settLoading={settLoading}
         dynamicLinks={dynamicLinks}
         loadingDynamicLinks={loadingDynamicLinks}
+      />
+
+      {/* Add the SearchDialog component here */}
+      <SearchDialog 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
       />
     </>
   );

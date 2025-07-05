@@ -10,18 +10,17 @@ import Preloader from '@/components/loaders/preloader';
 const HeroSection = ({
     popularSearches,
     setPopularSearches,
-    loadingSearches
+    loadingSearches,
+    onOpenSearch // Make this optional
 }:{
     popularSearches: string[],
     setPopularSearches: React.Dispatch<React.SetStateAction<string[]>>,
-    loadingSearches: boolean
+    loadingSearches: boolean,
+    onOpenSearch?: () => void // Make optional with ?
 }) => {
 
     const router = useRouter();
     const [loading, setLoading] = useState(true);
-
-    
-    
 
     const handleSearch = async (e: any) => {
         e.preventDefault();
@@ -30,9 +29,14 @@ const HeroSection = ({
         handleSearchClick(router, search);
     }
 
-    // if (loading) {
-    //     return <Preloader text="Loading amazing deals..." />;
-    // }
+    const handleExploreDealsClick = () => {
+        if (onOpenSearch) {
+            onOpenSearch(); // Open the search modal if function exists
+        } else {
+            // Fallback: navigate to deals page
+            router.push('/deals');
+        }
+    }
 
     return (
         <section className="relative min-h-[60vh] flex items-center bg-gradient-to-br from-primary via-primary to-black">
@@ -75,21 +79,16 @@ const HeroSection = ({
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.8 }}
                     >
-                    {/* <input
-                            name="searchTerm"
-                            type="text"
-                            placeholder="What are you looking for?"
-                            className="w-full pl-12 pr-4 py-4 rounded-full bg-white/10 backdrop-blur-xl border border-white/20 text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 relative z-10"
-                            /> */}
-                    <Link
-                        href="/deals"
+                    {/* Changed from Link to button with onClick handler */}
+                    <button
+                        onClick={handleExploreDealsClick}
                         className="inline-flex text-sm items-center justify-center px-12 py-2 rounded-full bg-gradient-to-r from-secondary to-secondary-dark text-white font-medium hover:shadow-lg hover:shadow-secondary/50 transition-all duration-300 relative group"
                     >
                         <span className="relative z-10">
                         Explore Deals
                         </span>
                         <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                    </Link>
+                    </button>
                     </motion.div>
 
                     <div className="flex flex-wrap justify-center gap-3 items-center">
