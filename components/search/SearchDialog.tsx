@@ -3,7 +3,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useRouter } from 'next/navigation';
-import { Search, X, TrendingUp, Sparkles, Loader2, Tag, Store } from 'lucide-react';
+import { Search, X, TrendingUp, Sparkles, Loader2, Tag, Store, Grid3X3 } from 'lucide-react';
 import { useCategories, useDeals } from '@/lib/firebase/hooks';
 import { getPopularSearches, recordSearch } from '@/lib/firebase/search';
 
@@ -77,7 +77,7 @@ export default function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
         )
         .slice(0, 4)
         .map(deal => ({
-          text: deal.brand + ": " + deal.title,
+          text: deal.title,
           type: 'deal' as const,
           icon: Tag
         }));
@@ -106,7 +106,7 @@ export default function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
       // Combine and prioritize: deals first, then brands, then categories
       suggestions.push(...dealMatches, ...brandMatches, ...categoryMatches);
       
-      setSearchSuggestions(suggestions.slice(0, 9)); // Limit to 6 total suggestions
+      setSearchSuggestions(suggestions.slice(0, 6)); // Limit to 6 total suggestions
     } else {
       setSearchSuggestions([]);
     }
@@ -142,6 +142,11 @@ export default function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
   const handleSuggestionClick = async (suggestion: SearchSuggestion) => {
     setSearchQuery(suggestion.text);
     await handleSearch(suggestion.text);
+  };
+
+  const handleViewAllDeals = () => {
+    router.push('/deals');
+    onClose();
   };
 
   if (!isOpen) return null;
@@ -210,12 +215,31 @@ export default function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
                     animate={{ opacity: 1, y: 0 }}
                     className="border-t border-white/10 p-4 space-y-2"
                   >
+                    {/* View All Deals Option */}
+                    <motion.button
+                      initial={{ opacity: 0, x: -20 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      onClick={handleViewAllDeals}
+                      className="w-full flex items-center gap-3 p-3 rounded-lg bg-gradient-to-r from-primary/20 to-primary-dark/20 hover:from-primary/30 hover:to-primary-dark/30 border border-primary/20 hover:border-primary/30 transition-all text-left group"
+                    >
+                      <Grid3X3 className="h-4 w-4 text-primary group-hover:text-white transition-colors" />
+                      <div className="flex-1">
+                        <span className="text-white text-sm font-medium">View all deals</span>
+                        <div className="flex items-center gap-1 mt-1">
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                            Browse everything
+                          </span>
+                        </div>
+                      </div>
+                      <Search className="h-4 w-4 text-primary group-hover:text-white transition-colors" />
+                    </motion.button>
+
                     {searchSuggestions.map((suggestion, index) => (
                       <motion.button
                         key={`${suggestion.type}-${suggestion.text}`}
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        transition={{ delay: index * 0.05 }}
+                        transition={{ delay: (index + 1) * 0.05 }}
                         onClick={() => handleSuggestionClick(suggestion)}
                         className="w-full flex items-center gap-3 p-3 rounded-lg bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 transition-all text-left group"
                       >
@@ -243,6 +267,27 @@ export default function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
             {/* Search Content - Only show when no suggestions */}
             {searchSuggestions.length === 0 && (
               <div className="mt-4 bg-white/10 backdrop-blur-xl rounded-2xl border border-white/20 p-6">
+                {/* View All Deals - Always visible when no suggestions */}
+                <div className="mb-8">
+                  <motion.button
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    onClick={handleViewAllDeals}
+                    className="w-full flex items-center gap-4 p-4 rounded-xl bg-gradient-to-r from-primary/20 to-primary-dark/20 hover:from-primary/30 hover:to-primary-dark/30 border border-primary/20 hover:border-primary/30 transition-all text-left group"
+                  >
+                    <div className="flex-shrink-0">
+                      <Grid3X3 className="h-6 w-6 text-primary group-hover:text-white transition-colors" />
+                    </div>
+                    <div className="flex-1">
+                      <h3 className="text-white text-base font-semibold mb-1">View all deals</h3>
+                      <p className="text-gray-300 text-sm">Browse our complete collection of amazing deals</p>
+                    </div>
+                    <div className="flex-shrink-0">
+                      <Search className="h-5 w-5 text-primary group-hover:text-white transition-colors" />
+                    </div>
+                  </motion.button>
+                </div>
+
                 <div className="grid grid-cols-1 gap-8">
                   {/* Popular Searches */}
                   {popularSearches.length > 0 && (

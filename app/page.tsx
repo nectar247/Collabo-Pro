@@ -56,7 +56,7 @@ export default function Home() {
 
   return (
     <>
-      <Navigation />
+      <Navigation onOpenSearch={() => setIsSearchOpen(true)} />
       <div className="overflow-hidden">
 
         {/* Hero Section */}

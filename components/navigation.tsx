@@ -21,14 +21,16 @@ import {
 import { useAuth, useSiteSettings } from "@/lib/firebase/hooks";
 import { signOut } from "@/lib/auth";
 import { ThemeToggle } from "./theme/theme-toggle";
-import SearchDialog from "./search/SearchDialog";
 
-export default function Navigation() {
+interface NavigationProps {
+  onOpenSearch?: () => void; // Add this prop
+}
+
+export default function Navigation({ onOpenSearch }: NavigationProps) {
   
   const { settings } = useSiteSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -45,6 +47,15 @@ export default function Navigation() {
       setIsUserMenuOpen(false);
     } catch (error) {
       console.error('Error signing out:', error);
+    }
+  };
+
+  const handleSearchClick = () => {
+    if (onOpenSearch) {
+      onOpenSearch();
+    } else {
+      // Fallback: navigate to search page
+      router.push('/search');
     }
   };
 
@@ -92,7 +103,7 @@ export default function Navigation() {
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center space-x-4">
               <button
-                onClick={() => setIsSearchOpen(true)}
+                onClick={handleSearchClick}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label="Search"
               >
@@ -218,7 +229,7 @@ export default function Navigation() {
                   <div className="px-4">
                     <button
                       onClick={() => {
-                        setIsSearchOpen(true);
+                        handleSearchClick();
                         setIsMenuOpen(false);
                       }}
                       className="w-full flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300"
