@@ -81,7 +81,7 @@ export default function Footer(
                 <li key={i}>
                   <Link 
                     key={i}
-                    href={'/brands/' + encodeURIComponent(brand.name)}
+                    href={`/brands/${brand.slug}`}
                     className="text-gray-400 hover:text-secondary transition-colors"
                   >
                     {brand.name}
