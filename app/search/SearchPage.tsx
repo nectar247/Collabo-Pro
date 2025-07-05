@@ -345,7 +345,9 @@ export default function SearchPage() {
           >
             <form onSubmit={handleSearch} className="relative">
               <input
-                ref={(input) => input && input.focus()}
+                ref={(input) => {
+                  input?.focus();
+                }}
                 type="text"
                 placeholder="Search for deals..."
                 className="w-full pl-12 pr-20 py-4 bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-xl text-gray-700 dark:text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary/50 shadow-lg backdrop-blur-sm"

@@ -1,14 +1,36 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
-// import dynamic from 'next/dynamic';
 import { ThemeProvider } from '@/components/theme/theme-provider';
-// import Footer from '@/components/footer';
 import Script from 'next/script';
-// const Navigation = dynamic(() => import('@/components/navigation'), {
-//   ssr: false
-// });
+import { Metadata, Viewport } from 'next';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
+
+// Add metadata export for your root layout
+export const metadata: Metadata = {
+  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  title: {
+    template: '%s | Shop4Vouchers',
+    default: 'Shop4Vouchers',
+  },
+  description: 'Your best voucher shop for amazing deals!',
+  openGraph: {
+    title: 'Shop4Vouchers',
+    description: 'Your best voucher shop for amazing deals!',
+    images: ['/icon-512x512.png'],
+    type: 'website',
+  },
+  icons: {
+    icon: '/icon-512x512.png',
+    apple: '/icon-512x512.png',
+  },
+  manifest: '/manifest.json',
+};
+
+// Move themeColor to viewport export
+export const viewport: Viewport = {
+  themeColor: '#16C47F',
+};
 
 export default function RootLayout({
   children,
@@ -22,15 +44,6 @@ export default function RootLayout({
       suppressHydrationWarning
     >
       <head>
-        <meta property="og:image" content="/icon-512x512.png" />
-        <meta property="og:image:alt" content="Shop4Vouchers Logo" />
-        <meta property="og:image:type" content="image/svg+xml" />
-        <meta property="og:title" content="Shop4Vouchers" />
-        <meta property="og:description" content="Your best voucher shop for amazing deals!" />
-        <link rel="icon" href="/icon-512x512.png" sizes="any" />
-        <link rel="apple-touch-icon" href="/icon-512x512.png" />
-        <link rel="manifest" href="/manifest.json" />
-        <meta name="theme-color" content="#16C47F" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
       </head>

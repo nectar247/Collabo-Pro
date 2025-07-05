@@ -75,7 +75,7 @@ export function generateMetadata({
     alternates: {
       canonical: baseUrl,
     },
-    metadataBase: new URL(baseUrl),
+    // Remove metadataBase from here since it's now set in root layout
     other: { },
   };
 

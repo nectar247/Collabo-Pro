@@ -74,8 +74,10 @@ export default function DiscountModal({ deal, isModalOpen, setIsModalOpen }: Dis
             <hr className="my-2 border-gray-300" />
             <p className="text-[14px] text-center text-gray-700 mb-2">
               Sign up to our mailing list so that we can send you updates about new deals.
+              <br />
+              You can unsubscribe at any time
             </p>
-            <div className="mb-4">
+            <div className="mt-2 mb-4">
               <input
                 type="email"
                 value={subscribedEmail}

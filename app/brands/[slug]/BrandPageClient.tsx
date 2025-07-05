@@ -17,7 +17,7 @@ import Navigation from "@/components/navigation";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
-export default function BrandPage() {
+export default function BrandPageClient() {
   const params = useParams();
   const slug = params.slug as string;
   const { getBrandDetails } = useDeals();
