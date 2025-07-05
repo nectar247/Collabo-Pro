@@ -528,7 +528,7 @@ export default function SearchPage() {
                 >
                   <div className="flex flex-col items-center gap-4">
                     <p className="text-gray-600 dark:text-gray-400">
-                      Showing {deals.length} of {totalDeals} deals
+                      Showing {deals.length} of {totalDeals}+ deals
                     </p>
                     <button
                       onClick={loadMoreDeals}
@@ -562,7 +562,7 @@ export default function SearchPage() {
                 >
                   <div className="inline-flex items-center gap-2 bg-white dark:bg-white/10 border border-gray-300 dark:border-white/20 rounded-lg px-4 py-2">
                     <span className="text-sm text-gray-600 dark:text-gray-400">
-                      Page {currentPage} of {Math.ceil(totalDeals / dealsPerPage)}
+                      Page {currentPage} of {Math.ceil(totalDeals / dealsPerPage)}+
                     </span>
                   </div>
                 </motion.div>
