@@ -87,6 +87,7 @@ export interface Brand {
   activeDeals: number;
   createdAt: Date;
   updatedAt: Date;
+  slug: string;
   status: 'active' | 'inactive'
 }
 

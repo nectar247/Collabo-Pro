@@ -66,7 +66,7 @@ export default function CategoryPageClient({
   return (
     <>
       <Navigation />
-      <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-12">
+      <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-6">
         <div className="container mx-auto px-4">
           {/* Header */}
           <div className="w-full mb-12">
@@ -83,17 +83,6 @@ export default function CategoryPageClient({
                 <span>/</span>
                 <span className="text-gray-700 dark:text-gray-300">{displayCategoryName}</span>
               </nav>
-
-              {/* Back button - positioned to the left */}
-              <div className="flex items-center mb-6">
-                <Link
-                  href="/categories"
-                  className="inline-flex items-center gap-2 text-sm text-gray-600 dark:text-gray-400 hover:text-primary transition-colors group"
-                >
-                  <ArrowLeft className="h-4 w-4 group-hover:-translate-x-1 transition-transform" />
-                  Back to Categories
-                </Link>
-              </div>
             </div>
 
             {/* Main header content - full width centering */}
@@ -103,7 +92,7 @@ export default function CategoryPageClient({
                   {displayCategoryName} Deals
                 </h1>
                 <p className="text-lg text-gray-700 dark:text-gray-300 mb-2">
-                  Discover the best {displayCategoryName.toLowerCase()} deals and discounts
+                  Discover the best {displayCategoryName} deals and discounts
                 </p>
                 <div className="flex items-center justify-center gap-4 text-sm">
                   <span className="inline-flex items-center gap-2 bg-primary/10 text-primary px-3 py-1 rounded-full">

@@ -37,10 +37,11 @@ export default function BrandsDirectory() {
       : allBrands;
   }, [allBrands, searchQuery]);
 
-  // Define a type for the brand object
+  // Define a type for the brand object - updated to include slug
   interface Brand {
     id: string;
     name: string;
+    slug: string; // Added slug field
   }
 
   // Define a type for the alphabetical groups
@@ -153,7 +154,10 @@ export default function BrandsDirectory() {
                     <ul className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 divide-y">
                       {alphabeticalGroups[letter].map((brand) => (
                         <li key={brand.id} className="p-4 border-gray-200">
-                          <Link href={`/brands/${encodeURIComponent(brand.name)}`} className="block hover:underline">
+                          <Link 
+                            href={`/brands/${brand.slug}`} 
+                            className="block hover:underline"
+                          >
                             {brand.name}
                           </Link>
                         </li>
