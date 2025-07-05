@@ -77,7 +77,7 @@ export default function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
         )
         .slice(0, 4)
         .map(deal => ({
-          text: deal.title,
+          text: deal.brand + ": " + deal.title,
           type: 'deal' as const,
           icon: Tag
         }));
