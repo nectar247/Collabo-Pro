@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit2, Trash2, Search, Filter, Eye, ChevronDown, Ban, CheckCircle } from 'lucide-react';
 import { useBrands, useCategories, useDeals } from '@/lib/firebase/hooks';
@@ -27,8 +27,10 @@ export default function DealManagement() {
   const [showLink, setShowLink] = useState<boolean>(false);
 
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [countryCode, setCountryCode] = useState('all');
+  const searchInputRef = useRef<HTMLInputElement>(null);
 
   const [expandedDeal, setExpandedDeal] = useState<string | null>(null);
   const [filters, setFilters] = useState<DealFilters>({
@@ -42,16 +44,62 @@ export default function DealManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
+  // Debounce search query
   useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // 300ms delay for better responsiveness
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Reset to first page when debounced search query changes
+  useEffect(() => {
+    if (debouncedSearchQuery) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchQuery]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters, countryCode]);
+
+  // Handle filter changes with page reset
+  const handleFilterChange = (filterType: string, value: any) => {
+    setCurrentPage(1); // Reset to first page
+    
+    switch (filterType) {
+      case 'itemsPerPage':
+        setItemsPerPage(value);
+        break;
+      case 'country':
+        setCountryCode(value);
+        break;
+      default:
+        setFilters(prev => ({ ...prev, [filterType]: value }));
+        break;
+    }
+  };
+
+  useEffect(() => {
+    console.log('Fetching deals with params:', {
+      searchTerm: debouncedSearchQuery,
+      countryCode,
+      page: currentPage,
+      pageSize: itemsPerPage,
+      dealFilters: filters,
+    });
+    
     fetchAdminDeals({
-      searchTerm: searchQuery,
+      searchTerm: debouncedSearchQuery,
       countryCode,
       page: currentPage,
       pageSize: itemsPerPage,
       dealFilters: filters,
     });
   }, [
-    searchQuery, 
+    debouncedSearchQuery, 
     currentPage, 
     fetchAdminDeals, 
     countryCode, 
@@ -514,26 +562,39 @@ export default function DealManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-component="deal-management">
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         {/* Search Input */}
         <div className="flex-1 relative">
           <input
-            type="search"
+            ref={searchInputRef}
+            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search deals..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
+            className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                searchInputRef.current?.focus();
+              }}
+              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 w-5 h-5 flex items-center justify-center text-lg leading-none"
+              type="button"
+            >
+              ×
+            </button>
+          )}
         </div>
 
         {/* Actions */}
         <div className="flex gap-2">
           <select
             className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
-            onChange={(e) => setItemsPerPage(e.target.value as any)}
+            onChange={(e) => handleFilterChange('itemsPerPage', e.target.value)}
             defaultValue={itemsPerPage}
           >
             {[5, 10, 50, 100, 200, 500, 1000].map(n => (
@@ -563,6 +624,17 @@ export default function DealManagement() {
         </div>
       </div>
 
+      {/* Search Results Info */}
+      {debouncedSearchQuery && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-blue-800 text-sm">
+            Searching for "<strong>{debouncedSearchQuery}</strong>"
+            {totalDealsCount !== undefined && (
+              <span> - {totalDealsCount} deals found</span>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Filters */}
       <AnimatePresence>
@@ -581,7 +653,7 @@ export default function DealManagement() {
                 </label>
                 <select
                   value={filters.category}
-                  onChange={(e) => setFilters({ ...filters, category: e.target.value })}
+                  onChange={(e) => handleFilterChange('category', e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
                 >
                   {categories.map((category) => (
@@ -599,7 +671,7 @@ export default function DealManagement() {
                 </label>
                 <select
                   value={filters.brand}
-                  onChange={(e) => setFilters({ ...filters, brand: e.target.value })}
+                  onChange={(e) => handleFilterChange('brand', e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
                 >
                   {brands.map((brand) => (
@@ -617,7 +689,7 @@ export default function DealManagement() {
                 </label>
                 <select
                   value={filters.status}
-                  onChange={(e) => setFilters({ ...filters, status: e.target.value as DealFilters['status'] })}
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
                 >
                   <option value="all">All</option>
@@ -626,16 +698,14 @@ export default function DealManagement() {
                 </select>
               </div>
 
-              {/* Date Range Filter */}
+              {/* Country Filter */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">
                   Country
                 </label>
                 <select
                   value={countryCode}
-                  onChange={(e) =>
-                    setCountryCode(e.target.value as string)
-                  }
+                  onChange={(e) => handleFilterChange('country', e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
                 >
                   <option value="all">All</option>
@@ -651,7 +721,7 @@ export default function DealManagement() {
                 </label>
                 <select
                   value={filters.dateRange}
-                  onChange={(e) => setFilters({ ...filters, dateRange: e.target.value as DealFilters['dateRange'] })}
+                  onChange={(e) => handleFilterChange('dateRange', e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
                 >
                   <option value="all">All Time</option>
@@ -689,7 +759,9 @@ export default function DealManagement() {
                   animate={{ opacity: 1 }}
                   className="border-b border-gray-200"
                 >
-                  <td>{index+1}</td>
+                  <td className="py-4 text-gray-800">
+                    {((currentPage - 1) * itemsPerPage) + index + 1}
+                  </td>
                   <td className="py-4 text-gray-800">
                     <div className="w-10 h-10 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200 bg-white">
                       <img

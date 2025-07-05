@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit2, Trash2, Search, Filter, Eye, ChevronDown, Ban, CheckCircle } from 'lucide-react';
 import { useCategories } from '@/lib/firebase/hooks';
@@ -22,8 +22,10 @@ export default function CategoryManagement() {
   const [isAddingCategory, setIsAddingCategory] = useState(false);
   const [editCategory, setEditCategory] = useState<any>(null);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [filters, setFilters] = useState<CategoryFilters>({
     name: 'all',
     status: 'all',
@@ -33,6 +35,29 @@ export default function CategoryManagement() {
   // PAGINATION 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300);
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+
+
+  // Reset to first page when search changes
+  useEffect(() => {
+    if (debouncedSearchQuery) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchQuery]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [filters]);
 
   const handleAddCategory = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -85,8 +110,8 @@ export default function CategoryManagement() {
   const filteredCategories = categories.filter(category => {
 
     const matchesSearch = 
-      category.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-      category.description.toLowerCase().includes(searchQuery.toLowerCase());
+      category.name.toLowerCase().includes(debouncedSearchQuery.toLowerCase()) ||
+      category.description.toLowerCase().includes(debouncedSearchQuery.toLowerCase());
 
     const matchesStatus = filters.status === 'all' || category.status === filters.status;
     
@@ -306,18 +331,31 @@ export default function CategoryManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-component="category-management">
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         <div className="flex-1 relative">
           <input
-            type="search"
+            ref={searchInputRef}
+            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search categories..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
+            className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                searchInputRef.current?.focus();
+              }}
+              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 w-5 h-5 flex items-center justify-center text-lg leading-none"
+              type="button"
+            >
+              ×
+            </button>
+          )}
         </div>
         <div className="flex gap-2">
           <select
@@ -347,6 +385,18 @@ export default function CategoryManagement() {
           </button>
         </div>
       </div>
+
+      {/* Search Results Info */}
+      {debouncedSearchQuery && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-blue-800 text-sm">
+            Searching for "<strong>{debouncedSearchQuery}</strong>"
+            {filteredCategories.length !== undefined && (
+              <span> - {filteredCategories.length} categories found</span>
+            )}
+          </p>
+        </div>
+      )}
 
       {/* Filters */}
       <AnimatePresence>

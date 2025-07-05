@@ -565,71 +565,91 @@ export function useDeals(options: UseDealsOptions = {}) {
         dealFilters = {},
       } = options;
 
-      // console.log(options);
+      console.log('🔍 fetchAdminDeals called with:', options);
 
       try {
         setLoading(true);
-  
+
         let dealQuery: Query = collection(db, "deals_fresh");
-  
         const filters: any[] = [];
-  
-        if (status && status != 'all') {
-          filters.push(where('status', '==', status));
-        }
-  
-        if (searchTerm) {
-          filters.push(
-            where('title', '>=', searchTerm),
-            where('title', '<=', searchTerm + '\uf8ff')
-          );
+
+        // Apply status filter first (most selective)
+        if (dealFilters.status && dealFilters.status !== 'all') {
+          filters.push(where('status', '==', dealFilters.status));
         }
 
-        dealQuery = query(
-          dealQuery,
-          ...filters,
-          orderBy('title'),
-          limit(page * pageSize)
-        );
-  
+        // For search, we'll do client-side filtering since Firestore's text search is limited
+        if (searchTerm) {
+          console.log('🔍 Will search for:', searchTerm);
+        }
+
+        // Build the query with filters
+        if (filters.length > 0) {
+          dealQuery = query(dealQuery, ...filters);
+        }
+
+        // Add ordering - always order by a consistent field
+        dealQuery = query(dealQuery, orderBy('title'));
+
+        console.log('📊 Executing deals query...');
         const snapshot = await getDocs(dealQuery);
-  
-        const startIdx = (page - 1) * pageSize;
-        const pagedDocs = snapshot.docs.slice(startIdx, startIdx + pageSize);
-  
-        const all = pagedDocs.map((doc) => {
+        
+        console.log('📊 Raw deals results:', snapshot.docs.length);
+
+        // Get all documents and apply client-side filtering
+        let allDeals = snapshot.docs.map((doc) => {
           const data = doc.data();
           return { id: doc.id, ...data };
         });
-  
 
+        console.log('📊 Before filtering deals:', allDeals.length);
 
-
-
-
-
-
-
-        let filtered = all;
-        if (dealFilters.status && dealFilters.status !== 'all') {
-          filtered = filtered.filter((b: any) => b.status === dealFilters.status);
-        }
-        if (countryCode && countryCode !== 'all') {
-          filtered = filtered.filter((b: any) => 
-            // b.rawData?.regions?.all === true ||
-            b.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
+        // Apply client-side search filter
+        if (searchTerm) {
+          const searchLower = searchTerm.toLowerCase();
+          allDeals = allDeals.filter((deal: any) =>
+            deal.title?.toLowerCase().includes(searchLower) ||
+            deal.description?.toLowerCase().includes(searchLower) ||
+            deal.brand?.toLowerCase().includes(searchLower) ||
+            deal.category?.toLowerCase().includes(searchLower)
           );
+          console.log('📊 After search filter deals:', allDeals.length, 'for term:', searchTerm);
         }
-        filtered = filtered.sort((a: any, b: any) => b.activeDeals - a.activeDeals);
 
-        const countSnap = await getCountFromServer(query(collection(db, "deals_fresh"), ...filters));
-        const total = countSnap.data().count;
+        // Apply country filter
+        if (countryCode && countryCode !== 'all') {
+          allDeals = allDeals.filter((deal: any) => 
+            deal.rawData?.regions?.all === true ||
+            deal.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
+          );
+          console.log('📊 After country filter deals:', allDeals.length);
+        }
 
-        // console.log(filtered);
-  
-        setAdminDeals(filtered as any);
-        setTotalDealsCount(total);
+        // Sort by creation date descending
+        allDeals = allDeals.sort((a: any, b: any) => {
+          const aTime = a.createdAt?.seconds || 0;
+          const bTime = b.createdAt?.seconds || 0;
+          return bTime - aTime;
+        });
+
+        // Apply pagination
+        const startIdx = (page - 1) * pageSize;
+        const endIdx = startIdx + pageSize;
+        const paginatedDeals = allDeals.slice(startIdx, endIdx);
+
+        console.log('📊 Final deals results:', {
+          total: allDeals.length,
+          page,
+          pageSize,
+          startIdx,
+          endIdx,
+          returned: paginatedDeals.length
+        });
+
+        setAdminDeals(paginatedDeals as any);
+        setTotalDealsCount(allDeals.length);
       } catch (err) {
+        console.error('❌ Error in fetchAdminDeals:', err);
         setError(err as Error);
       } finally {
         setLoading(false);
@@ -1291,83 +1311,96 @@ const fetchFeaturedBrands = useCallback(async () => {
         pageSize = 10,
       } = options;
 
+      console.log('🔍 fetchAdminBrands called with:', options);
+
       try {
         setLoading(true);
-  
+
         let brandQuery: Query = collection(db, 'brands');
-  
         const filters: any[] = [];
-  
-        if (status && status != 'all') {
-          filters.push(where('status', '==', status));
-        }
-  
-        if (searchTerm) {
-          filters.push(
-            where('name', '>=', searchTerm),
-            where('name', '<=', searchTerm + '\uf8ff')
-          );
+
+        // Apply status filter first (most selective)
+        if (selectedStatus && selectedStatus !== 'all') {
+          filters.push(where('status', '==', selectedStatus));
         }
 
-        brandQuery = query(
-          brandQuery,
-          ...filters,
-          orderBy('name'),
-          limit(page * pageSize)
-        );
-  
+        // For search, we'll do client-side filtering since Firestore's text search is limited
+        if (searchTerm) {
+          // Don't add where clause for search, we'll filter client-side
+          console.log('🔍 Will search for:', searchTerm);
+        }
+
+        // Build the query with filters
+        if (filters.length > 0) {
+          brandQuery = query(brandQuery, ...filters);
+        }
+
+        // Add ordering - always order by a consistent field
+        brandQuery = query(brandQuery, orderBy('name'));
+
+        console.log('📊 Executing query...');
         const snapshot = await getDocs(brandQuery);
-  
-        const startIdx = (page - 1) * pageSize;
-        const pagedDocs = snapshot.docs.slice(startIdx, startIdx + pageSize);
-  
-        const all = pagedDocs.map((doc) => {
+        
+        console.log('📊 Raw results:', snapshot.docs.length);
+
+        // Get all documents and apply client-side filtering
+        let allBrands = snapshot.docs.map((doc) => {
           const data = doc.data();
           return { id: doc.id, ...data };
         });
-  
 
+        console.log('📊 Before filtering:', allBrands.length);
 
+        // Apply client-side search filter
+        if (searchTerm) {
+          const searchLower = searchTerm.toLowerCase();
+          allBrands = allBrands.filter((brand: any) =>
+            brand.name?.toLowerCase().includes(searchLower) ||
+            brand.description?.toLowerCase().includes(searchLower)
+          );
+          console.log('📊 After search filter:', allBrands.length, 'for term:', searchTerm);
+        }
 
-
-
-
-
-
-        let filtered = all;
+        // Apply other filters
         if (activeDealsOnly && activeDealsOnly !== 'all') {
-          if(activeDealsOnly === 'active')
-            filtered = filtered.filter((b: any) => b.activeDeals > 0);
-          if(activeDealsOnly === 'inactive')
-            filtered = filtered.filter((b: any) => b.activeDeals == 0);
+          if (activeDealsOnly === 'active') {
+            allBrands = allBrands.filter((b: any) => b.activeDeals > 0);
+          }
+          if (activeDealsOnly === 'inactive') {
+            allBrands = allBrands.filter((b: any) => b.activeDeals == 0);
+          }
+          console.log('📊 After activeDeals filter:', allBrands.length);
         }
-        if (selectedStatus && selectedStatus !== 'all') {
-          filtered = filtered.filter((b: any) => b.status === selectedStatus);
-        }
+
         if (countryCode && countryCode !== 'all') {
-          filtered = filtered.filter((b: any) => 
+          allBrands = allBrands.filter((b: any) => 
             !b.rawData?.primaryRegion?.countryCode || 
             b.rawData?.primaryRegion?.countryCode === countryCode
           );
+          console.log('📊 After country filter:', allBrands.length);
         }
-        filtered = filtered.sort((a: any, b: any) => b.activeDeals - a.activeDeals);
 
+        // Sort by active deals descending
+        allBrands = allBrands.sort((a: any, b: any) => (b.activeDeals || 0) - (a.activeDeals || 0));
 
+        // Apply pagination
+        const startIdx = (page - 1) * pageSize;
+        const endIdx = startIdx + pageSize;
+        const paginatedBrands = allBrands.slice(startIdx, endIdx);
 
+        console.log('📊 Final results:', {
+          total: allBrands.length,
+          page,
+          pageSize,
+          startIdx,
+          endIdx,
+          returned: paginatedBrands.length
+        });
 
-
-
-
-
-
-
-  
-        const countSnap = await getCountFromServer(query(collection(db, 'brands'), ...filters));
-        const total = countSnap.data().count;
-  
-        setAdminBrands(filtered as any);
-        setTotalBrandsCount(total);
+        setAdminBrands(paginatedBrands as any);
+        setTotalBrandsCount(allBrands.length);
       } catch (err) {
+        console.error('❌ Error in fetchAdminBrands:', err);
         setError(err as Error);
       } finally {
         setLoading(false);

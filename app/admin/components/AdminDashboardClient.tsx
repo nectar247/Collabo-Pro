@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, Suspense, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Shield, BarChart3, Users, ShoppingBag, Tag, Settings, FileText, File, Grid2X2, ChevronRight } from "lucide-react";
 import Navigation from "@/components/navigation";
@@ -50,6 +50,10 @@ export default function AdminDashboardClient() {
     { id: "settings", label: "Settings", icon: Settings }
   ];
 
+  const handleTabChange = (tabId: string) => {
+    setActiveTab(tabId);
+  };
+
   if (userLoading) return <Preloader text="Loading profile..." />;
 
   if (!user || !isAdmin) {
@@ -92,7 +96,7 @@ export default function AdminDashboardClient() {
             {tabs.map((tab) => (
               <button
                 key={tab.id}
-                onClick={() => setActiveTab(tab.id)}
+                onClick={() => handleTabChange(tab.id)}
                 className={`flex items-center px-4 py-2 rounded-lg transition-colors ${
                   activeTab === tab.id
                     ? "bg-primary/100 dark:bg-primary/20 border border-primary/30"

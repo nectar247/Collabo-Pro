@@ -1,7 +1,7 @@
 /* eslint-disable @next/next/no-img-element */
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit2, Trash2, Search, Filter, Eye, ChevronDown, Power, Ban, CheckCircle } from 'lucide-react';
 import { useBrands } from '@/lib/firebase/hooks';
@@ -17,6 +17,7 @@ export default function BrandManagement() {
   const { adminBrands, totalBrandsCount, fetchAdminBrands, loading, error, addBrand, updateBrand, deleteBrand, toggleBrandStatus } = useBrands();
   const [isAddingBrand, setIsAddingBrand] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
   const [showFilters, setShowFilters] = useState(false);
   const [activeDealsOnly, setActiveDealsOnly] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
@@ -28,6 +29,7 @@ export default function BrandManagement() {
 
   const [editBrand, setEditBrand] = useState<any>(null);
   const [expandedBrand, setExpandedBrand] = useState<string | null>(null);
+  const searchInputRef = useRef<HTMLInputElement>(null);
   const [newBrand, setNewBrand] = useState({
     name: '',
     logo: '',
@@ -36,6 +38,48 @@ export default function BrandManagement() {
     activeDeals: 0,
     status: 'active'
   });
+
+  // Debounce search query
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      setDebouncedSearchQuery(searchQuery);
+    }, 300); // Reduced to 300ms for better responsiveness
+
+    return () => clearTimeout(timer);
+  }, [searchQuery]);
+
+  // Maintain focus on search input during typing and when clearing (only for this component)
+  useEffect(() => {
+    // Only manage focus if this component is actually visible and being used
+    if (searchInputRef.current && 
+        document.activeElement !== searchInputRef.current &&
+        searchInputRef.current.closest('[data-component="brand-management"]')) {
+      
+      const cursorPosition = searchInputRef.current.selectionStart;
+      searchInputRef.current.focus();
+      
+      if (cursorPosition !== null) {
+        searchInputRef.current.setSelectionRange(cursorPosition, cursorPosition);
+      }
+    }
+  }, [adminBrands, searchQuery]);
+
+  // Reset to first page when debounced search query changes (but not on every render)
+  useEffect(() => {
+    if (debouncedSearchQuery) {
+      setCurrentPage(1);
+    }
+  }, [debouncedSearchQuery]);
+
+  // Reset to first page when filters change
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [selectedStatus, activeDealsOnly, countryCode]);
+
+  // Reset page when filters change
+  const resetPageAndFetch = useCallback(() => {
+    setCurrentPage(1);
+  }, []);
 
   const handleAddBrand = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -65,6 +109,7 @@ export default function BrandManagement() {
       console.error('Error adding brand:', error);
     }
   };
+  
   const handleUpdateBrand = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!editBrand) return;
@@ -85,6 +130,7 @@ export default function BrandManagement() {
       console.error('Error updating brand:', error);
     }
   };
+  
   const handleToggleStatus = async (brandId: string, currentStatus: 'active' | 'inactive') => {
     try {
       const brand = adminBrands.find(b => b.id === brandId)
@@ -103,6 +149,7 @@ export default function BrandManagement() {
       console.error('Error toggling brand status:', error);
     }
   };
+  
   const handleDeleteBrand = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this brand?')) {
       try {
@@ -113,18 +160,46 @@ export default function BrandManagement() {
     }
   };
 
+  // Handle filter changes with page reset
+  const handleFilterChange = (filterType: string, value: any) => {
+    setCurrentPage(1); // Reset to first page
+    
+    switch (filterType) {
+      case 'activeDeals':
+        setActiveDealsOnly(value);
+        break;
+      case 'status':
+        setSelectedStatus(value);
+        break;
+      case 'country':
+        setCountryCode(value);
+        break;
+      case 'itemsPerPage':
+        setItemsPerPage(value);
+        break;
+    }
+  };
+
   useEffect(() => {
-    fetchAdminBrands({
-      searchTerm: searchQuery,
+    console.log('Fetching brands with params:', {
+      searchTerm: debouncedSearchQuery,
       status: selectedStatus,
       countryCode,
       activeDealsOnly,
-      selectedStatus,
+      page: currentPage,
+      pageSize: itemsPerPage,
+    });
+    
+    fetchAdminBrands({
+      searchTerm: debouncedSearchQuery,
+      status: selectedStatus,
+      countryCode,
+      activeDealsOnly,
       page: currentPage,
       pageSize: itemsPerPage,
     });
   }, [
-    searchQuery, 
+    debouncedSearchQuery,
     selectedStatus, 
     currentPage, 
     fetchAdminBrands, 
@@ -249,6 +324,7 @@ export default function BrandManagement() {
       </div>
     </form>
   );
+  
   const renderBrandCard = (brand: any) => (
     <motion.div
       key={brand.id}
@@ -338,6 +414,7 @@ export default function BrandManagement() {
       </AnimatePresence>
     </motion.div>
   );
+  
   // Update the desktop view status toggle
   const renderDesktopStatusToggle = (brand: any) => (
     <button
@@ -351,6 +428,7 @@ export default function BrandManagement() {
     )}
   </button>
   );
+  
   const renderPagination = (currentPage: number, setCurrentPage: (x: number)=>void) => {
     return (
       <div className='text-center p-2'>
@@ -386,26 +464,39 @@ export default function BrandManagement() {
   }
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-component="brand-management">
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         {/* Search Input */}
         <div className="flex-1 relative">
           <input
-            type="search"
+            ref={searchInputRef}
+            type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             placeholder="Search brands..."
-            className="w-full pl-10 pr-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
+            className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
+          {searchQuery && (
+            <button
+              onClick={() => {
+                setSearchQuery('');
+                searchInputRef.current?.focus();
+              }}
+              className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 w-5 h-5 flex items-center justify-center text-lg leading-none"
+              type="button"
+            >
+              ×
+            </button>
+          )}
         </div>
 
         {/* Controls */}
         <div className="flex gap-2">
           <select
             className="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
-            onChange={(e) => setItemsPerPage(e.target.value as any)}
+            onChange={(e) => handleFilterChange('itemsPerPage', e.target.value)}
             defaultValue={itemsPerPage}
           >
             {[5, 10, 50, 100, 200, 500, 1000].map(n => (
@@ -433,6 +524,18 @@ export default function BrandManagement() {
         </div>
       </div>
 
+      {/* Search Results Info */}
+      {debouncedSearchQuery && (
+        <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+          <p className="text-blue-800 text-sm">
+            Searching for "<strong>{debouncedSearchQuery}</strong>"
+            {totalBrandsCount !== undefined && (
+              <span> - {totalBrandsCount} brands found</span>
+            )}
+          </p>
+        </div>
+      )}
+
       {/* Filters */}
       <AnimatePresence>
         {showFilters && (
@@ -450,9 +553,7 @@ export default function BrandManagement() {
                 </label>
                 <select
                   value={activeDealsOnly}
-                  onChange={(e) =>
-                    setActiveDealsOnly(e.target.value as BrandFilters['activeDeals'])
-                  }
+                  onChange={(e) => handleFilterChange('activeDeals', e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
                 >
                   <option value="all">All</option>
@@ -468,9 +569,7 @@ export default function BrandManagement() {
                 </label>
                 <select
                   value={countryCode}
-                  onChange={(e) =>
-                    setCountryCode(e.target.value as string)
-                  }
+                  onChange={(e) => handleFilterChange('country', e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
                 >
                   <option value="all">All</option>
@@ -486,9 +585,7 @@ export default function BrandManagement() {
                 </label>
                 <select
                   value={selectedStatus}
-                  onChange={(e) =>
-                    setSelectedStatus(e.target.value as BrandFilters['status'])
-                  }
+                  onChange={(e) => handleFilterChange('status', e.target.value)}
                   className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
                 >
                   <option value="all">All</option>
@@ -524,7 +621,7 @@ export default function BrandManagement() {
                   className="border-b border-gray-200"
                 >
                   <td className='py-4 text-gray-800'>
-                    {(index+1)}
+                    {((currentPage - 1) * itemsPerPage) + index + 1}
                   </td>
                   <td className="py-4 text-gray-800">
                     {brand.name}
@@ -572,7 +669,6 @@ export default function BrandManagement() {
           </table>
           {renderPagination(currentPage, setCurrentPage)}
         </div>
-
 
         {/* Mobile View */}
         <div className="md:hidden space-y-4">
