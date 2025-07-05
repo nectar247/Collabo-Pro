@@ -21,9 +21,10 @@ import {
 import { useAuth, useSiteSettings } from "@/lib/firebase/hooks";
 import { signOut } from "@/lib/auth";
 import { ThemeToggle } from "./theme/theme-toggle";
+import SearchDialog from "./search/SearchDialog";
 
 interface NavigationProps {
-  onOpenSearch?: () => void; // Add this prop
+  onOpenSearch?: () => void; // Optional prop for external control
 }
 
 export default function Navigation({ onOpenSearch }: NavigationProps) {
@@ -31,6 +32,7 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
   const { settings } = useSiteSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
+  const [isSearchOpen, setIsSearchOpen] = useState(false); // Internal search state
   const [mounted, setMounted] = useState(false);
   const router = useRouter();
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -52,10 +54,11 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
 
   const handleSearchClick = () => {
     if (onOpenSearch) {
+      // If external control is provided, use it (for home page)
       onOpenSearch();
     } else {
-      // Fallback: navigate to search page
-      router.push('/search');
+      // Otherwise, use internal state (for all other pages)
+      setIsSearchOpen(true);
     }
   };
 
@@ -348,6 +351,12 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
           </AnimatePresence>
         </div>
       </header>
+
+      {/* Search Modal - Always present in Navigation */}
+      <SearchDialog 
+        isOpen={isSearchOpen} 
+        onClose={() => setIsSearchOpen(false)} 
+      />
     </>
   );
 }

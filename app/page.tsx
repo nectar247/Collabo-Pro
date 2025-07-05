@@ -64,7 +64,7 @@ export default function Home() {
           popularSearches={popularSearches}
           setPopularSearches={setPopularSearches}
           loadingSearches={loadingSearches}
-          onOpenSearch={() => setIsSearchOpen(true)} // Add this prop
+          onOpenSearch={() => setIsSearchOpen(true)} // This will open the home page modal
         />
 
         {/* Brands Section */}
