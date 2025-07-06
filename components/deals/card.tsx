@@ -8,7 +8,7 @@ import ShadowScale from '../shadow';
 import { DealsLabel, reformatDate, truncateText } from '@/helper';
 import DiscountModal from '../modal/DiscountModal';
 import { useAuth, useProfile } from '@/lib/firebase/hooks';
-import { toast } from 'sonner'; // Using your existing Sonner installation
+import { toast } from 'sonner';
 
 function DealButton({ deal }: { deal: Deal }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -139,11 +139,9 @@ function DealCard1({ deal }: { deal: any }) {
           className="object-contain border aspect-square transition-transform duration-500 group-hover:scale-110 max-w-[80px] max-h-[80px] rounded-md bg-white/50"
         />
         <div className="flex flex-col mt-3">
-          <Link href={`/deals/${deal.id}`} className="font-semibold">
             <h3 className="md:text-md text-xs font-semibold text-primary dark:text-white group-hover:text-gray-500 transition-colors">
               {truncateText(deal.description, 200)}
             </h3>
-          </Link>
           <span className="text-tertiary dark:text-white text-xs md:text-sm mt-1 text-left">{deal.brand}</span>
           <Link
             href={`/brands/${encodeURIComponent(deal.brand)}`}
@@ -153,46 +151,7 @@ function DealCard1({ deal }: { deal: any }) {
           </Link>
         </div>
         <div className="absolute top-2 right-7 flex items-center space-x-2">
-          {/* Enhanced Heart Icon with Save Functionality */}
-          {user ? (
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
-              onClick={handleSaveDeal}
-              className="p-1 rounded-full hover:bg-white/10 transition-all duration-200 relative"
-              title={isSaved ? "Remove from saved deals" : "Save deal"}
-            >
-              <Heart 
-                className={`h-5 w-5 transition-all duration-200 ${
-                  isSaved 
-                    ? 'text-red-500 fill-red-500 drop-shadow-sm' 
-                    : 'text-gray-400 hover:text-red-400 hover:scale-105'
-                }`} 
-              />
-              {/* Small indicator when saved */}
-              {isSaved && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"
-                />
-              )}
-            </motion.button>
-          ) : (
-            <button
-              onClick={(e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                toast.info('Login required', {
-                  description: 'Please log in to save deals to your account',
-                });
-              }}
-              className="p-1 rounded-full hover:bg-white/10 transition-all duration-200"
-              title="Login to save deals"
-            >
-              <Heart className="h-5 w-5 text-gray-400 hover:text-red-400" />
-            </button>
-          )}
+
           
           {deal.discount && (
             <div className="bg-primary/80 text-white px-[5px] py-[3px] rounded-sm text-xs backdrop-blur-xl">
@@ -223,7 +182,7 @@ function DealCard1({ deal }: { deal: any }) {
               </div> : <></>}
           </div>
         </div>
-        <div>
+        <div className="flex justify-between items-start">
           {deal.terms ?
             <>
               {/* Toggle Terms & Conditions */}
@@ -242,6 +201,46 @@ function DealCard1({ deal }: { deal: any }) {
                 </div>
               )}
             </> : ''}
+                      {/* Enhanced Heart Icon with Save Functionality */}
+          {user ? (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleSaveDeal}
+              className="p-1 rounded-full hover:bg-white/10 transition-all duration-200 relative"
+              title={isSaved ? "Remove from saved deals" : "Save deal"}
+            >
+              <Heart 
+                className={`h-5 w-5 transition-all duration-200 ${
+                  isSaved 
+                    ? 'text-tertiary fill-tertiary drop-shadow-sm' 
+                    : 'text-gray-400 hover:text-red-400 hover:scale-105'
+                }`} 
+              />
+              {/* Small indicator when saved */}
+              {isSaved && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"
+                />
+              )}
+            </motion.button>
+          ) : (
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toast.info('Login required', {
+                  description: 'Please log in to save deals to your account',
+                });
+              }}
+              className="p-1 rounded-full hover:bg-white/10 transition-all duration-200"
+              title="Login to save deals"
+            >
+              <Heart className="h-5 w-5 text-gray-400 hover:text-red-400" />
+            </button>
+          )}
         </div>
       </div>
     </div>
