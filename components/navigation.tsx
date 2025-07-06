@@ -89,7 +89,7 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/search" className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+              <Link href="/deals" className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
                 Deals
               </Link>
               <Link href="/categories" className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">

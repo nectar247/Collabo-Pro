@@ -4,7 +4,7 @@ export const revalidate = 600; // ← Enables ISR: rebuilds page every 60 second
 import dynamic from "next/dynamic";
 import { generateMetadata as createMetadata } from '@/lib/metadata';
 
-const DealsPageClient = dynamic(() => import('./DealsPageClient'), { ssr: false });
+const DealsPageClient = dynamic(() => import('../search/SearchPage'), { ssr: false });
 
 // Add metadata export for this page
 export const metadata = createMetadata({
