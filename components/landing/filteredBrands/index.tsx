@@ -48,14 +48,7 @@ const FilteredBrands = ({
                                 </div>
                                 <h2 className="text-xl md:text-2xl font-bold text-primary dark:text-white">Brands For You</h2>
                             </div>
-                            <Link
-                                href="/brands"
-                                className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-2 group"
-                                onClick={handleViewAllClick}
-                            >
-                                View All
-                                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
-                            </Link>
+
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -113,6 +106,15 @@ const FilteredBrands = ({
                                 </Link>
                             ))}
                         </div>
+                        <div className="mt-5 flex justify-end">
+                            <Link
+                                href="/brands" 
+                                className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-2 group"
+                                >
+                                View all brands
+                                <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                            </Link>
+                        </div>                        
                     </div>
                 </section>
             )}
