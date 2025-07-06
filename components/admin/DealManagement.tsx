@@ -28,9 +28,15 @@ export default function DealManagement() {
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
+  const searchTimeoutRef = useRef<NodeJS.Timeout>();
+
   const [showFilters, setShowFilters] = useState(false);
   const [countryCode, setCountryCode] = useState('all');
   const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // CURSOR POSITION FIX: Store cursor position
+  const cursorPositionRef = useRef<number>(0);
+  const shouldPreserveFocusRef = useRef<boolean>(false);
 
   const [expandedDeal, setExpandedDeal] = useState<string | null>(null);
   const [filters, setFilters] = useState<DealFilters>({
@@ -44,14 +50,50 @@ export default function DealManagement() {
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
 
-  // Debounce search query
-  useEffect(() => {
-    const timer = setTimeout(() => {
-      setDebouncedSearchQuery(searchQuery);
-    }, 300); // 300ms delay for better responsiveness
+  // FIXED: Improved search handling with cursor preservation
+  const handleSearchChange = useCallback((query: string) => {
+    // Store cursor position before state update
+    if (searchInputRef.current) {
+      cursorPositionRef.current = searchInputRef.current.selectionStart || 0;
+      shouldPreserveFocusRef.current = true;
+    }
 
-    return () => clearTimeout(timer);
-  }, [searchQuery]);
+    // Update search query immediately for UI responsiveness
+    setSearchQuery(query);
+    
+    // Clear previous timeout
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Set new timeout for debounced search
+    searchTimeoutRef.current = setTimeout(() => {
+      setDebouncedSearchQuery(query);
+    }, 500);
+  }, []);
+
+  // FIXED: Preserve cursor position after re-render
+  useEffect(() => {
+    if (shouldPreserveFocusRef.current && searchInputRef.current) {
+      const input = searchInputRef.current;
+      
+      // Use requestAnimationFrame to ensure DOM has updated
+      requestAnimationFrame(() => {
+        input.focus();
+        input.setSelectionRange(cursorPositionRef.current, cursorPositionRef.current);
+        shouldPreserveFocusRef.current = false;
+      });
+    }
+  });
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (searchTimeoutRef.current) {
+        clearTimeout(searchTimeoutRef.current);
+      }
+    };
+  }, []);
 
   // Reset to first page when debounced search query changes
   useEffect(() => {
@@ -195,6 +237,24 @@ export default function DealManagement() {
   };
 
   const totalPages = Math.ceil(totalDealsCount / itemsPerPage);
+
+  // FIXED: Improved clear search handler
+  const handleClearSearch = useCallback(() => {
+    setSearchQuery('');
+    setDebouncedSearchQuery('');
+    
+    // Clear any pending timeouts
+    if (searchTimeoutRef.current) {
+      clearTimeout(searchTimeoutRef.current);
+    }
+    
+    // Focus input after clearing
+    requestAnimationFrame(() => {
+      if (searchInputRef.current) {
+        searchInputRef.current.focus();
+      }
+    });
+  }, []);
 
   const renderDealForm = () => (
     <form onSubmit={isAddingDeal ? handleAddDeal : handleUpdateDeal} className="space-y-4">
@@ -565,23 +625,21 @@ export default function DealManagement() {
     <div className="space-y-6" data-component="deal-management">
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
-        {/* Search Input */}
+        {/* FIXED: Search Input with cursor preservation */}
         <div className="flex-1 relative">
           <input
             ref={searchInputRef}
+            autoFocus
             type="text"
             value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
+            onChange={(e) => handleSearchChange(e.target.value)}
             placeholder="Search deals..."
             className="w-full pl-10 pr-10 py-2 bg-white border border-gray-300 rounded-lg text-gray-800 placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
           <Search className="absolute left-3 top-2.5 h-5 w-5 text-gray-500" />
           {searchQuery && (
             <button
-              onClick={() => {
-                setSearchQuery('');
-                searchInputRef.current?.focus();
-              }}
+              onClick={handleClearSearch}
               className="absolute right-3 top-2.5 text-gray-400 hover:text-gray-600 w-5 h-5 flex items-center justify-center text-lg leading-none"
               type="button"
             >
