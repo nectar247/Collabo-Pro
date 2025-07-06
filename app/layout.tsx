@@ -3,6 +3,7 @@ import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme/theme-provider';
 import Script from 'next/script';
 import { Metadata, Viewport } from 'next';
+import { Toaster } from 'sonner';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
@@ -51,6 +52,12 @@ export default function RootLayout({
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <main className="flex-grow">
             {children}
+            <Toaster 
+              position="top-right" 
+              richColors 
+              expand={true}
+              closeButton
+            />
           </main>
         </ThemeProvider>
         <Script src="https://www.dwin2.com/pub.1822416.min.js" strategy="lazyOnload" />

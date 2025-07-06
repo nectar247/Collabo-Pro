@@ -121,7 +121,7 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                 <Heart className="h-5 w-5 text-gray-700 dark:text-gray-300" />
               </Link>
 
-              <Link
+              {/* <Link
                 href="/cart"
                 className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label="Shopping cart"
@@ -132,7 +132,7 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                     {cartItemCount}
                   </span>
                 )}
-              </Link>
+              </Link> */}
 
               <ThemeToggle />
 
@@ -284,7 +284,7 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                       <Heart className="h-5 w-5" />
                       Saved Deals
                     </Link>
-                    <Link
+                    {/* <Link
                       href="/cart"
                       className="flex items-center gap-2 w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
                       onClick={() => setIsMenuOpen(false)}
@@ -296,7 +296,7 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                           {cartItemCount}
                         </span>
                       )}
-                    </Link>
+                    </Link> */}
                     {user ? (
                       <>
                         <Link

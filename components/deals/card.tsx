@@ -8,6 +8,7 @@ import ShadowScale from '../shadow';
 import { DealsLabel, reformatDate, truncateText } from '@/helper';
 import DiscountModal from '../modal/DiscountModal';
 import { useAuth, useProfile } from '@/lib/firebase/hooks';
+import { toast } from 'sonner'; // Using your existing Sonner installation
 
 function DealButton({ deal }: { deal: Deal }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -63,25 +64,67 @@ function DealCard1({ deal }: { deal: any }) {
     }
   }, [deal, savedDeals, user]);
 
-  // Handle save/unsave deal
+  // Handle save/unsave deal with Sonner toast notifications
   const handleSaveDeal = async (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent any parent link navigation
     e.stopPropagation(); // Stop event bubbling
     
     try {
       if (!user) {
-        // You might want to show a login modal or redirect to login
-        console.log('User must be logged in to save deals');
+        toast.error('Please log in to save deals', {
+          description: 'You need to be logged in to save deals to your account',
+          action: {
+            label: 'Login',
+            onClick: () => {
+              // You can add navigation to login page here
+              console.log('Navigate to login');
+            },
+          },
+        });
         return false;
       }
+      
+      // Show loading toast
+      const loadingToastId = toast.loading(
+        isSaved ? 'Removing from saved deals...' : 'Saving deal...'
+      );
       
       const response = await savedUnsaveDeals({
         dealId: deal.id
       }, !isSaved);
       
       setIsSaved(response);
+      
+      // Dismiss loading toast
+      toast.dismiss(loadingToastId);
+      
+      // Show success toast with appropriate message
+      if (response) {
+        toast.success('Deal saved successfully!', {
+          description: `${deal.brand} deal has been added to your saved deals`,
+          action: {
+            label: 'View',
+            onClick: () => {
+              // Navigate to saved deals page
+              window.location.href = '/profile/saved';
+            },
+          },
+        });
+      } else {
+        toast.success('Deal removed from saved list', {
+          description: 'The deal has been removed from your saved deals',
+        });
+      }
+      
     } catch (err) {
       console.error('Failed to save/unsave deal:', err);
+      toast.error('Something went wrong!', {
+        description: 'Failed to save deal. Please try again.',
+        action: {
+          label: 'Retry',
+          onClick: () => handleSaveDeal(e),
+        },
+      });
     }
   };
 
@@ -110,24 +153,45 @@ function DealCard1({ deal }: { deal: any }) {
           </Link>
         </div>
         <div className="absolute top-2 right-7 flex items-center space-x-2">
-          {/* Updated Heart Icon with Save Functionality */}
+          {/* Enhanced Heart Icon with Save Functionality */}
           {user ? (
             <motion.button
               whileHover={{ scale: 1.1 }}
               whileTap={{ scale: 0.9 }}
               onClick={handleSaveDeal}
-              className="p-1 rounded-full hover:bg-white/10 transition-all duration-200"
+              className="p-1 rounded-full hover:bg-white/10 transition-all duration-200 relative"
+              title={isSaved ? "Remove from saved deals" : "Save deal"}
             >
               <Heart 
-                className={`h-5 w-5 transition-colors duration-200 ${
+                className={`h-5 w-5 transition-all duration-200 ${
                   isSaved 
-                    ? 'text-red-500 fill-red-500' 
-                    : 'text-gray-400 hover:text-red-400'
+                    ? 'text-red-500 fill-red-500 drop-shadow-sm' 
+                    : 'text-gray-400 hover:text-red-400 hover:scale-105'
                 }`} 
               />
+              {/* Small indicator when saved */}
+              {isSaved && (
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"
+                />
+              )}
             </motion.button>
           ) : (
-            <Heart className="h-5 w-5 text-gray-400" />
+            <button
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                toast.info('Login required', {
+                  description: 'Please log in to save deals to your account',
+                });
+              }}
+              className="p-1 rounded-full hover:bg-white/10 transition-all duration-200"
+              title="Login to save deals"
+            >
+              <Heart className="h-5 w-5 text-gray-400 hover:text-red-400" />
+            </button>
           )}
           
           {deal.discount && (
