@@ -54,9 +54,9 @@ function DealCard1({ deal }: { deal: any }) {
         <Image
           src={deal.image || deal.brandDetails?.logo}
           alt={deal.brand}
-          width={100}
+          width={80}
           height={80}
-          className="object-contain border transition-transform duration-500 group-hover:scale-110 w-[25%] max-w-[100px] mt-3 h-[80%] rounded-md bg-white/50"
+          className="object-contain border aspect-square transition-transform duration-500 group-hover:scale-110 max-w-[80px] max-h-[80px] rounded-md bg-white/50"
         />
         <div className="flex flex-col mt-3">
           <Link href={`/deals/${deal.id}`} className="font-semibold">
