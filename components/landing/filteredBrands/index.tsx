@@ -6,6 +6,7 @@ import { ArrowRight, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import React from 'react';
+import { toast } from 'sonner'; // Add toast notifications
 
 const FilteredBrands = ({
     brands,
@@ -17,6 +18,21 @@ const FilteredBrands = ({
     const filteredBrands = brands
         .sort(() => Math.random() - 0.5)
         .slice(0, 8);
+
+    // Handle brand click with toast feedback
+    const handleBrandClick = (brandName: string, activeDeals?: number) => {
+        const dealText = activeDeals ? `${activeDeals} active deals` : 'deals and offers';
+        toast.info(`Loading ${brandName}`, {
+            description: `Checking out ${dealText} available now`,
+        });
+    };
+
+    // Handle "View All" click
+    const handleViewAllClick = () => {
+        toast.info('Loading all brands', {
+            description: 'Browse our complete collection of partner brands',
+        });
+    };
 
     return (
         <div>
@@ -35,6 +51,7 @@ const FilteredBrands = ({
                             <Link
                                 href="/brands"
                                 className="text-sm text-primary hover:text-primary-dark font-medium flex items-center gap-2 group"
+                                onClick={handleViewAllClick}
                             >
                                 View All
                                 <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
@@ -47,6 +64,7 @@ const FilteredBrands = ({
                                     key={brand.id}
                                     href={`/brands/${brand.slug}`}
                                     className="group block bg-white dark:bg-white/5 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                                    onClick={() => handleBrandClick(brand.name, brand.activeDeals)}
                                 >
                                     <motion.div
                                         initial={{ opacity: 0, y: 20 }}

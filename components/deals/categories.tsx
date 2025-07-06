@@ -5,6 +5,7 @@ import { ArrowRight } from 'lucide-react';
 import { truncateText } from '@/helper';
 import { useDeals } from '@/lib/firebase/hooks';
 import { Deal } from '@/lib/firebase/collections';
+import { toast } from 'sonner'; // Add toast notifications
 
 function CategoryCard1({category}: {category: any}) {
     const { deals, loading } = useDeals();
@@ -19,6 +20,14 @@ function CategoryCard1({category}: {category: any}) {
         }
     }, [deals, loading, category.name]);
 
+    // Handle category click with toast feedback
+    const handleCategoryClick = () => {
+        const dealCount = category.count || categoryDeals.length;
+        toast.info(`Loading ${category.name} deals`, {
+            description: `Browsing ${dealCount}+ available deals in this category`,
+        });
+    };
+
     return (
         <motion.div
             key={category.name}
@@ -26,9 +35,10 @@ function CategoryCard1({category}: {category: any}) {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
         >
-                <Link
+            <Link
                 href={`/categories/${encodeURIComponent(category.name.toLowerCase())}`}
                 className="group block"
+                onClick={handleCategoryClick}
             >
                 <div className="relative overflow-hidden rounded-2xl bg-secondary/100 dark:bg-secondary/50 backdrop-blur-xl p-3 px-4 transition-all duration-500 hover:shadow-2xl hover:shadow-primary/5">
                     <div className={`absolute inset-0 bg-gradient-to-br ${category.color} opacity-10 group-hover:opacity-20 transition-opacity duration-500`} />

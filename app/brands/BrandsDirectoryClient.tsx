@@ -9,6 +9,7 @@ import ErrorLoader from "@/components/loaders/ErrorLoader";
 import Navigation from "@/components/navigation";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
+import { toast } from "sonner"; // Add simple toast
 
 export default function BrandsDirectoryClient() {
   
@@ -71,6 +72,13 @@ export default function BrandsDirectoryClient() {
 
   const availableLetters = useMemo(() => Object.keys(alphabeticalGroups).sort(), [alphabeticalGroups]);
   const alphabet = "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("");
+
+  // Simple toast function for brand clicks
+  const handleBrandClick = (brandName: string) => {
+    toast.info(`Loading ${brandName} deals`, {
+      description: "Finding the best offers and vouchers for you"
+    });
+  };
 
   if (loadingBrands) return <Preloader text="Loading brands..." />;
   if (errorBrands) return <ErrorLoader text="Error Loading Brands" message={errorBrands.message} />;
@@ -157,6 +165,7 @@ export default function BrandsDirectoryClient() {
                           <Link 
                             href={`/brands/${brand.slug}`} 
                             className="block hover:underline"
+                            onClick={() => handleBrandClick(brand.name)}
                           >
                             {brand.name}
                           </Link>

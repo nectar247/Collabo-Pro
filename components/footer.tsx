@@ -10,6 +10,7 @@ import { validateEmail } from "@/lib/utils/sanitize";
 import { useDynamicLinks } from "@/lib/firebase/hooks";
 import { Brand, Category, ContentSection, SystemSettings } from "@/lib/firebase/collections";
 import { FooterSingleLoading } from "./skeleton";
+import { toast } from "sonner"; // Add Sonner toast
 
 export default function Footer(
   {categories, brands, settings, dynamicLinks, loadingCategories, loadingBrands, loadingDynamicLinks, settLoading}: 
@@ -17,7 +18,6 @@ export default function Footer(
   loadingCategories: boolean, loadingBrands: boolean, loadingDynamicLinks: boolean, settLoading: boolean
   }
 ) {
-  // console.log("🛠️ Footer brands:", brands);
   const [email, setEmail] = useState("");
   const [subscribeStatus, setSubscribeStatus] = useState<"idle" | "loading" | "success" | "error">("idle");
 
@@ -25,12 +25,28 @@ export default function Footer(
     e.preventDefault();
     
     if (!validateEmail(email)) {
+      toast.error("Invalid email address", {
+        description: "Please enter a valid email address to subscribe to our newsletter",
+        action: {
+          label: "Try Again",
+          onClick: () => {
+            // Focus back on input
+            const input = document.querySelector('input[type="email"]') as HTMLInputElement;
+            input?.focus();
+          },
+        },
+      });
       setSubscribeStatus("error");
       setTimeout(() => setSubscribeStatus("idle"), 3000);
       return;
     }
 
     setSubscribeStatus("loading");
+    
+    // Show loading toast
+    const loadingToast = toast.loading("Subscribing to newsletter...", {
+      description: "Please wait while we add you to our mailing list",
+    });
 
     try {
       await subscribeToNewsletter(email, {
@@ -38,13 +54,69 @@ export default function Footer(
         weeklyNewsletter: true,
         specialOffers: true
       });
+      
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Show success toast
+      toast.success("Successfully subscribed!", {
+        description: `Welcome aboard! You'll receive the latest deals at ${email}`,
+        action: {
+          label: "Manage Preferences",
+          onClick: () => {
+            // You can add a link to subscription management page
+            window.open('/newsletter-preferences', '_blank');
+          },
+        },
+      });
+      
       setSubscribeStatus("success");
       setEmail("");
       setTimeout(() => setSubscribeStatus("idle"), 3000);
     } catch (error) {
+      // Dismiss loading toast
+      toast.dismiss(loadingToast);
+      
+      // Show error toast
+      toast.error("Subscription failed", {
+        description: "There was an error subscribing you to our newsletter. Please try again.",
+        action: {
+          label: "Retry",
+          onClick: () => handleSubscribe(e),
+        },
+      });
+      
       setSubscribeStatus("error");
       setTimeout(() => setSubscribeStatus("idle"), 3000);
     }
+  };
+
+  const handleSocialClick = (platform: string, url: string) => {
+    toast.info(`Opening ${platform}`, {
+      description: `Redirecting you to our ${platform} page`,
+      action: {
+        label: "Follow Us",
+        onClick: () => window.open(url, '_blank'),
+      },
+    });
+  };
+
+  const handleNavigationClick = (section: string, destination?: string) => {
+    toast.info(`Loading ${section}`, {
+      description: destination ? `Taking you to ${destination}` : `Browsing ${section.toLowerCase()} section`,
+    });
+  };
+
+  const handleCategoryClick = (categoryName: string) => {
+    toast.info("Loading category", {
+      description: `Browsing ${categoryName} deals and offers`,
+    });
+  };
+
+  const handleBrandClick = (brandName: string) => {
+    toast.info("Loading brand", {
+      description: `Checking out ${brandName} deals and vouchers`,
+    });
   };
 
   return (
@@ -61,8 +133,9 @@ export default function Footer(
                 <li key={i}>
                   <Link
                     key={category.id}
-                    href={`/categories/${category.slug}`} // Use the slug field directly
+                    href={`/categories/${category.slug}`}
                     className="text-gray-400 hover:text-secondary transition-colors"
+                    onClick={() => handleCategoryClick(category.name)}
                   >
                     {category.name}
                   </Link>
@@ -83,6 +156,7 @@ export default function Footer(
                     key={i}
                     href={`/brands/${brand.slug}`}
                     className="text-gray-400 hover:text-secondary transition-colors"
+                    onClick={() => handleBrandClick(brand.name)}
                   >
                     {brand.name}
                   </Link>
@@ -90,6 +164,7 @@ export default function Footer(
               ))}
             </ul>
           </div>
+          
           <div>
             <h3 className="text-lg font-semibold mb-4">Help</h3>
             <ul className="space-y-2">
@@ -97,6 +172,7 @@ export default function Footer(
                 <Link 
                   href="/about" 
                   className="text-gray-400 hover:text-secondary transition-colors"
+                  onClick={() => handleNavigationClick("Help", "About Us page")}
                 >
                   About Us
                 </Link>
@@ -105,6 +181,7 @@ export default function Footer(
                 <Link 
                   href="/faq" 
                   className="text-gray-400 hover:text-secondary transition-colors"
+                  onClick={() => handleNavigationClick("Help", "FAQ page")}
                 >
                   FAQs
                 </Link>
@@ -118,6 +195,7 @@ export default function Footer(
                   <Link
                     href={`/${link.slug}`}
                     className="text-gray-400 hover:text-secondary transition-colors"
+                    onClick={() => handleNavigationClick("Help", link.title)}
                   >
                     {link.title}
                   </Link>
@@ -127,6 +205,7 @@ export default function Footer(
                 <Link 
                   href="/contact" 
                   className="text-gray-400 hover:text-secondary transition-colors"
+                  onClick={() => handleNavigationClick("Help", "Contact Us page")}
                 >
                   Contact Us
                 </Link>
@@ -146,6 +225,7 @@ export default function Footer(
                   <Link
                     href={`/${link.slug}`}
                     className="text-gray-400 hover:text-secondary transition-colors"
+                    onClick={() => handleNavigationClick("Legal", link.title)}
                   >
                     {link.title}
                   </Link>
@@ -167,11 +247,17 @@ export default function Footer(
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="Enter your email"
                   className="w-full px-4 py-2 bg-white/10 border border-white/20 rounded-lg text-white placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 focus:border-secondary"
+                  onFocus={() => {
+                    toast.info("Newsletter signup", {
+                      description: "Get daily deals and exclusive offers delivered to your inbox",
+                    });
+                  }}
                 />
                 <button
                   type="submit"
                   disabled={subscribeStatus === "loading"}
                   className="absolute right-2 top-2 p-1 rounded-lg bg-secondary hover:bg-secondary-dark disabled:opacity-50 transition-colors"
+                  title="Subscribe to newsletter"
                 >
                   <Mail className="h-4 w-4 text-white" />
                 </button>
@@ -202,6 +288,13 @@ export default function Footer(
                 className="text-gray-400 hover:text-secondary transition-colors"
                 aria-label="Follow us on Linkedin"
                 target="_blank"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSocialClick("LinkedIn", "https://www.linkedin.com/company/shop4vouchers/?viewAsMember=true");
+                  setTimeout(() => {
+                    window.open("https://www.linkedin.com/company/shop4vouchers/?viewAsMember=true", "_blank");
+                  }, 1000);
+                }}
               >
                 <Linkedin className="h-7 w-7" />
               </Link>
@@ -210,6 +303,13 @@ export default function Footer(
                 className="text-gray-400 hover:text-secondary transition-colors"
                 aria-label="Follow us on Instagram"
                 target="_blank"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSocialClick("Instagram", "https://www.instagram.com/shop4vouchers.co.uk/");
+                  setTimeout(() => {
+                    window.open("https://www.instagram.com/shop4vouchers.co.uk/", "_blank");
+                  }, 1000);
+                }}
               >
                 <Instagram className="h-7 w-7" />
               </Link>
@@ -218,16 +318,28 @@ export default function Footer(
                 className="text-gray-400 hover:text-secondary transition-colors"
                 aria-label="Follow us on Twitter"
                 target="_blank"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSocialClick("X (Twitter)", "https://x.com/Shop4Vouchersuk");
+                  setTimeout(() => {
+                    window.open("https://x.com/Shop4Vouchersuk", "_blank");
+                  }, 1000);
+                }}
               >
-                {/* <Twitter className="h-7 w-7" /> */}
                 <FaXTwitter className="h-7 w-7"/>
               </Link>
               <Link 
-                // href="https://www.facebook.com/share/1BxW7ibeVE/?mibextid=wwXIfr" 
                 href="https://www.facebook.com/61573543566850/" 
                 className="text-gray-400 hover:text-secondary transition-colors"
-                aria-label="Follow us on Twitter"
+                aria-label="Follow us on Facebook"
                 target="_blank"
+                onClick={(e) => {
+                  e.preventDefault();
+                  handleSocialClick("Facebook", "https://www.facebook.com/61573543566850/");
+                  setTimeout(() => {
+                    window.open("https://www.facebook.com/61573543566850/", "_blank");
+                  }, 1000);
+                }}
               >
                 <Facebook className="h-7 w-7" />
               </Link>
@@ -235,22 +347,20 @@ export default function Footer(
           </div>
         </div>
         
-
         <div className="mt-12 pt-8 border-t border-gray-800 text-xs text-center">
-  <div className="w-[50%] mx-auto text-gray-400">
-    <p className="mb-2">
-      {settings?.general.siteName} is a voucher, coupon, and discount deals website in the UK.
-    </p>
-    <p>
-      Shop4Vouchers.co.uk is operated by Transecure Consulting Limited, a company registered in England and Wales
-      (Company registration number 15101385). Registered office: 28 Hornbeam Gardens, CM1 4GH.
-    </p>
-  </div>
-  <p className="text-gray-400 mt-4">
-    © {new Date().getFullYear()} {settings?.general.siteName}. All rights reserved.
-  </p>
-</div>
-
+          <div className="w-[50%] mx-auto text-gray-400">
+            <p className="mb-2">
+              {settings?.general.siteName} is a voucher, coupon, and discount deals website in the UK.
+            </p>
+            <p>
+              Shop4Vouchers.co.uk is operated by Transecure Consulting Limited, a company registered in England and Wales
+              (Company registration number 15101385). Registered office: 28 Hornbeam Gardens, CM1 4GH.
+            </p>
+          </div>
+          <p className="text-gray-400 mt-4">
+            © {new Date().getFullYear()} {settings?.general.siteName}. All rights reserved.
+          </p>
+        </div>
       </div>
     </footer>
   );

@@ -22,6 +22,7 @@ import { useAuth, useSiteSettings } from "@/lib/firebase/hooks";
 import { signOut } from "@/lib/auth";
 import { ThemeToggle } from "./theme/theme-toggle";
 import SearchDialog from "./search/SearchDialog";
+import { toast } from "sonner"; // Add Sonner toast
 
 interface NavigationProps {
   onOpenSearch?: () => void; // Optional prop for external control
@@ -34,6 +35,7 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const [isSearchOpen, setIsSearchOpen] = useState(false); // Internal search state
   const [mounted, setMounted] = useState(false);
+  const [isSigningOut, setIsSigningOut] = useState(false);
   const router = useRouter();
   const { user, isAdmin, loading: authLoading } = useAuth();
   const [cartItemCount] = useState(0);
@@ -42,13 +44,58 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
     setMounted(true);
   }, []);
 
+  // Show welcome toast when user signs in
+  useEffect(() => {
+    if (user && mounted && !authLoading) {
+      // Only show welcome toast if user just signed in (not on every page load)
+      const hasShownWelcome = sessionStorage.getItem('welcomeToastShown');
+      if (!hasShownWelcome) {
+        toast.success(`Welcome back!`, {
+          description: `Good to see you again, ${user.displayName || user.email}`,
+          action: {
+            label: 'View Profile',
+            onClick: () => router.push('/dashboard'),
+          },
+        });
+        sessionStorage.setItem('welcomeToastShown', 'true');
+      }
+    }
+  }, [user, mounted, authLoading, router]);
+
   const handleSignOut = async () => {
+    if (isSigningOut) return; // Prevent multiple clicks
+    
     try {
+      setIsSigningOut(true);
+      const loadingToast = toast.loading('Signing out...');
+      
       await signOut();
+      
+      // Clear welcome toast flag
+      sessionStorage.removeItem('welcomeToastShown');
+      
+      toast.dismiss(loadingToast);
+      toast.success('Signed out successfully', {
+        description: 'You have been logged out of your account',
+        action: {
+          label: 'Sign In Again',
+          onClick: () => router.push('/sign-in'),
+        },
+      });
+      
       router.refresh();
       setIsUserMenuOpen(false);
     } catch (error) {
       console.error('Error signing out:', error);
+      toast.error('Sign out failed', {
+        description: 'There was an error signing you out. Please try again.',
+        action: {
+          label: 'Retry',
+          onClick: () => handleSignOut(),
+        },
+      });
+    } finally {
+      setIsSigningOut(false);
     }
   };
 
@@ -60,6 +107,31 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
       // Otherwise, use internal state (for all other pages)
       setIsSearchOpen(true);
     }
+  };
+
+  const handleSavedDealsClick = (e: React.MouseEvent) => {
+    if (!user) {
+      e.preventDefault();
+      toast.info('Login required', {
+        description: 'Please sign in to view your saved deals',
+        action: {
+          label: 'Sign In',
+          onClick: () => router.push('/sign-in'),
+        },
+      });
+    }
+  };
+
+  const handleDashboardClick = () => {
+    toast.info('Loading dashboard...', {
+      description: 'Taking you to your personal dashboard',
+    });
+  };
+
+  const handleNavigationClick = (page: string) => {
+    toast.info(`Loading ${page}...`, {
+      description: `Browsing ${page.toLowerCase()} for you`,
+    });
   };
 
   if (!mounted) {
@@ -89,16 +161,32 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
 
             {/* Desktop Navigation */}
             <nav className="hidden md:flex items-center space-x-8">
-              <Link href="/deals" className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+              <Link 
+                href="/deals" 
+                className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+                onClick={() => handleNavigationClick('Deals')}
+              >
                 Deals
               </Link>
-              <Link href="/categories" className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+              <Link 
+                href="/categories" 
+                className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+                onClick={() => handleNavigationClick('Categories')}
+              >
                 Categories
               </Link>
-              <Link href="/brands" className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+              <Link 
+                href="/brands" 
+                className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+                onClick={() => handleNavigationClick('Brands')}
+              >
                 Brands
               </Link>
-              <Link href="/blog" className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors">
+              <Link 
+                href="/blog" 
+                className="text-gray-700 dark:text-gray-300 hover:text-primary dark:hover:text-primary transition-colors"
+                onClick={() => handleNavigationClick('Blog')}
+              >
                 Blog
               </Link>
             </nav>
@@ -106,7 +194,12 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
             {/* Desktop Actions */}
             <div className="hidden md:flex items-center space-x-4">
               <button
-                onClick={handleSearchClick}
+                onClick={() => {
+                  handleSearchClick();
+                  toast.info('Search opened', {
+                    description: 'Start typing to find amazing deals',
+                  });
+                }}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label="Search"
               >
@@ -117,22 +210,10 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                 href={user ? "/saved" : "/sign-in"}
                 className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
                 aria-label="Saved items"
+                onClick={handleSavedDealsClick}
               >
                 <Heart className="h-5 w-5 text-gray-700 dark:text-gray-300" />
               </Link>
-
-              {/* <Link
-                href="/cart"
-                className="relative p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
-                aria-label="Shopping cart"
-              >
-                <ShoppingCart className="h-5 w-5 text-gray-700 dark:text-gray-300" />
-                {cartItemCount > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-primary text-white text-xs w-5 h-5 flex items-center justify-center rounded-full">
-                    {cartItemCount}
-                  </span>
-                )}
-              </Link> */}
 
               <ThemeToggle />
 
@@ -159,7 +240,12 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                           <Link
                             href="/sign-in"
                             className="flex items-center px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            onClick={() => setIsUserMenuOpen(false)}
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              toast.info('Redirecting to sign in', {
+                                description: 'Please enter your credentials to continue',
+                              });
+                            }}
                           >
                             <LogIn className="h-4 w-4 mr-2" />
                             Sign In
@@ -167,7 +253,12 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                           <Link
                             href="/sign-up"
                             className="flex items-center px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            onClick={() => setIsUserMenuOpen(false)}
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              toast.info('Create new account', {
+                                description: 'Join us to save deals and get personalized recommendations',
+                              });
+                            }}
                           >
                             <UserPlus className="h-4 w-4 mr-2" />
                             Sign Up
@@ -178,7 +269,10 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                           <Link
                             href="/dashboard"
                             className="flex items-center px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
-                            onClick={() => setIsUserMenuOpen(false)}
+                            onClick={() => {
+                              setIsUserMenuOpen(false);
+                              handleDashboardClick();
+                            }}
                           >
                             <User className="h-4 w-4 mr-2" />
                             Dashboard
@@ -191,10 +285,11 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                           </Link>
                           <button
                             onClick={handleSignOut}
-                            className="w-full flex items-center px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700"
+                            disabled={isSigningOut}
+                            className="w-full flex items-center px-4 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 disabled:opacity-50 disabled:cursor-not-allowed"
                           >
                             <LogOut className="h-4 w-4 mr-2" />
-                            Sign Out
+                            {isSigningOut ? 'Signing Out...' : 'Sign Out'}
                           </button>
                         </div>
                       )}
@@ -234,6 +329,9 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                       onClick={() => {
                         handleSearchClick();
                         setIsMenuOpen(false);
+                        toast.info('Search opened', {
+                          description: 'Start typing to find amazing deals',
+                        });
                       }}
                       className="w-full flex items-center gap-2 px-4 py-2 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300"
                     >
@@ -247,28 +345,40 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                     <Link
                       href="/deals"
                       className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      onClick={() => setIsMenuOpen(false)}
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleNavigationClick('Deals');
+                      }}
                     >
                       Deals
                     </Link>
                     <Link
                       href="/categories"
                       className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      onClick={() => setIsMenuOpen(false)}
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleNavigationClick('Categories');
+                      }}
                     >
                       Categories
                     </Link>
                     <Link
                       href="/brands"
                       className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      onClick={() => setIsMenuOpen(false)}
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleNavigationClick('Brands');
+                      }}
                     >
                       Brands
                     </Link>
                     <Link
                       href="/blog"
                       className="block px-4 py-2 rounded-lg text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800"
-                      onClick={() => setIsMenuOpen(false)}
+                      onClick={() => {
+                        setIsMenuOpen(false);
+                        handleNavigationClick('Blog');
+                      }}
                     >
                       Blog
                     </Link>
@@ -279,30 +389,24 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                     <Link
                       href={user ? "/saved" : "/sign-in"}
                       className="flex items-center gap-2 w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                      onClick={() => setIsMenuOpen(false)}
+                      onClick={(e) => {
+                        setIsMenuOpen(false);
+                        handleSavedDealsClick(e);
+                      }}
                     >
                       <Heart className="h-5 w-5" />
                       Saved Deals
                     </Link>
-                    {/* <Link
-                      href="/cart"
-                      className="flex items-center gap-2 w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                      onClick={() => setIsMenuOpen(false)}
-                    >
-                      <ShoppingCart className="h-5 w-5" />
-                      Cart
-                      {cartItemCount > 0 && (
-                        <span className="ml-auto bg-primary text-white text-xs px-2 py-1 rounded-full">
-                          {cartItemCount}
-                        </span>
-                      )}
-                    </Link> */}
+                    
                     {user ? (
                       <>
                         <Link
                           href="/dashboard"
                           className="flex items-center gap-2 w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                          onClick={() => setIsMenuOpen(false)}
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            handleDashboardClick();
+                          }}
                         >
                           <User className="h-5 w-5" />
                           Dashboard
@@ -318,10 +422,11 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                             handleSignOut();
                             setIsMenuOpen(false);
                           }}
-                          className="flex items-center gap-2 w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
+                          disabled={isSigningOut}
+                          className="flex items-center gap-2 w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                           <LogOut className="h-5 w-5" />
-                          Sign Out
+                          {isSigningOut ? 'Signing Out...' : 'Sign Out'}
                         </button>
                       </>
                     ) : (
@@ -329,7 +434,12 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                         <Link
                           href="/sign-in"
                           className="flex items-center gap-2 w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                          onClick={() => setIsMenuOpen(false)}
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            toast.info('Redirecting to sign in', {
+                              description: 'Please enter your credentials to continue',
+                            });
+                          }}
                         >
                           <LogIn className="h-5 w-5" />
                           Sign In
@@ -337,7 +447,12 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
                         <Link
                           href="/sign-up"
                           className="flex items-center gap-2 w-full px-4 py-2 rounded-lg bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300"
-                          onClick={() => setIsMenuOpen(false)}
+                          onClick={() => {
+                            setIsMenuOpen(false);
+                            toast.info('Create new account', {
+                              description: 'Join us to save deals and get personalized recommendations',
+                            });
+                          }}
                         >
                           <UserPlus className="h-5 w-5" />
                           Sign Up
