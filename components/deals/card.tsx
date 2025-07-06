@@ -1,13 +1,13 @@
 import { Deal } from '@/lib/firebase/collections';
 import Image from 'next/image';
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { ArrowRight } from 'lucide-react';
-import { Check, ChevronDownCircle, ChevronRightCircle, Copy, LucideChevronsDown, LucideChevronsRight } from "lucide-react";
+import { Heart, ArrowRight, Check, ChevronDownCircle, ChevronRightCircle, Copy, LucideChevronsDown, LucideChevronsRight } from "lucide-react";
 import ShadowScale from '../shadow';
 import { DealsLabel, reformatDate, truncateText } from '@/helper';
 import DiscountModal from '../modal/DiscountModal';
+import { useAuth, useProfile } from '@/lib/firebase/hooks';
 
 function DealButton({ deal }: { deal: Deal }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -47,6 +47,43 @@ function DealButton({ deal }: { deal: Deal }) {
 
 function DealCard1({ deal }: { deal: any }) {
   const [showTerms, setShowTerms] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  
+  // Get auth and profile hooks
+  const { user } = useAuth();
+  const { savedDeals, savedUnsaveDeals } = useProfile();
+
+  // Check if deal is saved when component mounts or savedDeals changes
+  useEffect(() => {
+    if (user && savedDeals && savedDeals.length && deal) {
+      const isCurrentDealSaved = savedDeals.some((element: any) => element.dealId === deal.id);
+      setIsSaved(isCurrentDealSaved);
+    } else {
+      setIsSaved(false);
+    }
+  }, [deal, savedDeals, user]);
+
+  // Handle save/unsave deal
+  const handleSaveDeal = async (e: React.MouseEvent) => {
+    e.preventDefault(); // Prevent any parent link navigation
+    e.stopPropagation(); // Stop event bubbling
+    
+    try {
+      if (!user) {
+        // You might want to show a login modal or redirect to login
+        console.log('User must be logged in to save deals');
+        return false;
+      }
+      
+      const response = await savedUnsaveDeals({
+        dealId: deal.id
+      }, !isSaved);
+      
+      setIsSaved(response);
+    } catch (err) {
+      console.error('Failed to save/unsave deal:', err);
+    }
+  };
 
   return (
     <div className="bg-white shadow-g dark:bg-white/10 backdrop-blur-xl p-1 rounded-xl overflow-hidden border border-white/20 group hover:border-primary/20 transition-colors w-[100%] md:w-[100%]">
@@ -72,12 +109,33 @@ function DealCard1({ deal }: { deal: any }) {
             <span>See all <span className='font-semibold underline'>{deal.brand} deals </span></span>
           </Link>
         </div>
-        
-        {deal.discount ? (
-          <div className="absolute top-2 md:top-2 right-7 bg-primary/80 text-white px-[5px] py-[3px] rounded-sm text-xs backdrop-blur-xl">
-            {deal.discount}
-          </div>
-        ) : ''}
+        <div className="absolute top-2 right-7 flex items-center space-x-2">
+          {/* Updated Heart Icon with Save Functionality */}
+          {user ? (
+            <motion.button
+              whileHover={{ scale: 1.1 }}
+              whileTap={{ scale: 0.9 }}
+              onClick={handleSaveDeal}
+              className="p-1 rounded-full hover:bg-white/10 transition-all duration-200"
+            >
+              <Heart 
+                className={`h-5 w-5 transition-colors duration-200 ${
+                  isSaved 
+                    ? 'text-red-500 fill-red-500' 
+                    : 'text-gray-400 hover:text-red-400'
+                }`} 
+              />
+            </motion.button>
+          ) : (
+            <Heart className="h-5 w-5 text-gray-400" />
+          )}
+          
+          {deal.discount && (
+            <div className="bg-primary/80 text-white px-[5px] py-[3px] rounded-sm text-xs backdrop-blur-xl">
+              {deal.discount}
+            </div>
+          )}
+        </div>
       </div>
 
       <div className="px-5">
@@ -109,18 +167,12 @@ function DealCard1({ deal }: { deal: any }) {
                 onClick={() => setShowTerms(!showTerms)}
                 className="text-gray-600 dark:text-gray-300 text-xs mt-1 py-2 underline hover:text-gray-800 flex items-center"
               >
-                {/* {!showTerms ?
-                <ChevronRightCircle className="float-left mr-1 w-4" />
-                :<ChevronDownCircle className="float-left mr-1 w-4"/>} */}
                 View Terms
               </button>
               {/* Terms & Conditions Section */}
               {showTerms && (
                 <div className="mt-1 text-sm text-gray-600 dark:text-gray-300 bg-gray-100/20 dark:bg-gray-700 p-1 rounded">
                   <div className="overflow-y-auto max-h-[400px]">
-                    {/* <div 
-                        className="prose prose-invert max-w-none"
-                    /> */}
                     <p>{deal.terms}</p>
                   </div>
                 </div>
