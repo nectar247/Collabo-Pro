@@ -9,7 +9,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Preloader from '@/components/loaders/preloader';
 import ErrorLoader from '@/components/loaders/ErrorLoader';
 import { DealCard1 } from '@/components/deals/card';
-import { useEffect, useState, useMemo } from 'react';
+import { useEffect, useState, useMemo, useRef } from 'react';
 import { recordSearch } from '@/lib/firebase/search';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
@@ -23,6 +23,10 @@ export default function SearchPage() {
   const searchParams = useSearchParams();
   const router = useRouter();
   const queryString = searchParams.get('q') || '';
+  
+  // Ref for scroll position preservation
+  const loadMoreButtonRef = useRef<HTMLButtonElement>(null);
+  const dealsGridRef = useRef<HTMLDivElement>(null);
   
   // States
   const [deals, setDeals] = useState<Deal[]>([]);
@@ -200,16 +204,73 @@ export default function SearchPage() {
     fetchDeals();
   }, [queryString]);
 
-  // Function to load more deals (pagination)
+  // Function to load more deals (pagination) with scroll position preservation
   const loadMoreDeals = async () => {
     if (isLoadingMore || queryString.trim()) return; // Don't paginate during search
     
     try {
       setIsLoadingMore(true);
+      
+      // Store current scroll position relative to the load more button
+      const buttonRect = loadMoreButtonRef.current?.getBoundingClientRect();
+      const scrollPosition = window.pageYOffset;
+      const buttonOffsetFromTop = buttonRect ? buttonRect.top + scrollPosition : 0;
+      
       const nextPage = currentPage + 1;
       const newDeals = await loadDealsWithPagination(nextPage);
       setDeals(newDeals);
       setCurrentPage(nextPage);
+      
+      // Use requestAnimationFrame to ensure DOM has updated before scrolling
+      requestAnimationFrame(() => {
+        // Calculate the new position to maintain visual continuity
+        // We want to scroll to roughly where the load more button was
+        const newScrollPosition = buttonOffsetFromTop - window.innerHeight * 0.8;
+        window.scrollTo({
+          top: Math.max(0, newScrollPosition),
+          behavior: 'smooth'
+        });
+      });
+      
+    } catch (error: any) {
+      console.error('❌ Error loading more deals:', error);
+      setError(error);
+    } finally {
+      setIsLoadingMore(false);
+    }
+  };
+
+  // Alternative approach: Smooth scroll to the first new deal
+  const loadMoreDealsWithNewDealsScroll = async () => {
+    if (isLoadingMore || queryString.trim()) return;
+    
+    try {
+      setIsLoadingMore(true);
+      
+      // Remember the current number of deals
+      const currentDealsCount = deals.length;
+      
+      const nextPage = currentPage + 1;
+      const newDeals = await loadDealsWithPagination(nextPage);
+      setDeals(newDeals);
+      setCurrentPage(nextPage);
+      
+      // Scroll to the first new deal after a short delay
+      setTimeout(() => {
+        const dealsGrid = dealsGridRef.current;
+        if (dealsGrid) {
+          const allDealCards = dealsGrid.querySelectorAll('[data-deal-card]');
+          const firstNewDeal = allDealCards[currentDealsCount];
+          
+          if (firstNewDeal) {
+            firstNewDeal.scrollIntoView({
+              behavior: 'smooth',
+              block: 'start'
+            });
+          }
+        }
+      }, 100);
+      
     } catch (error: any) {
       console.error('❌ Error loading more deals:', error);
       setError(error);
@@ -499,6 +560,7 @@ export default function SearchPage() {
           {filteredDeals.length > 0 ? (
             <>
               <motion.div 
+                ref={dealsGridRef}
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 transition={{ delay: 0.4 }}
@@ -511,6 +573,7 @@ export default function SearchPage() {
                 {filteredDeals.map((deal: any, index) => (
                   <motion.div
                     key={deal.id}
+                    data-deal-card
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: index * 0.05 }}
@@ -533,6 +596,7 @@ export default function SearchPage() {
                       Showing {deals.length} of {totalDeals}+ deals
                     </p>
                     <button
+                      ref={loadMoreButtonRef}
                       onClick={loadMoreDeals}
                       disabled={isLoadingMore}
                       className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-8 py-3 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed"

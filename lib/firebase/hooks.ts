@@ -446,6 +446,7 @@ type FetchAdminDealsOptions = {
   pageSize?: number;
   dealFilters?: any,
 };
+
 export function useDeals(options: UseDealsOptions = {}) {
   const [deals, setDeals] = useState<Deal[]>([]);
   const [allAdminDeals, setAdminDeals] = useState<Deal[]>([]);
@@ -454,7 +455,6 @@ export function useDeals(options: UseDealsOptions = {}) {
   const [hasMore, setHasMore] = useState(true);
   const limit__ = 10; // Number of deals to load per request
   
-
   const [totalDealsCount, setTotalDealsCount] = useState(0);
   
   const [trendingDeals, setTrendingDeals] = useState<Deal[]>([]);
@@ -462,7 +462,42 @@ export function useDeals(options: UseDealsOptions = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
+  // Cache for active brands - much more efficient!
+  const [activeBrands, setActiveBrands] = useState<string[]>([]);
+  const [activeBrandsLoaded, setActiveBrandsLoaded] = useState(false);
+
+  // Fetch active brands once and cache them
+  const fetchActiveBrands = useCallback(async () => {
+    try {
+      const brandsSnapshot = await getDocs(query(
+        collection(db, 'brands'),
+        where('status', '==', 'active')
+      ));
+      const brandNames = brandsSnapshot.docs.map(doc => doc.data().name);
+      setActiveBrands(brandNames);
+      setActiveBrandsLoaded(true);
+      console.log('🏷️ Active brands loaded:', brandNames.length);
+    } catch (err) {
+      console.error("Error fetching active brands:", err);
+      setError(err as Error);
+    }
+  }, []);
+
+  // Helper function to filter deals by active brands using cached data
+  const filterDealsByActiveBrands = useCallback((deals: any[]): any[] => {
+    if (!activeBrandsLoaded) return deals; // Return all if brands not loaded yet
+    return deals.filter(deal => activeBrands.includes(deal.brand));
+  }, [activeBrands, activeBrandsLoaded]);
+
+  // Load active brands on component mount
   useEffect(() => {
+    fetchActiveBrands();
+  }, [fetchActiveBrands]);
+
+  useEffect(() => {
+    // Only proceed if active brands are loaded
+    if (!activeBrandsLoaded) return;
+
     const {
       category,
       brand,
@@ -505,8 +540,8 @@ export function useDeals(options: UseDealsOptions = {}) {
     
           await fetchDeals();
 
-          setTrendingDeals(
-            dealsData
+          // Filter deals by active brands before processing
+          const activeDeals = filterDealsByActiveBrands(dealsData)
             .filter((e: any) => 
               e.expiresAt?.seconds && new Date(e.expiresAt.seconds * 1000) > new Date() 
               && e.status === 'active'
@@ -514,29 +549,30 @@ export function useDeals(options: UseDealsOptions = {}) {
             .filter((item: any) => 
               item.rawData?.regions?.all === true ||
               item.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
-            )
+            );
+
+          setTrendingDeals(
+            activeDeals
             .sort(() => Math.random() - 0.5) // Shuffle array randomly
-            .slice(0, 12) // Select first 3 random deals
+            .slice(0, 12) // Select first 12 random deals
           );
-          // console.log(dealsData
-          //   .filter((e: any) => 
-          //     e.expiresAt?.seconds && new Date(e.expiresAt.seconds * 1000) > new Date() 
-          //     && e.status === 'active'
-          //   ));
+
           setAllDeals(dealsData);
 
           const countryFiltered = dealsData.filter((item: any) => 
-            // item.rawData?.regions?.all === true ||
             item.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
           );
 
-          setPublicDeals(
-            countryFiltered
+          const publicDeals = countryFiltered
             .filter((e: any) => 
               e.expiresAt?.seconds && new Date(e.expiresAt.seconds * 1000) > new Date() 
               && e.status === 'active'
-            )
-          );
+            );
+
+          // Filter public deals by active brands
+          const activePublicDeals = filterDealsByActiveBrands(publicDeals);
+
+          setPublicDeals(activePublicDeals);
           setLoading(false);
         } catch (err) {
           console.error("Error processing deals:", err);
@@ -553,116 +589,123 @@ export function useDeals(options: UseDealsOptions = {}) {
     
     return unsubscribe;
     
-  }, [options.category, options.brand, options.limit, options.orderByField, options.orderDirection]);
+  }, [options.category, options.brand, options.limit, options.orderByField, options.orderDirection, activeBrandsLoaded, filterDealsByActiveBrands]);
 
-const fetchAdminDeals = useCallback(
-  async (options: FetchAdminDealsOptions = {}) => {
-    const {
-      searchTerm = '',
-      countryCode,
-      page = 1,
-      pageSize = 10,
-      dealFilters = {},
-    } = options;
+  const fetchAdminDeals = useCallback(
+    async (options: FetchAdminDealsOptions = {}) => {
+      const {
+        searchTerm = '',
+        countryCode,
+        page = 1,
+        pageSize = 10,
+        dealFilters = {},
+      } = options;
 
-    console.log('🔍 fetchAdminDeals called with:', options);
+      console.log('🔍 fetchAdminDeals called with:', options);
 
-    try {
-      setLoading(true);
+      try {
+        setLoading(true);
 
-      let dealQuery: Query = collection(db, "deals_fresh");
-      const filters: any[] = [];
+        let dealQuery: Query = collection(db, "deals_fresh");
+        const filters: any[] = [];
 
-      // Apply status filter first (most selective)
-      if (dealFilters.status && dealFilters.status !== 'all') {
-        filters.push(where('status', '==', dealFilters.status));
-      }
+        // Apply status filter first (most selective)
+        if (dealFilters.status && dealFilters.status !== 'all') {
+          filters.push(where('status', '==', dealFilters.status));
+        }
 
-      // For search, we'll do client-side filtering since Firestore's text search is limited
-      if (searchTerm) {
-        console.log('🔍 Will search for:', searchTerm);
-      }
+        // For search, we'll do client-side filtering since Firestore's text search is limited
+        if (searchTerm) {
+          console.log('🔍 Will search for:', searchTerm);
+        }
 
-      // Build the query with filters
-      if (filters.length > 0) {
-        dealQuery = query(dealQuery, ...filters);
-      }
+        // Build the query with filters
+        if (filters.length > 0) {
+          dealQuery = query(dealQuery, ...filters);
+        }
 
-      // MODIFIED: Always order by updatedAt descending by default
-      dealQuery = query(dealQuery, orderBy('updatedAt', 'desc'));
+        // Always order by updatedAt descending by default
+        dealQuery = query(dealQuery, orderBy('updatedAt', 'desc'));
 
-      console.log('📊 Executing deals query...');
-      const snapshot = await getDocs(dealQuery);
-      
-      console.log('📊 Raw deals results:', snapshot.docs.length);
+        console.log('📊 Executing deals query...');
+        const snapshot = await getDocs(dealQuery);
+        
+        console.log('📊 Raw deals results:', snapshot.docs.length);
 
-      // Get all documents and apply client-side filtering
-      let allDeals = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return { id: doc.id, ...data };
-      });
-
-      console.log('📊 Before filtering deals:', allDeals.length);
-
-      // Apply client-side search filter
-      if (searchTerm) {
-        const searchLower = searchTerm.toLowerCase();
-        allDeals = allDeals.filter((deal: any) =>
-          deal.title?.toLowerCase().includes(searchLower) ||
-          deal.description?.toLowerCase().includes(searchLower) ||
-          deal.brand?.toLowerCase().includes(searchLower) ||
-          deal.category?.toLowerCase().includes(searchLower)
-        );
-        console.log('📊 After search filter deals:', allDeals.length, 'for term:', searchTerm);
-      }
-
-      // Apply country filter
-      if (countryCode && countryCode !== 'all') {
-        allDeals = allDeals.filter((deal: any) => 
-          deal.rawData?.regions?.all === true ||
-          deal.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
-        );
-        console.log('📊 After country filter deals:', allDeals.length);
-      }
-
-      // MODIFIED: Only sort by creation date if we're searching
-      if (searchTerm) {
-        allDeals = allDeals.sort((a: any, b: any) => {
-          const aTime = a.createdAt?.seconds || 0;
-          const bTime = b.createdAt?.seconds || 0;
-          return bTime - aTime;
+        // Get all documents and apply client-side filtering
+        let allDeals = snapshot.docs.map((doc) => {
+          const data = doc.data();
+          return { id: doc.id, ...data };
         });
+
+        console.log('📊 Before filtering deals:', allDeals.length);
+
+        // Apply client-side search filter
+        if (searchTerm) {
+          const searchLower = searchTerm.toLowerCase();
+          allDeals = allDeals.filter((deal: any) =>
+            deal.title?.toLowerCase().includes(searchLower) ||
+            deal.description?.toLowerCase().includes(searchLower) ||
+            deal.brand?.toLowerCase().includes(searchLower) ||
+            deal.category?.toLowerCase().includes(searchLower)
+          );
+          console.log('📊 After search filter deals:', allDeals.length, 'for term:', searchTerm);
+        }
+
+        // Apply country filter
+        if (countryCode && countryCode !== 'all') {
+          allDeals = allDeals.filter((deal: any) => 
+            deal.rawData?.regions?.all === true ||
+            deal.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
+          );
+          console.log('📊 After country filter deals:', allDeals.length);
+        }
+
+        // Filter by active brands for public-facing admin views
+        // Uncomment the next line if you want admin to also only see deals from active brands:
+        // allDeals = filterDealsByActiveBrands(allDeals);
+
+        // Only sort by creation date if we're searching
+        if (searchTerm) {
+          allDeals = allDeals.sort((a: any, b: any) => {
+            const aTime = a.createdAt?.seconds || 0;
+            const bTime = b.createdAt?.seconds || 0;
+            return bTime - aTime;
+          });
+        }
+
+        // Apply pagination
+        const startIdx = (page - 1) * pageSize;
+        const endIdx = startIdx + pageSize;
+        const paginatedDeals = allDeals.slice(startIdx, endIdx);
+
+        console.log('📊 Final deals results:', {
+          total: allDeals.length,
+          page,
+          pageSize,
+          startIdx,
+          endIdx,
+          returned: paginatedDeals.length
+        });
+
+        setAdminDeals(paginatedDeals as any);
+        setTotalDealsCount(allDeals.length);
+      } catch (err) {
+        console.error('❌ Error in fetchAdminDeals:', err);
+        setError(err as Error);
+      } finally {
+        setLoading(false);
       }
+    },
+    [filterDealsByActiveBrands]
+  );
 
-      // Apply pagination
-      const startIdx = (page - 1) * pageSize;
-      const endIdx = startIdx + pageSize;
-      const paginatedDeals = allDeals.slice(startIdx, endIdx);
-
-      console.log('📊 Final deals results:', {
-        total: allDeals.length,
-        page,
-        pageSize,
-        startIdx,
-        endIdx,
-        returned: paginatedDeals.length
-      });
-
-      setAdminDeals(paginatedDeals as any);
-      setTotalDealsCount(allDeals.length);
-    } catch (err) {
-      console.error('❌ Error in fetchAdminDeals:', err);
-      setError(err as Error);
-    } finally {
-      setLoading(false);
-    }
-  },
-  []
-);
   useEffect(() => {
-    fetchAdminDeals();
-  }, []);
-
+    // Only fetch admin deals after active brands are loaded
+    if (activeBrandsLoaded) {
+      fetchAdminDeals();
+    }
+  }, [activeBrandsLoaded, fetchAdminDeals]);
 
   // Function to fetch deals with pagination
   const fetchDeals = async () => {
@@ -701,19 +744,23 @@ const fetchAdminDeals = useCallback(
         })) as unknown as Deal[]
       );
 
+      const activeDeals = newDeals
+        .filter((e: any) => 
+          e.expiresAt?.seconds && new Date(e.expiresAt.seconds * 1000) > new Date() 
+          && e.status === 'active'
+        )
+        .filter((item: any) => 
+          item.rawData?.regions?.all === true ||
+          item.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
+        );
+
+      // Filter by active brands using cached data
+      const activeBrandDeals = filterDealsByActiveBrands(activeDeals);
+
       setDeals((prevDeals) => 
         ([
           ...prevDeals, 
-          ...(newDeals
-            .filter((e: any) => 
-              e.expiresAt?.seconds && new Date(e.expiresAt.seconds * 1000) > new Date() 
-              && e.status === 'active'
-            )
-            .filter((item: any) => 
-              item.rawData?.regions?.all === true ||
-              item.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
-            )
-            .sort(() => Math.random() - 0.5)) // Shuffle array randomly
+          ...activeBrandDeals.sort(() => Math.random() - 0.5) // Shuffle array randomly
         ])
       ); // Append new deals
       setLastVisibleDoc(snapshot.docs[snapshot.docs.length - 1]); // Track last doc
@@ -731,16 +778,26 @@ const fetchAdminDeals = useCallback(
 
   const getBrandDetails = async (name: string): Promise<Brand | null> => {
     try {
-      const brandsRef = collection(db, "brands"); // Reference to the collection
+      // First check if brand is in our active brands cache
+      if (activeBrandsLoaded && !activeBrands.includes(name)) {
+        return null; // Brand is not active
+      }
+
+      const brandsRef = collection(db, "brands");
       const q = query(brandsRef, where("name", "==", name));
       const querySnapshot = await getDocs(q);
 
-      if (querySnapshot.empty) return null; // No matching documents
+      if (querySnapshot.empty) return null;
 
-      const brandDoc = querySnapshot.docs[0]; // Assuming name is unique, take the first match
+      const brandDoc = querySnapshot.docs[0];
+      const brandData = brandDoc.data();
+      
+      // Double-check that brand is active
+      if (brandData.status !== 'active') return null;
+      
       return {
         id: brandDoc.id,
-        ...brandDoc.data(),
+        ...brandData,
       } as Brand;
     } catch (err) {
       console.error("Error fetching brand:", err);
@@ -751,10 +808,22 @@ const fetchAdminDeals = useCallback(
   
   const getDeal = async (id: string): Promise<Deal | null> => {
     try {
-      const dealDoc = await getDoc(doc(db, 'deals', id));
+      const dealDoc = await getDoc(doc(db, 'deals_fresh', id));
       if (!dealDoc.exists()) return null;
-      let brandDetails = await getBrandDetails(dealDoc.data().brand);
-      return { id: dealDoc.id, brandDetails, ...dealDoc.data() } as Deal;
+      
+      const dealData = dealDoc.data();
+      
+      // Check if brand is active using cached data
+      if (activeBrandsLoaded && !activeBrands.includes(dealData.brand)) {
+        return null; // Brand is not active
+      }
+      
+      let brandDetails = await getBrandDetails(dealData.brand);
+      
+      // If brand is not active, don't return the deal
+      if (!brandDetails) return null;
+      
+      return { id: dealDoc.id, brandDetails, ...dealData } as Deal;
     } catch (err) {
       console.error('Error fetching deal:', err);
       setError(err as Error);
@@ -764,9 +833,13 @@ const fetchAdminDeals = useCallback(
 
   const addDeal = async (dealData: Omit<Deal, 'id' | 'createdAt' | 'updatedAt' | 'status'>) => {
     try {
+      // Check if the brand is active using cached data
+      if (activeBrandsLoaded && !activeBrands.includes(dealData.brand)) {
+        throw new Error('Cannot add deal for inactive brand');
+      }
+
       const docRef = await addDoc(collection(db, "deals_fresh"), {
         ...dealData,
-        // status: 'active',
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
@@ -779,6 +852,11 @@ const fetchAdminDeals = useCallback(
 
   const updateDeal = async (dealId: string, data: Partial<Deal>) => {
     try {
+      // If brand is being updated, check if new brand is active using cached data
+      if (data.brand && activeBrandsLoaded && !activeBrands.includes(data.brand)) {
+        throw new Error('Cannot assign deal to inactive brand');
+      }
+
       await updateDoc(doc(db, 'deals_fresh', dealId), {
         ...data,
         updatedAt: serverTimestamp()
@@ -810,6 +888,11 @@ const fetchAdminDeals = useCallback(
     }
   };
 
+  // Function to refresh active brands cache when needed
+  const refreshActiveBrands = useCallback(() => {
+    fetchActiveBrands();
+  }, [fetchActiveBrands]);
+
   return {
     deals,
     allPublicDeals,
@@ -824,10 +907,15 @@ const fetchAdminDeals = useCallback(
     updateDeal,
     toggleDealStatus,
     deleteDeal,
+    refreshActiveBrands, // Expose this function to refresh cache when needed
 
     allAdminDeals,
     totalDealsCount,
-    fetchAdminDeals
+    fetchAdminDeals,
+    
+    // Expose active brands info for debugging/monitoring
+    activeBrands,
+    activeBrandsLoaded
   };
 }
 
@@ -836,6 +924,27 @@ export function useDeal(dealId: string) {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [activeBrands, setActiveBrands] = useState<string[]>([]);
+  const [activeBrandsLoaded, setActiveBrandsLoaded] = useState(false);
+
+  // Load active brands for this hook too
+  useEffect(() => {
+    const fetchActiveBrands = async () => {
+      try {
+        const brandsSnapshot = await getDocs(query(
+          collection(db, 'brands'),
+          where('status', '==', 'active')
+        ));
+        const brandNames = brandsSnapshot.docs.map(doc => doc.data().name);
+        setActiveBrands(brandNames);
+        setActiveBrandsLoaded(true);
+      } catch (err) {
+        console.error("Error fetching active brands:", err);
+      }
+    };
+
+    fetchActiveBrands();
+  }, []);
 
   useEffect(() => {
     if (!dealId) {
@@ -843,11 +952,21 @@ export function useDeal(dealId: string) {
       return;
     }
 
+    // Wait for active brands to load
+    if (!activeBrandsLoaded) return;
+
     const unsubscribe = onSnapshot(
       doc(db, 'deals_fresh', dealId),
-      (doc) => {
+      async (doc) => {
         if (doc.exists()) {
-          setDeal({ id: doc.id, ...doc.data() } as Deal);
+          const dealData = doc.data();
+          
+          // Check if brand is active using cached data
+          if (activeBrands.includes(dealData.brand)) {
+            setDeal({ id: doc.id, ...dealData } as Deal);
+          } else {
+            setDeal(null); // Brand is not active
+          }
         } else {
           setDeal(null);
         }
@@ -861,7 +980,7 @@ export function useDeal(dealId: string) {
     );
 
     return unsubscribe;
-  }, [dealId]);
+  }, [dealId, activeBrands, activeBrandsLoaded]);
 
   return { deal, loading, error };
 }
@@ -1192,16 +1311,17 @@ export function useBrands(options: UseBrandsOptions = {}) {
   
   const [adminBrands, setAdminBrands] = useState<Brand[]>([]);
   const [totalBrandsCount, setTotalBrandsCount] = useState<number>(0);
+
   const fetchFeaturedBrandss = useCallback(async () => {
     try {
       setLoading(true);
-      // const countryCode = getRegionFromHost(window.location.hostname);
 
-      // console.log("got here", true);
       const snapshot = await getDocs(query(
         collection(db, 'brands'),
+        where('status', '==', 'active'), // Filter active brands in Firestore
         where('brandimg', '!=', ''),
-        orderBy('brandimg', 'asc'),
+        orderBy('status', 'asc'), // Order by status first
+        orderBy('brandimg', 'asc'), // Then by brandimg
         limit(50)
       ));
 
@@ -1212,15 +1332,10 @@ export function useBrands(options: UseBrandsOptions = {}) {
         };
       });
 
+      // Only filter by activeDeals since status is already filtered in query
       const activeFiltered = all
-        .filter((b: any) => b.status === 'active' && b.activeDeals > 0)
+        .filter((b: any) => b.activeDeals > 0)
         .sort((a: any, b: any) => b.activeDeals - a.activeDeals) as any;
-
-      // const countryFiltered = activeFiltered
-      //       .filter((b: any) => 
-      //         ! b.rawData?.primaryRegion?.countryCode || 
-      //         b.rawData?.primaryRegion?.countryCode === countryCode
-      //       )
 
       setFeaturedBrandss(activeFiltered as any);
     } catch (err) {
@@ -1229,54 +1344,55 @@ export function useBrands(options: UseBrandsOptions = {}) {
       setLoading(false);
     }
   }, []);
-//This is the footer populater random brands
-const fetchFeaturedBrands = useCallback(async () => {
-  try {
-    setLoading(true);
 
-    const snapshot = await getDocs(query(
-      collection(db, 'brands'),
-      limit(50)
-    ));
+  // This is the footer populater random brands
+  const fetchFeaturedBrands = useCallback(async () => {
+    try {
+      setLoading(true);
 
-    // 1. Map to plain objects
-    const all = snapshot.docs.map(doc => {
-      // Treat doc.data() as Brand *without* id
-      const data = doc.data() as Omit<Brand, 'id'>;
-      return {
-        id: doc.id, 
-        ...data
-      };
-    });
+      const snapshot = await getDocs(query(
+        collection(db, 'brands'),
+        where('status', '==', 'active'), // Filter active brands in Firestore
+        limit(50)
+      ));
 
-    // 2. Filter to only “active” with deals
-    const activeFiltered = all.filter(b => b.status === 'active' && b.activeDeals > 0);
+      // 1. Map to plain objects
+      const all = snapshot.docs.map(doc => {
+        // Treat doc.data() as Brand *without* id
+        const data = doc.data() as Omit<Brand, 'id'>;
+        return {
+          id: doc.id, 
+          ...data
+        };
+      });
 
-    // 3. Shuffle (Fisher–Yates)
-    for (let i = activeFiltered.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [activeFiltered[i], activeFiltered[j]] = [activeFiltered[j], activeFiltered[i]];
+      // 2. Filter to only brands with deals (status already filtered in query)
+      const activeFiltered = all.filter(b => b.activeDeals > 0);
+
+      // 3. Shuffle (Fisher–Yates)
+      for (let i = activeFiltered.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [activeFiltered[i], activeFiltered[j]] = [activeFiltered[j], activeFiltered[i]];
+      }
+
+      // 4. (Optional) If you only want, say, 10 featured brands:
+      // const randomlyPicked = activeFiltered.slice(0, 10);
+
+      setFeaturedBrands(activeFiltered);
+    } catch (err) {
+      setError(err as Error);
+    } finally {
+      setLoading(false);
     }
-
-    // 4. (Optional) If you only want, say, 10 featured brands:
-    // const randomlyPicked = activeFiltered.slice(0, 10);
-
-    setFeaturedBrands(activeFiltered);
-  } catch (err) {
-    setError(err as Error);
-  } finally {
-    setLoading(false);
-  }
-}, []);
+  }, []);
 
   const fetchAllBrands = useCallback(async () => {
     try {
       setLoading(true);
-      // const countryCode = getRegionFromHost(window.location.hostname);
 
       const snapshot = await getDocs(query(
         collection(db, 'brands'),
-        where('status', '==', 'active')
+        where('status', '==', 'active') // Single filter for active brands
       ));
 
       const all = snapshot.docs.map(doc => {
@@ -1285,14 +1401,14 @@ const fetchFeaturedBrands = useCallback(async () => {
           id: doc.id, ...data, 
         };
       });
+
       // DEBUG:
       console.log("🛠️ fetchAllBrands — raw docs:", all);  
+      
+      // Only filter by activeDeals since status is already filtered in query
       const activeFiltered = all
-        .filter((b: any) => b.status === 'active' && b.activeDeals > 0)
+        .filter((b: any) => b.activeDeals > 0)
         .sort((a: any, b: any) => b.activeDeals - a.activeDeals) as any;
-
-      // const countryFiltered = activeFiltered
-      //       .filter((b: any) => !b.rawData?.primaryRegion?.countryCode || b.rawData?.primaryRegion?.countryCode === countryCode)
 
       setAllBrands(activeFiltered as any);
     } catch (err) {
@@ -1301,6 +1417,7 @@ const fetchFeaturedBrands = useCallback(async () => {
       setLoading(false);
     }
   }, []);
+
   const fetchAdminBrands = useCallback(
     async (options: FetchAdminBrandsOptions = {}) => {
       const {
@@ -1324,6 +1441,9 @@ const fetchFeaturedBrands = useCallback(async () => {
         // Apply status filter first (most selective)
         if (selectedStatus && selectedStatus !== 'all') {
           filters.push(where('status', '==', selectedStatus));
+        } else {
+          // Default to active brands only if no specific status is selected
+          filters.push(where('status', '==', 'active'));
         }
 
         // For search, we'll do client-side filtering since Firestore's text search is limited
@@ -1439,6 +1559,7 @@ const fetchFeaturedBrands = useCallback(async () => {
       return null;
     }
   };
+
   const addBrand = async (brandData: Omit<Brand, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
       // Check if brand with the same name exists
@@ -1463,6 +1584,7 @@ const fetchFeaturedBrands = useCallback(async () => {
       throw error;
     }
   };
+
   const updateBrand = async (brandId: string, data: Partial<Brand>) => {
     try {
       // Fetch the brand details
@@ -1509,6 +1631,7 @@ const fetchFeaturedBrands = useCallback(async () => {
       throw error;
     }
   };
+
   const deleteBrand = async (brandId: string) => {
     try {
       let brandDealsExist = await getBrand(brandId);
@@ -1523,6 +1646,7 @@ const fetchFeaturedBrands = useCallback(async () => {
       throw error;
     }
   };
+
   const toggleBrandStatus = async (brandId: string, currentStatus: 'active' | 'inactive') => {
     try {
       await updateDoc(doc(db, 'brands', brandId), {

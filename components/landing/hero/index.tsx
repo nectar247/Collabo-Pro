@@ -1,5 +1,5 @@
 import { motion } from 'framer-motion';
-import { ArrowRight, Sparkles } from 'lucide-react';
+import { ArrowRight, Sparkles, Search } from 'lucide-react';
 import Link from 'next/link';
 import React, { useEffect, useState } from 'react';
 import { getPopularSearches, recordSearch } from '@/lib/firebase/search';
@@ -44,15 +44,6 @@ const HeroSection = ({
             
             <div className="container mx-auto px-4 relative z-10">
                 <div className="max-w-3xl mx-auto text-center">
-                    <motion.div
-                    initial={{ scale: 0.8, opacity: 0 }}
-                    animate={{ scale: 1, opacity: 1 }}
-                    transition={{ delay: 0.2, duration: 0.8 }}
-                    className="mb-6 inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 backdrop-blur-md border border-white/20"
-                    >
-                    <Sparkles className="h-5 w-5 text-secondary" />
-                    <span className="text-white/90">Discover the future of savings</span>
-                    </motion.div>
 
                     <motion.h1 
                     className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-white via-gray-100 to-gray-300 mb-3"
@@ -70,7 +61,7 @@ const HeroSection = ({
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.6, duration: 0.8 }}
                     >
-                    AI-powered savings.
+                    Shop Smarter, Spend Less.
                     </motion.p>
 
                     <motion.div 
@@ -79,28 +70,27 @@ const HeroSection = ({
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.8 }}
                     >
-                    {/* Changed from Link to button with onClick handler */}
-                    <button
+                    <div className="relative">
+                        <input
+                        type="text"
+                        placeholder="Search deals..."
                         onClick={handleExploreDealsClick}
-                        className="inline-flex text-sm items-center justify-center px-12 py-2 rounded-full bg-gradient-to-r from-secondary to-secondary-dark text-white font-medium hover:shadow-lg hover:shadow-secondary/50 transition-all duration-300 relative group"
-                    >
-                        <span className="relative z-10">
-                        Explore Deals
-                        </span>
-                        <ArrowRight className="ml-2 h-5 w-5 transition-transform group-hover:translate-x-1" />
-                    </button>
+                        className="inline-flex text-sm items-center justify-center pl-12 pr-4 py-2 rounded-full bg-white text-gray-800 font-medium hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 w-64 focus:outline-none focus:ring-2 focus:ring-secondary"
+                        />
+                        <Search className="absolute left-4 top-2.5 h-5 w-5 text-gray-400" />
+                    </div>
                     </motion.div>
 
                     <div className="flex flex-wrap justify-center gap-3 items-center">
                     <span className="text-gray-400">Trending:</span>
                     {popularSearches.slice(0, 4).map((search) => (
-                        <Link
+                        <span
                         key={search}
-                        href={`/search?q=${encodeURIComponent(search)}`}
+                        // href={`/search?q=${encodeURIComponent(search)}`}
                         className="text-sm text-white/80 hover:text-white px-4 py-1.5 rounded-full bg-defaultPurple/25 hover:bg-defaultPurple/10 backdrop-blur-md border border-defaultPurple/10 hover:border-defaultPurple/20 transition-all duration-300"
                         >
                             {search}
-                        </Link>
+                        </span>
                     ))}
                     </div>
                 </div>

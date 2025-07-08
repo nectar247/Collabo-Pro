@@ -27,16 +27,31 @@ export default function DealContent({ deal }: DealContentProps) {
   const {savedDeals, savedUnsaveDeals} = useProfile();
   const [isSaved, setIsSaved] = useState(false);
 
-
   const { settings, loading: settLoading } = useSettings();
   const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
+  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands, activeBrands, activeBrandsLoaded } = useBrands({
     limit: null
   });
   const { trendingDeals, loading: loadingDeals } = useDeals();
   const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [isBrandActive, setIsBrandActive] = useState<boolean | null>(null);
+
+  // Check if the deal's brand is active
+  useEffect(() => {
+    if (deal && activeBrandsLoaded && activeBrands) {
+      const brandIsActive = activeBrands.includes(deal.brand);
+      setIsBrandActive(brandIsActive);
+      
+      // Log for debugging
+      console.log('🔍 Brand check:', {
+        dealBrand: deal.brand,
+        activeBrands: activeBrands.length,
+        isActive: brandIsActive
+      });
+    }
+  }, [deal, activeBrands, activeBrandsLoaded]);
 
   useEffect(()=>{
     if(user && savedDeals && savedDeals.length && deal){
@@ -48,12 +63,30 @@ export default function DealContent({ deal }: DealContentProps) {
     }
   },[deal, savedDeals, user])
 
-  if (!deal) {
+  // Show loading while checking brand status
+  if (!activeBrandsLoaded || isBrandActive === null) {
+    return (
+      <div className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-gray-800 dark:text-gray-400">Loading deal...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Show not found if deal doesn't exist or brand is inactive
+  if (!deal || isBrandActive === false) {
     return (
       <div className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black flex items-center justify-center">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-primary dark:text-white mb-4">Deal Not Found</h1>
-          <p className="text-gray-800 dark:text-gray-400 mb-8">The deal you&apos;re looking for doesn&apos;t exist or has expired.</p>
+          <p className="text-gray-800 dark:text-gray-400 mb-8">
+            {!deal 
+              ? "The deal you're looking for doesn't exist or has expired."
+              : "This deal is no longer available due to brand status changes."
+            }
+          </p>
           <Link
             href="/deals"
             className="inline-flex items-center gap-2 bg-primary hover:bg-primary-dark text-white px-6 py-3 rounded-lg transition-colors"
