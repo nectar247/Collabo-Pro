@@ -1306,8 +1306,10 @@ export function useBrands(options: UseBrandsOptions = {}) {
   const [featuredBrands, setFeaturedBrands] = useState<Brand[]>([]);
   const [featuredBrandss, setFeaturedBrandss] = useState<Brand[]>([]);
   const [allBrands, setAllBrands] = useState<Brand[]>([]);
+  const [activeBrands, setActiveBrands] = useState<Brand[]>([]); // Added back
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
+  const [activeBrandsLoaded, setActiveBrandsLoaded] = useState(false); // Added back
   
   const [adminBrands, setAdminBrands] = useState<Brand[]>([]);
   const [totalBrandsCount, setTotalBrandsCount] = useState<number>(0);
@@ -1418,8 +1420,39 @@ export function useBrands(options: UseBrandsOptions = {}) {
     }
   }, []);
 
-  // Replace your fetchAdminBrands function with this fixed version:
+  // Added back: Fetch active brands function
+  const fetchActiveBrands = useCallback(async () => {
+    try {
+      setLoading(true);
+      setActiveBrandsLoaded(false);
 
+      const snapshot = await getDocs(query(
+        collection(db, 'brands'),
+        where('status', '==', 'active') // Only active brands
+      ));
+
+      const brands = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return { 
+          id: doc.id, 
+          ...data, 
+        };
+      }) as Brand[];
+
+      // Filter brands that have active deals
+      const brandsWithDeals = brands.filter(b => b.activeDeals > 0);
+
+      setActiveBrands(brandsWithDeals);
+      setActiveBrandsLoaded(true);
+    } catch (err) {
+      setError(err as Error);
+      setActiveBrandsLoaded(false);
+    } finally {
+      setLoading(false);
+    }
+  }, []);
+
+  // Fixed fetchAdminBrands function
   const fetchAdminBrands = useCallback(
     async (options: FetchAdminBrandsOptions = {}) => {
       const {
@@ -1541,16 +1574,23 @@ export function useBrands(options: UseBrandsOptions = {}) {
 
   useEffect(() => {
     fetchFeaturedBrands();
-  }, []);
+  }, [fetchFeaturedBrands]);
+  
   useEffect(() => {
     fetchFeaturedBrandss();
-  }, []);
+  }, [fetchFeaturedBrandss]);
+  
   useEffect(() => {
     fetchAllBrands();
-  }, []);
+  }, [fetchAllBrands]);
+  
   useEffect(() => {
     fetchAdminBrands();
-  }, []);
+  }, [fetchAdminBrands]);
+
+  useEffect(() => {
+    fetchActiveBrands();
+  }, [fetchActiveBrands]);
 
   // Function to get a single brand
   const getBrand = async (id: string): Promise<Brand | null> => {
@@ -1586,6 +1626,10 @@ export function useBrands(options: UseBrandsOptions = {}) {
         updatedAt: serverTimestamp(),
         // status: 'active'
       });
+      
+      // Refresh the active brands list after adding
+      fetchActiveBrands();
+      
       return docRef.id;
     } catch (error) {
       console.error('Error adding brand:', error);
@@ -1632,6 +1676,9 @@ export function useBrands(options: UseBrandsOptions = {}) {
         ...data,
         updatedAt: serverTimestamp(),
       });
+
+      // Refresh the active brands list after updating
+      fetchActiveBrands();
   
       // console.log("Brand and associated deals updated successfully.");
     } catch (error) {
@@ -1644,10 +1691,13 @@ export function useBrands(options: UseBrandsOptions = {}) {
     try {
       let brandDealsExist = await getBrand(brandId);
       // console.log(brandDealsExist?.activeDeals);
-      if(!brandDealsExist?.activeDeals)
+      if(!brandDealsExist?.activeDeals) {
         await deleteDoc(doc(db, 'brands', brandId));
-      else {
-        throw ('Brand cannot be deleted as deals exist for brand!');
+        
+        // Refresh the active brands list after deleting
+        fetchActiveBrands();
+      } else {
+        throw new Error('Brand cannot be deleted as deals exist for brand!');
       }
     } catch (error) {
       console.error('Error deleting brand:', error);
@@ -1661,6 +1711,9 @@ export function useBrands(options: UseBrandsOptions = {}) {
         status: currentStatus === 'active' ? 'inactive' : 'active',
         updatedAt: serverTimestamp()
       });
+
+      // Refresh the active brands list after toggling status
+      fetchActiveBrands();
     } catch (error) {
       console.error('Error toggling brand status:', error);
       throw error;
@@ -1671,6 +1724,8 @@ export function useBrands(options: UseBrandsOptions = {}) {
     featuredBrands,
     featuredBrandss,
     allBrands,
+    activeBrands, // Added back
+    activeBrandsLoaded, // Added back
     loading,
     error,
     getBrand,
@@ -1678,6 +1733,7 @@ export function useBrands(options: UseBrandsOptions = {}) {
     updateBrand,
     deleteBrand,
     toggleBrandStatus,
+    fetchActiveBrands, // Added back
 
     adminBrands,
     totalBrandsCount,

@@ -41,7 +41,7 @@ export default function DealContent({ deal }: DealContentProps) {
   // Check if the deal's brand is active
   useEffect(() => {
     if (deal && activeBrandsLoaded && activeBrands) {
-      const brandIsActive = activeBrands.includes(deal.brand);
+      const brandIsActive = activeBrands.some(brand => brand.name === deal.brand);
       setIsBrandActive(brandIsActive);
       
       // Log for debugging
