@@ -1418,6 +1418,8 @@ export function useBrands(options: UseBrandsOptions = {}) {
     }
   }, []);
 
+  // Replace your fetchAdminBrands function with this fixed version:
+
   const fetchAdminBrands = useCallback(
     async (options: FetchAdminBrandsOptions = {}) => {
       const {
@@ -1438,17 +1440,15 @@ export function useBrands(options: UseBrandsOptions = {}) {
         let brandQuery: Query = collection(db, 'brands');
         const filters: any[] = [];
 
-        // Apply status filter first (most selective)
+        // Apply status filter - ONLY if specifically selected
         if (selectedStatus && selectedStatus !== 'all') {
           filters.push(where('status', '==', selectedStatus));
-        } else {
-          // Default to active brands only if no specific status is selected
-          filters.push(where('status', '==', 'active'));
+          console.log('📊 Applying status filter:', selectedStatus);
         }
+        // Remove the default active filter - let it show all brands by default
 
         // For search, we'll do client-side filtering since Firestore's text search is limited
         if (searchTerm) {
-          // Don't add where clause for search, we'll filter client-side
           console.log('🔍 Will search for:', searchTerm);
         }
 
@@ -1502,8 +1502,14 @@ export function useBrands(options: UseBrandsOptions = {}) {
           console.log('📊 After country filter:', allBrands.length);
         }
 
-        // Sort by active deals descending
-        allBrands = allBrands.sort((a: any, b: any) => (b.activeDeals || 0) - (a.activeDeals || 0));
+        // Sort by active deals descending, then by status (active first)
+        allBrands = allBrands.sort((a: any, b: any) => {
+          // First sort by status (active brands first)
+          if (a.status === 'active' && b.status === 'inactive') return -1;
+          if (a.status === 'inactive' && b.status === 'active') return 1;
+          // Then by active deals descending
+          return (b.activeDeals || 0) - (a.activeDeals || 0);
+        });
 
         // Apply pagination
         const startIdx = (page - 1) * pageSize;
@@ -1516,7 +1522,9 @@ export function useBrands(options: UseBrandsOptions = {}) {
           pageSize,
           startIdx,
           endIdx,
-          returned: paginatedBrands.length
+          returned: paginatedBrands.length,
+          activeCount: allBrands.filter((b: any) => b.status === 'active').length,
+          inactiveCount: allBrands.filter((b: any) => b.status === 'inactive').length
         });
 
         setAdminBrands(paginatedBrands as any);

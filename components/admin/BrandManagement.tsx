@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, Search, Filter, Eye, ChevronDown, Power, Ban, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Filter, Eye, ChevronDown, Power, Ban, CheckCircle, X } from 'lucide-react';
 import { useBrands } from '@/lib/firebase/hooks';
 import ContentPreloader from '../loaders/ContentPreloader';
 import ContentErrorLoader from '../loaders/ContentErrorLoader';
@@ -11,6 +11,12 @@ import ContentErrorLoader from '../loaders/ContentErrorLoader';
 interface BrandFilters {
   activeDeals: 'all' | 'active' | 'inactive';
   status: 'all' | 'active' | 'inactive';
+}
+
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
 }
 
 export default function BrandManagement() {
@@ -22,6 +28,7 @@ export default function BrandManagement() {
   const [activeDealsOnly, setActiveDealsOnly] = useState('all');
   const [selectedStatus, setSelectedStatus] = useState('all');
   const [countryCode, setCountryCode] = useState('all');
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   // PAGINATION 
   const [currentPage, setCurrentPage] = useState(1);
@@ -39,18 +46,118 @@ export default function BrandManagement() {
     status: 'active'
   });
 
+  // Toast functionality
+  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = Date.now().toString();
+    const newToast: Toast = { id, message, type };
+    setToasts(prev => [...prev, newToast]);
+    
+    // Auto remove toast after 5 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, 5000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
+  // Function to disable all deals under a brand using brand name
+  const disableDealsUnderBrand = async (brandId: string) => {
+    try {
+      console.log('🔍 Starting to disable deals for brand ID:', brandId);
+      
+      const { collection, query, where, getDocs, doc, writeBatch } = await import('firebase/firestore');
+      const { db } = await import('@/lib/firebase');
+      
+      // First, get the brand name from the brand ID
+      const brand = adminBrands.find(b => b.id === brandId);
+      if (!brand) {
+        console.error('❌ Brand not found in adminBrands array');
+        return 0;
+      }
+      
+      const brandName = brand.name;
+      console.log('🔍 Looking for deals with brand name:', brandName);
+      
+      // Query deals_fresh collection using the brand name
+      const dealsQuery = query(
+        collection(db, 'deals_fresh'), // Note: using deals_fresh collection
+        where('brand', '==', brandName)
+      );
+      
+      const dealsSnapshot = await getDocs(dealsQuery);
+      
+      if (dealsSnapshot.empty) {
+        console.log('❌ No deals found for brand name:', brandName);
+        
+        // Let's also try a case-insensitive search or partial match
+        console.log('🔍 Checking for similar brand names in deals_fresh...');
+        const allDealsQuery = query(collection(db, 'deals_fresh'));
+        const allDealsSnapshot = await getDocs(allDealsQuery);
+        
+        const similarBrands = new Set();
+        allDealsSnapshot.docs.forEach((dealDoc) => {
+          const dealData = dealDoc.data();
+          if (dealData.brand && dealData.brand.toLowerCase().includes(brandName.toLowerCase())) {
+            similarBrands.add(dealData.brand);
+          }
+        });
+        
+        if (similarBrands.size > 0) {
+          console.log('🔍 Found similar brand names:', Array.from(similarBrands));
+        }
+        
+        return 0;
+      }
+
+      console.log(`✅ Found ${dealsSnapshot.docs.length} deals for brand "${brandName}"`);
+      
+      // Use batch write for better performance
+      const batch = writeBatch(db);
+      let updatedCount = 0;
+      
+      dealsSnapshot.docs.forEach((dealDoc) => {
+        const dealData = dealDoc.data();
+        console.log(`Updating deal ${dealDoc.id}:`, {
+          currentStatus: dealData.status,
+          title: dealData.title || dealData.name || 'Unknown',
+          brand: dealData.brand
+        });
+        
+        const dealRef = doc(db, 'deals_fresh', dealDoc.id);
+        batch.update(dealRef, { 
+          status: 'inactive',
+          updatedAt: new Date(),
+          deactivatedBy: 'brand_deactivation'
+        });
+        updatedCount++;
+      });
+      
+      // Commit the batch
+      await batch.commit();
+      
+      console.log(`✅ Successfully updated ${updatedCount} deals to inactive status`);
+      return updatedCount;
+      
+    } catch (error) {
+      console.error('❌ Error disabling deals:', error);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      throw new Error(`Failed to disable deals: ${errorMessage}`);
+    }
+  };
+
   // Debounce search query
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearchQuery(searchQuery);
-    }, 300); // Reduced to 300ms for better responsiveness
+    }, 300);
 
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
   // Maintain focus on search input during typing and when clearing (only for this component)
   useEffect(() => {
-    // Only manage focus if this component is actually visible and being used
     if (searchInputRef.current && 
         document.activeElement !== searchInputRef.current &&
         searchInputRef.current.closest('[data-component="brand-management"]')) {
@@ -64,7 +171,7 @@ export default function BrandManagement() {
     }
   }, [adminBrands, searchQuery]);
 
-  // Reset to first page when debounced search query changes (but not on every render)
+  // Reset to first page when debounced search query changes
   useEffect(() => {
     if (debouncedSearchQuery) {
       setCurrentPage(1);
@@ -87,11 +194,11 @@ export default function BrandManagement() {
       const brandData = {
         ...newBrand,
         activeDeals: 0,
-        // No longer defaulting brandimg to logo
         brandimg: newBrand.brandimg
       };
 
       await addBrand(brandData as any);
+      addToast('Brand added successfully!', 'success');
 
       setIsAddingBrand(false);
       setNewBrand({
@@ -104,9 +211,9 @@ export default function BrandManagement() {
       });
 
       setEditBrand(null);
-      // console.log(brandData);
     } catch (error) {
       console.error('Error adding brand:', error);
+      addToast('Error adding brand. Please try again.', 'error');
     }
   };
   
@@ -117,7 +224,6 @@ export default function BrandManagement() {
     console.log(editBrand);
     
     try {
-      // If brand has no active deals, it should be inactive
       const updatedBrand = {
         ...editBrand,
         status: editBrand.activeDeals === 0 ? 'inactive' : editBrand.status,
@@ -125,28 +231,86 @@ export default function BrandManagement() {
       };
 
       await updateBrand(updatedBrand.id, updatedBrand);
+      addToast('Brand updated successfully!', 'success');
       setEditBrand(null);
     } catch (error) {
       console.error('Error updating brand:', error);
+      addToast('Error updating brand. Please try again.', 'error');
     }
   };
   
   const handleToggleStatus = async (brandId: string, currentStatus: 'active' | 'inactive') => {
     try {
-      const brand = adminBrands.find(b => b.id === brandId)
+      console.log('🔍 Starting brand toggle:', { brandId, currentStatus });
+      
+      const brand = adminBrands.find(b => b.id === brandId);
       if (!brand) {
-        alert("Brand not found");
+        console.error('❌ Brand not found in adminBrands array');
+        addToast("Brand not found", 'error');
         return;
       }
 
-      // if (currentStatus === 'inactive' && brand.activeDeals === 0) {
-      //   alert("Cannot activate brand with no active deals");
-      //   return;
+      console.log('✅ Brand found:', brand.name);
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      
+      if (newStatus === 'inactive') {
+        addToast('Disabling brand and all associated deals...', 'info');
         
-      // }
-      await toggleBrandStatus(brandId, currentStatus);
+        try {
+          // First disable deals
+          const dealsCount = await disableDealsUnderBrand(brandId);
+          console.log(`✅ Disabled ${dealsCount} deals`);
+          
+          // Then toggle brand status
+          console.log('🔄 Toggling brand status...');
+          await toggleBrandStatus(brandId, currentStatus);
+          console.log('✅ Brand status toggled successfully');
+          
+          // Force refresh the brands list to prevent disappearing
+          console.log('🔄 Refreshing brands list...');
+          await fetchAdminBrands({
+            searchTerm: debouncedSearchQuery,
+            status: selectedStatus,
+            countryCode,
+            activeDealsOnly,
+            page: currentPage,
+            pageSize: itemsPerPage,
+          });
+          
+          addToast(
+            `Brand disabled successfully! ${dealsCount} deal(s) were also disabled.`,
+            'success'
+          );
+        } catch (error) {
+          console.error('❌ Error in disable process:', error);
+          addToast('Error disabling brand or deals. Please check the console.', 'error');
+        }
+      } else {
+        // Activating brand
+        addToast('Activating brand...', 'info');
+        
+        try {
+          await toggleBrandStatus(brandId, currentStatus);
+          
+          // Force refresh after activation too
+          await fetchAdminBrands({
+            searchTerm: debouncedSearchQuery,
+            status: selectedStatus,
+            countryCode,
+            activeDealsOnly,
+            page: currentPage,
+            pageSize: itemsPerPage,
+          });
+          
+          addToast('Brand activated successfully!', 'success');
+        } catch (error) {
+          console.error('❌ Error activating brand:', error);
+          addToast('Error activating brand. Please try again.', 'error');
+        }
+      }
     } catch (error) {
-      console.error('Error toggling brand status:', error);
+      console.error('❌ Error in handleToggleStatus:', error);
+      addToast('Error changing brand status. Please try again.', 'error');
     }
   };
   
@@ -154,15 +318,17 @@ export default function BrandManagement() {
     if (window.confirm('Are you sure you want to delete this brand?')) {
       try {
         await deleteBrand(id);
+        addToast('Brand deleted successfully!', 'success');
       } catch (error) {
         console.error('Error deleting brand:', error);
+        addToast('Error deleting brand. Please try again.', 'error');
       }
     }
   };
 
   // Handle filter changes with page reset
   const handleFilterChange = (filterType: string, value: any) => {
-    setCurrentPage(1); // Reset to first page
+    setCurrentPage(1);
     
     switch (filterType) {
       case 'activeDeals':
@@ -209,6 +375,42 @@ export default function BrandManagement() {
   ]);
 
   const totalPages = Math.ceil(totalBrandsCount / itemsPerPage);
+
+  // Toast component
+  const ToastContainer = () => (
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+      <AnimatePresence>
+        {toasts.map((toast) => (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, x: 300 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 300 }}
+            className={`px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] max-w-[400px] ${
+              toast.type === 'success' 
+                ? 'bg-green-500 text-white' 
+                : toast.type === 'error' 
+                ? 'bg-red-500 text-white' 
+                : 'bg-blue-500 text-white'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {toast.type === 'success' && <CheckCircle className="h-5 w-5" />}
+              {toast.type === 'error' && <X className="h-5 w-5" />}
+              {toast.type === 'info' && <Eye className="h-5 w-5" />}
+              <span className="text-sm">{toast.message}</span>
+            </div>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="ml-2 hover:bg-white/20 rounded p-1"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
 
   const renderBrandForm = () => (
     <form onSubmit={isAddingBrand ? handleAddBrand : handleUpdateBrand} className="space-y-4">
@@ -415,7 +617,6 @@ export default function BrandManagement() {
     </motion.div>
   );
   
-  // Update the desktop view status toggle
   const renderDesktopStatusToggle = (brand: any) => (
     <button
     onClick={() => handleToggleStatus(brand.id, brand.status)}
@@ -465,6 +666,9 @@ export default function BrandManagement() {
 
   return (
     <div className="space-y-6" data-component="brand-management">
+      {/* Toast Container */}
+      <ToastContainer />
+      
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         {/* Search Input */}

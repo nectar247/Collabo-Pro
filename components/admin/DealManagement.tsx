@@ -3,7 +3,7 @@
 
 import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Plus, Edit2, Trash2, Search, Filter, Eye, ChevronDown, Ban, CheckCircle } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Filter, Eye, ChevronDown, Ban, CheckCircle, X } from 'lucide-react';
 import { useBrands, useCategories, useDeals } from '@/lib/firebase/hooks';
 import { DealsLabel } from '@/helper';
 import { AnyARecord } from 'node:dns';
@@ -17,6 +17,12 @@ interface DealFilters {
   dateRange: 'all' | 'today' | 'week' | 'month';
 }
 
+interface Toast {
+  id: string;
+  message: string;
+  type: 'success' | 'error' | 'info';
+}
+
 export default function DealManagement() {
   const { allAdminDeals, totalDealsCount, loading, error, addDeal, updateDeal, toggleDealStatus, deleteDeal, fetchAdminDeals } = useDeals();
   const { allCategories: allCategories } = useCategories();
@@ -25,6 +31,7 @@ export default function DealManagement() {
   const [editDeal, setEditDeal] = useState<any>(null);
   const [showCode, setShowCode] = useState<boolean>(false);
   const [showLink, setShowLink] = useState<boolean>(false);
+  const [toasts, setToasts] = useState<Toast[]>([]);
 
   const [searchQuery, setSearchQuery] = useState('');
   const [debouncedSearchQuery, setDebouncedSearchQuery] = useState('');
@@ -49,6 +56,58 @@ export default function DealManagement() {
   // PAGINATION 
   const [currentPage, setCurrentPage] = useState(1);
   const [itemsPerPage, setItemsPerPage] = useState(10);
+
+  // Toast functionality
+  const addToast = (message: string, type: 'success' | 'error' | 'info' = 'info') => {
+    const id = Date.now().toString();
+    const newToast: Toast = { id, message, type };
+    setToasts(prev => [...prev, newToast]);
+    
+    // Auto remove toast after 5 seconds
+    setTimeout(() => {
+      setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, 5000);
+  };
+
+  const removeToast = (id: string) => {
+    setToasts(prev => prev.filter(toast => toast.id !== id));
+  };
+
+  // Toast component
+  const ToastContainer = () => (
+    <div className="fixed top-4 right-4 z-50 space-y-2">
+      <AnimatePresence>
+        {toasts.map((toast) => (
+          <motion.div
+            key={toast.id}
+            initial={{ opacity: 0, x: 300 }}
+            animate={{ opacity: 1, x: 0 }}
+            exit={{ opacity: 0, x: 300 }}
+            className={`px-4 py-3 rounded-lg shadow-lg flex items-center justify-between min-w-[300px] max-w-[400px] ${
+              toast.type === 'success' 
+                ? 'bg-green-500 text-white' 
+                : toast.type === 'error' 
+                ? 'bg-red-500 text-white' 
+                : 'bg-blue-500 text-white'
+            }`}
+          >
+            <div className="flex items-center gap-2">
+              {toast.type === 'success' && <CheckCircle className="h-5 w-5" />}
+              {toast.type === 'error' && <X className="h-5 w-5" />}
+              {toast.type === 'info' && <Eye className="h-5 w-5" />}
+              <span className="text-sm">{toast.message}</span>
+            </div>
+            <button
+              onClick={() => removeToast(toast.id)}
+              className="ml-2 hover:bg-white/20 rounded p-1"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </motion.div>
+        ))}
+      </AnimatePresence>
+    </div>
+  );
 
   // FIXED: Improved search handling with cursor preservation
   const handleSearchChange = useCallback((query: string) => {
@@ -158,17 +217,21 @@ export default function DealManagement() {
       try {
         const brandExists = allBrands.some((brand: any) => brand.name === editDeal.brand);
           if (!brandExists) {
-              throw new Error('Selected brand does not exist');
+              addToast('Selected brand does not exist', 'error');
+              return;
           }
           await addDeal({
               ...editDeal,
               expiresAt: new Date(editDeal.expiresAt?.seconds ? editDeal.expiresAt.seconds * 1000 : editDeal.expiresAt),
               startsAt: new Date(editDeal.startsAt?.seconds ? editDeal.startsAt.seconds * 1000 : editDeal.startsAt)
           });
+          
+          addToast('Deal added successfully!', 'success');
           setIsAddingDeal(false);
           setEditDeal(null);
       } catch (error) {
           console.error('Error adding deal:', error);
+          addToast('Error adding deal. Please try again.', 'error');
       }
   };
 
@@ -184,9 +247,12 @@ export default function DealManagement() {
         expiresAt: new Date(updateData.expiresAt?.seconds ? updateData.expiresAt.seconds * 1000 : updateData.expiresAt),
         startsAt: new Date(updateData.startsAt?.seconds ? updateData.startsAt.seconds * 1000 : updateData.startsAt)
       });
+      
+      addToast('Deal updated successfully!', 'success');
       setEditDeal(null);
     } catch (error) {
       console.error('Error updating deal:', error);
+      addToast('Error updating deal. Please try again.', 'error');
     }
   };
 
@@ -222,8 +288,10 @@ export default function DealManagement() {
     if (window.confirm('Are you sure you want to delete this deal?')) {
       try {
         await deleteDeal(id);
+        addToast('Deal deleted successfully!', 'success');
       } catch (error) {
         console.error('Error deleting deal:', error);
+        addToast('Error deleting deal. Please try again.', 'error');
       }
     }
   };
@@ -231,8 +299,11 @@ export default function DealManagement() {
   const handleToggleStatus = async (id: string, currentStatus: 'active' | 'inactive') => {
     try {
       await toggleDealStatus(id, currentStatus);
+      const newStatus = currentStatus === 'active' ? 'inactive' : 'active';
+      addToast(`Deal ${newStatus === 'active' ? 'activated' : 'deactivated'} successfully!`, 'success');
     } catch (error) {
       console.error('Error toggling deal status:', error);
+      addToast('Error changing deal status. Please try again.', 'error');
     }
   };
 
@@ -623,6 +694,9 @@ export default function DealManagement() {
 
   return (
     <div className="space-y-6" data-component="deal-management">
+      {/* Toast Container */}
+      <ToastContainer />
+      
       {/* Header Actions */}
       <div className="flex flex-col sm:flex-row justify-between gap-4">
         {/* FIXED: Search Input with cursor preservation */}
