@@ -70,12 +70,12 @@ const HeroSection = ({
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.8, duration: 0.8 }}
                     >
-                    <div className="relative">
+                    <div className="relative w-full md:w-64">
                         <input
-                        type="text"
-                        placeholder="Search deals..."
-                        onClick={handleExploreDealsClick}
-                        className="inline-flex text-sm items-center justify-center pl-12 pr-4 py-2 rounded-full bg-white text-gray-800 font-medium hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 w-64 focus:outline-none focus:ring-2 focus:ring-secondary"
+                            type="text"
+                            placeholder="Search deals..."
+                            onClick={handleExploreDealsClick}
+                            className="inline-flex text-sm items-center justify-center pl-12 pr-4 py-2 rounded-full bg-white text-gray-800 font-medium hover:shadow-lg hover:shadow-gray-200/50 transition-all duration-300 w-full focus:outline-none focus:ring-2 focus:ring-secondary"
                         />
                         <Search className="absolute left-4 top-2.5 h-5 w-5 text-gray-400" />
                     </div>
