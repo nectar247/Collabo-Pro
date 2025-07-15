@@ -354,7 +354,7 @@ export default function Footer(
             </p>
             <p>
               Shop4Vouchers.co.uk is operated by Transecure Consulting Limited, a company registered in England and Wales
-              (Company registration number 15101385). Registered office: 124 City road, London. EC1V 2NX.
+              (Company registration number 15101385). Registered office: 124 City Road, London. EC1V 2NX.
             </p>
           </div>
           <p className="text-gray-400 mt-4">

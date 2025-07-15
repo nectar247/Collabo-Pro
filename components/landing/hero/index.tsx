@@ -52,7 +52,7 @@ const HeroSection = ({
                     transition={{ delay: 0.4, duration: 0.8 }}
                     style={{ lineHeight: 1.2 }}
                     >
-                    Find the Best UK Discount Codes, Deals & Vouchers – All in One Place
+                    Find the Best UK Discount Codes, <br />Deals & Vouchers – All in One Place
                     </motion.h1>
                     
                     <motion.p 
