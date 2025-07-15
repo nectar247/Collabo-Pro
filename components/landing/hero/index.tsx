@@ -52,7 +52,7 @@ const HeroSection = ({
                     transition={{ delay: 0.4, duration: 0.8 }}
                     style={{ lineHeight: 1.2 }}
                     >
-                    Smart deals with savings personalised just for you
+                    Find the Best UK Discount Codes, Deals & Vouchers – All in One Place
                     </motion.h1>
                     
                     <motion.p 
@@ -61,7 +61,7 @@ const HeroSection = ({
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.6, duration: 0.8 }}
                     >
-                    Shop Smarter, Spend Less.
+                    Shop Smart. Save More. Every Time.
                     </motion.p>
 
                     <motion.div 
@@ -81,7 +81,7 @@ const HeroSection = ({
                     </div>
                     </motion.div>
 
-                    <div className="flex flex-wrap justify-center gap-3 items-center">
+                    {/* <div className="flex flex-wrap justify-center gap-3 items-center">
                     <span className="text-gray-400">Trending:</span>
                     {popularSearches.slice(0, 4).map((search) => (
                         <span
@@ -92,7 +92,7 @@ const HeroSection = ({
                             {search}
                         </span>
                     ))}
-                    </div>
+                    </div> */}
                 </div>
             </div>
         </section>
