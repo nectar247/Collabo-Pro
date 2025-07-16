@@ -56,7 +56,7 @@ const HeroSection = ({
                     </motion.h1>
                     
                     <motion.p 
-                    className="text-lg text-gray-300 mb-7"
+                    className="text-lg text-secondary mb-7"
                     initial={{ y: 20, opacity: 0 }}
                     animate={{ y: 0, opacity: 1 }}
                     transition={{ delay: 0.6, duration: 0.8 }}
