@@ -697,7 +697,7 @@ export function useDeals(options: UseDealsOptions = {}) {
         setLoading(false);
       }
     },
-    [filterDealsByActiveBrands]
+    [] // Removed filterDealsByActiveBrands dependency since admin should see all deals
   );
 
   useEffect(() => {
@@ -1452,7 +1452,7 @@ export function useBrands(options: UseBrandsOptions = {}) {
     }
   }, []);
 
-  // Fixed fetchAdminBrands function
+  // Fixed fetchAdminBrands function - Shows ALL brands for admin management
   const fetchAdminBrands = useCallback(
     async (options: FetchAdminBrandsOptions = {}) => {
       const {
@@ -1473,12 +1473,12 @@ export function useBrands(options: UseBrandsOptions = {}) {
         let brandQuery: Query = collection(db, 'brands');
         const filters: any[] = [];
 
-        // Apply status filter - ONLY if specifically selected
+        // Apply status filter - ONLY if specifically selected (admin can see all brands by default)
         if (selectedStatus && selectedStatus !== 'all') {
           filters.push(where('status', '==', selectedStatus));
           console.log('📊 Applying status filter:', selectedStatus);
         }
-        // Remove the default active filter - let it show all brands by default
+        // NO default filtering - admin should see all brands (active and inactive) for management
 
         // For search, we'll do client-side filtering since Firestore's text search is limited
         if (searchTerm) {
