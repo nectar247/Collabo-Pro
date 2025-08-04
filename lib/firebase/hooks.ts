@@ -1312,6 +1312,7 @@ export function useBrands(options: UseBrandsOptions = {}) {
   const [activeBrandsLoaded, setActiveBrandsLoaded] = useState(false); // Added back
   
   const [adminBrands, setAdminBrands] = useState<Brand[]>([]);
+  const [allAdminBrands, setAllAdminBrands] = useState<Brand[]>([]);
   const [totalBrandsCount, setTotalBrandsCount] = useState<number>(0);
 
   const fetchFeaturedBrandss = useCallback(async () => {
@@ -1572,6 +1573,33 @@ export function useBrands(options: UseBrandsOptions = {}) {
     []
   );
 
+  // Function to fetch ALL admin brands (for dropdowns, no pagination)
+  const fetchAllAdminBrands = useCallback(async () => {
+    try {
+      const snapshot = await getDocs(query(
+        collection(db, 'brands'),
+        orderBy('name')
+      ));
+
+      const brands = snapshot.docs.map((doc) => {
+        const data = doc.data();
+        return { id: doc.id, ...data };
+      });
+
+      // Sort with active brands first, then alphabetically
+      const sortedBrands = brands.sort((a: any, b: any) => {
+        if (a.status === 'active' && b.status === 'inactive') return -1;
+        if (a.status === 'inactive' && b.status === 'active') return 1;
+        return a.name.localeCompare(b.name);
+      });
+
+      setAllAdminBrands(sortedBrands as any);
+    } catch (err) {
+      console.error('❌ Error in fetchAllAdminBrands:', err);
+      setError(err as Error);
+    }
+  }, []);
+
   useEffect(() => {
     fetchFeaturedBrands();
   }, [fetchFeaturedBrands]);
@@ -1587,6 +1615,10 @@ export function useBrands(options: UseBrandsOptions = {}) {
   useEffect(() => {
     fetchAdminBrands();
   }, [fetchAdminBrands]);
+
+  useEffect(() => {
+    fetchAllAdminBrands();
+  }, [fetchAllAdminBrands]);
 
   useEffect(() => {
     fetchActiveBrands();
@@ -1736,8 +1768,10 @@ export function useBrands(options: UseBrandsOptions = {}) {
     fetchActiveBrands, // Added back
 
     adminBrands,
+    allAdminBrands,
     totalBrandsCount,
-    fetchAdminBrands
+    fetchAdminBrands,
+    fetchAllAdminBrands
   };
 }
 

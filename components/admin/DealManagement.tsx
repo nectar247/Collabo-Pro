@@ -26,7 +26,7 @@ interface Toast {
 export default function DealManagement() {
   const { allAdminDeals, totalDealsCount, loading, error, addDeal, updateDeal, toggleDealStatus, deleteDeal, fetchAdminDeals } = useDeals();
   const { allCategories: allCategories } = useCategories();
-  const { allBrands: allBrands } = useBrands();
+  const { allAdminBrands: allBrands } = useBrands();
   const [isAddingDeal, setIsAddingDeal] = useState(false);
   const [editDeal, setEditDeal] = useState<any>(null);
   const [showCode, setShowCode] = useState<boolean>(false);
@@ -354,10 +354,11 @@ export default function DealManagement() {
           >
             <option value="">-select-</option>
             {allBrands
-              .filter((brand: any) => brand.status === 'active')
               .sort((a: any, b: any) => a.name.localeCompare(b.name))
               .map((brand: any) => (
-                <option key={brand.id} value={brand.name}>{brand.name}</option>
+                <option key={brand.id} value={brand.name}>
+                  {brand.name} {brand.status === 'inactive' ? '(inactive)' : ''}
+                </option>
               ))}
           </select>
         </div>
