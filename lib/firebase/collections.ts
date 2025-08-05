@@ -41,6 +41,10 @@ export interface Profile {
   createdAt: Date;
   updatedAt: Date;
   isAdmin?: boolean;
+  savedDeals?: Array<{
+    dealId: string;
+    savedAt: Date;
+  }>;
 }
 
 export interface Category {

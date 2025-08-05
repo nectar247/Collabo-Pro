@@ -1,7 +1,7 @@
 /* eslint-disable react-hooks/exhaustive-deps */
 import { useState, useEffect } from 'react';
 import { User } from 'firebase/auth';
-import { onSnapshot, doc } from 'firebase/firestore';
+import { onSnapshot, doc, updateDoc } from 'firebase/firestore';
 import { auth, db } from '@/lib/firebase';
 import type { Profile } from '../collections';
 import { signOut } from '../../auth';
@@ -82,7 +82,7 @@ export function useAuth() {
 export function useProfile() {
   const { user } = useAuth();
   const [profile, setProfile] = useState<Profile | null>(null);
-  const [savedDeals, setSavedDeals] = useState<[]>([]);
+  const [savedDeals, setSavedDeals] = useState<Array<{ dealId: string; savedAt: Date }>>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
