@@ -47,6 +47,11 @@ export default function RootLayout({
       <head>
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        <link rel="preconnect" href="https://vouched4vouchers.firebaseapp.com" />
+        <link rel="preconnect" href="https://firestore.googleapis.com" />
+        <link rel="preconnect" href="https://firebasestorage.googleapis.com" />
+        <link rel="preconnect" href="https://assets.trendii.com" />
+        <link rel="preconnect" href="https://tm.trendii.com" />
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -60,7 +65,7 @@ export default function RootLayout({
             />
           </main>
         </ThemeProvider>
-        <Script src="https://www.dwin2.com/pub.1822416.min.js" strategy="lazyOnload" />
+        <Script src="https://www.dwin2.com/pub.1822416.min.js" strategy="afterInteractive" />
       </body>
     </html>
   );

@@ -2,6 +2,17 @@
 @tailwind components;
 @tailwind utilities;
 
+/* Performance-optimized animations */
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
 
 @layer base {
     .prose {
@@ -92,4 +103,10 @@
     background-image: linear-gradient(66deg, #8520F7, #8520F7 59%, transparent 50%);
     transition: transform .2s, background-position .2s;
     transform: rotate(135deg) translateY(-6px) scaleX(-0.925);
+}
+
+/* Performance-optimized animation utilities */
+.animate-fade-in-up {
+    animation: fadeInUp 0.6s ease-out forwards;
+    animation-fill-mode: both;
 }

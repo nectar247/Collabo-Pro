@@ -1,6 +1,7 @@
 import { Deal } from '@/lib/firebase/collections';
+import { optimizeFirebaseImage, IMAGE_PRESETS } from '@/lib/utils/imageOptimization';
 import Image from 'next/image';
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Heart, ArrowRight, Check, ChevronDownCircle, ChevronRightCircle, Copy, LucideChevronsDown, LucideChevronsRight } from "lucide-react";
@@ -54,6 +55,15 @@ function DealCard1({ deal }: { deal: any }) {
   const { user } = useAuth();
   const { savedDeals, savedUnsaveDeals } = useProfile();
 
+  // Memoize expensive operations
+  const formattedDate = useMemo(() => {
+    return reformatDate((deal.expiresAt as any).seconds * 1000);
+  }, [deal.expiresAt]);
+
+  const truncatedDescription = useMemo(() => {
+    return truncateText(deal.description, 200);
+  }, [deal.description]);
+
   // Check if deal is saved when component mounts or savedDeals changes
   useEffect(() => {
     if (user && savedDeals && savedDeals.length && deal) {
@@ -65,7 +75,7 @@ function DealCard1({ deal }: { deal: any }) {
   }, [deal, savedDeals, user]);
 
   // Handle save/unsave deal with Sonner toast notifications
-  const handleSaveDeal = async (e: React.MouseEvent) => {
+  const handleSaveDeal = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent any parent link navigation
     e.stopPropagation(); // Stop event bubbling
     
@@ -126,21 +136,22 @@ function DealCard1({ deal }: { deal: any }) {
         },
       });
     }
-  };
+  }, [user, savedUnsaveDeals, isSaved, deal]);
 
   return (
     <div className="bg-white shadow-g dark:bg-white/10 backdrop-blur-xl p-1 rounded-xl overflow-hidden border border-white/20 group hover:border-primary/20 transition-colors w-[100%] md:w-[100%]">
       <div className="h-24 md:h-24 m-5 flex items-center space-x-4">
         <Image
-          src={deal.image || deal.brandDetails?.logo}
+          src={optimizeFirebaseImage(deal.image || deal.brandDetails?.logo, IMAGE_PRESETS.dealCard.thumbnail)}
           alt={deal.brand}
           width={80}
           height={80}
+          sizes="80px"
           className="object-contain border aspect-square transition-transform duration-500 group-hover:scale-110 max-w-[80px] max-h-[80px] rounded-md bg-white/50"
         />
         <div className="flex flex-col mt-3">
             <h3 className="md:text-md text-xs font-semibold text-primary dark:text-white group-hover:text-gray-500 transition-colors">
-              {truncateText(deal.description, 200)}
+              {truncatedDescription}
             </h3>
           <span className="text-tertiary dark:text-white text-xs md:text-sm mt-1 text-left">{deal.brand}</span>
           <Link
@@ -168,7 +179,7 @@ function DealCard1({ deal }: { deal: any }) {
             <div className="flex items-center justify-between text-sm">
               <span className="text-gray-800 dark:text-gray-100">Expires:</span>
               <span className="text-gray-900 dark:text-white font-medium">
-                {reformatDate((deal.expiresAt as any).seconds * 1000)}
+                {formattedDate}
               </span>
             </div>
             {deal.code ?
@@ -247,7 +258,10 @@ function DealCard1({ deal }: { deal: any }) {
   );
 }
 
+const MemoizedDealCard1 = memo(DealCard1);
+const MemoizedDealButton = memo(DealButton);
+
 export {
-  DealCard1,
-  DealButton,
+  MemoizedDealCard1 as DealCard1,
+  MemoizedDealButton as DealButton,
 };

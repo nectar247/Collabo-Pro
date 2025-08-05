@@ -1,11 +1,11 @@
 import BrandsGridSkeleton from '@/components/skeleton';
 import { truncateText } from '@/helper';
 import { Brand } from '@/lib/firebase/collections';
-import { motion } from 'framer-motion';
+import { optimizeFirebaseImage, IMAGE_PRESETS, getResponsiveSizes } from '@/lib/utils/imageOptimization';
 import { ArrowRight, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
-import React from 'react';
+import React, { memo, useMemo, useCallback } from 'react';
 import { toast } from 'sonner'; // Add toast notifications
 
 const FilteredBrands = ({
@@ -15,24 +15,26 @@ const FilteredBrands = ({
     brands: Brand[];
     loadingBrands: boolean;
 }) => {
-    const filteredBrands = brands
-        .sort(() => Math.random() - 0.5)
-        .slice(0, 8);
+    const filteredBrands = useMemo(() => {
+        return brands
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 8);
+    }, [brands]);
 
     // Handle brand click with toast feedback
-    const handleBrandClick = (brandName: string, activeDeals?: number) => {
+    const handleBrandClick = useCallback((brandName: string, activeDeals?: number) => {
         const dealText = activeDeals ? `${activeDeals} active deals` : 'deals and offers';
         toast.info(`Loading ${brandName}`, {
             description: `Checking out ${dealText} available now`,
         });
-    };
+    }, []);
 
     // Handle "View All" click
-    const handleViewAllClick = () => {
+    const handleViewAllClick = useCallback(() => {
         toast.info('Loading all brands', {
             description: 'Browse our complete collection of partner brands',
         });
-    };
+    }, []);
 
     return (
         <div>
@@ -56,32 +58,30 @@ const FilteredBrands = ({
                                 <Link
                                     key={brand.id}
                                     href={`/brands/${brand.slug}`}
-                                    className="group block bg-white dark:bg-white/5 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow"
+                                    className="group block bg-white dark:bg-white/5 rounded-xl overflow-hidden shadow-sm hover:shadow-md transition-shadow animate-fade-in-up"
                                     onClick={() => handleBrandClick(brand.name, brand.activeDeals)}
+                                    style={{ animationDelay: `${brands.indexOf(brand) * 0.1}s` }}
                                 >
-                                    <motion.div
-                                        initial={{ opacity: 0, y: 20 }}
-                                        whileInView={{ opacity: 1, y: 0 }}
-                                        viewport={{ once: true }}
-                                    >
+                                    <div>
                                         <div className="relative h-40 overflow-hidden border-b-2 border-tertiary/80">
                                             <Image
-                                                src={brand.brandimg}
+                                                src={optimizeFirebaseImage(brand.brandimg, IMAGE_PRESETS.brandCard.banner)}
                                                 alt={`${brand.name} banner`}
                                                 className="w-full h-full object-cover"
-                                                width={500}
-                                                height={240}
-                                                priority
+                                                fill
+                                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                                priority={false}
                                             />
                                         </div>
 
                                         <div className="relative -mt-8 ml-4">
                                             <div className="w-[64px] h-[64px] flex items-center justify-center rounded-md border bg-white/90 overflow-hidden">
                                                 <Image
-                                                    src={brand.logo}
+                                                    src={optimizeFirebaseImage(brand.logo, IMAGE_PRESETS.brandCard.logo)}
                                                     alt={`${brand.name} logo`}
                                                     width={58}
                                                     height={58}
+                                                    sizes="64px"
                                                     className="object-contain w-auto h-auto transition-transform duration-500 group-hover:scale-110"
                                                 />
                                             </div>
@@ -102,7 +102,7 @@ const FilteredBrands = ({
                                                 <ArrowRight className="ml-1 h-3 w-3 transition-transform group-hover:translate-x-1" />
                                             </div>
                                         </div>
-                                    </motion.div>
+                                    </div>
                                 </Link>
                             ))}
                         </div>
@@ -122,4 +122,4 @@ const FilteredBrands = ({
     );
 };
 
-export default FilteredBrands;
+export default memo(FilteredBrands);

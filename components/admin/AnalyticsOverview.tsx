@@ -1,35 +1,13 @@
 "use client";
 
-import { useState, useEffect } from 'react';
-import { Line, Bar } from 'react-chartjs-2';
-import {
-  Chart as ChartJS,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-} from 'chart.js';
-import { motion } from 'framer-motion';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { Users, Tag, DollarSign, Clock, TrendingUp } from 'lucide-react';
 import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 
-ChartJS.register(
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  BarElement,
-  Title,
-  Tooltip,
-  Legend,
-  Filler
-);
+// Lazy load heavy chart components
+const LineChart = lazy(() => import('./charts/LineChart'));
+const BarChart = lazy(() => import('./charts/BarChart'));
 
 interface AnalyticsData {
   totalUsers: number;
@@ -285,7 +263,9 @@ export default function AnalyticsOverview() {
           className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm"
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">User Activity</h3>
-          <Line data={lineChartData} options={chartOptions} />
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+            <LineChart data={lineChartData} options={chartOptions} />
+          </Suspense>
         </motion.div>
 
         {/* Deal Performance Chart */}
@@ -296,7 +276,9 @@ export default function AnalyticsOverview() {
           className="bg-white rounded-xl p-6 border border-gray-200 shadow-sm"
         >
           <h3 className="text-lg font-semibold text-gray-900 mb-4">Deal Performance by Category</h3>
-          <Bar data={barChartData} options={chartOptions} />
+          <Suspense fallback={<div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>}>
+            <BarChart data={barChartData} options={chartOptions} />
+          </Suspense>
         </motion.div>
       </div>
     </div>

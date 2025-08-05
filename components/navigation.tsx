@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, memo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
@@ -28,7 +28,7 @@ interface NavigationProps {
   onOpenSearch?: () => void; // Optional prop for external control
 }
 
-export default function Navigation({ onOpenSearch }: NavigationProps) {
+function Navigation({ onOpenSearch }: NavigationProps) {
   
   const { settings } = useSiteSettings();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -475,3 +475,5 @@ export default function Navigation({ onOpenSearch }: NavigationProps) {
     </>
   );
 }
+
+export default memo(Navigation);

@@ -17,16 +17,43 @@ import {
   useSettings,
 } from "@/lib/firebase/hooks";
 
-// Lazy load the heavy admin tab components
-const AnalyticsOverview = dynamic(() => import("@/components/admin/AnalyticsOverview"), { ssr: false });
-const DealManagement = dynamic(() => import("@/components/admin/DealManagement"), { ssr: false });
-const CategoryManagement = dynamic(() => import("@/components/admin/CategoryManagement"), { ssr: false });
-const UserManagement = dynamic(() => import("@/components/admin/UserManagement"), { ssr: false });
-const ContentManagement = dynamic(() => import("@/components/admin/ContentManagement"), { ssr: false });
-const BrandManagement = dynamic(() => import("@/components/admin/BrandManagement"), { ssr: false });
-const BlogManagement = dynamic(() => import("@/components/admin/BlogManagement"), { ssr: false });
-const MediaManagement = dynamic(() => import("@/components/admin/MediaManagement"), { ssr: false });
-const SettingsManagement = dynamic(() => import("@/components/admin/SettingsManagement"), { ssr: false });
+// Lazy load the heavy admin tab components with loading states
+const AnalyticsOverview = dynamic(() => import("@/components/admin/AnalyticsOverview"), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+});
+const DealManagement = dynamic(() => import("@/components/admin/DealManagement"), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+});
+const CategoryManagement = dynamic(() => import("@/components/admin/CategoryManagement"), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+});
+const UserManagement = dynamic(() => import("@/components/admin/UserManagement"), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+});
+const ContentManagement = dynamic(() => import("@/components/admin/ContentManagement"), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+});
+const BrandManagement = dynamic(() => import("@/components/admin/BrandManagement"), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+});
+const BlogManagement = dynamic(() => import("@/components/admin/BlogManagement"), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+});
+const MediaManagement = dynamic(() => import("@/components/admin/MediaManagement"), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+});
+const SettingsManagement = dynamic(() => import("@/components/admin/SettingsManagement"), { 
+  ssr: false,
+  loading: () => <div className="flex items-center justify-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary"></div></div>
+});
 
 export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState("analytics");

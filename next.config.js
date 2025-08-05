@@ -7,7 +7,8 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: { 
-    unoptimized: true,
+    unoptimized: false,
+    formats: ['image/webp', 'image/avif'],
     remotePatterns: [
       {
         protocol: 'https',
@@ -28,6 +29,10 @@ const nextConfig = {
       {
         protocol: 'https',
         hostname: 'a1.awin1.com'
+      },
+      {
+        protocol: 'https',
+        hostname: 'firebasestorage.googleapis.com'
       }
     ],
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
@@ -44,6 +49,36 @@ const nextConfig = {
   },
   async headers() {
     return [
+      {
+        // Static assets cache
+        source: '/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // Image cache
+        source: '/:path*.(jpg|jpeg|png|gif|ico|svg|webp|avif)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=86400, s-maxage=31536000',
+          },
+        ],
+      },
+      {
+        // Font cache
+        source: '/:path*.(woff|woff2|eot|ttf|otf)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
       {
         // apply to all routes
         source: '/:path*',
