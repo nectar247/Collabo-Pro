@@ -22,6 +22,7 @@ const db =
   typeof window !== 'undefined'
     ? initializeFirestore(app, {
         localCache: persistentLocalCache(),
+        experimentalForceLongPolling: false, // Use WebChannel for better performance
       })
     : getFirestore(app); // fallback for SSR (no IndexedDB)
 

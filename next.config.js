@@ -70,6 +70,26 @@ const nextConfig = {
         ],
       },
       {
+        // JavaScript and CSS cache
+        source: '/:path*.(js|css)',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
+        // Next.js chunks cache
+        source: '/_next/static/:path*',
+        headers: [
+          {
+            key: 'Cache-Control',
+            value: 'public, max-age=31536000, immutable',
+          },
+        ],
+      },
+      {
         // Font cache
         source: '/:path*.(woff|woff2|eot|ttf|otf)',
         headers: [

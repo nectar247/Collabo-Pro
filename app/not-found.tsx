@@ -5,9 +5,6 @@ import Link from "next/link";
 import { Search, ArrowRight, Home, Tag, ShoppingBag } from "lucide-react";
 
 import Navigation from "@/components/navigation";
-import Footer from '@/components/footer';
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
-
 export default function NotFound() {
   const quickLinks = [
     {
@@ -30,13 +27,7 @@ export default function NotFound() {
     }
   ];
 
-  const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
+  // Simplified 404 page without Firebase calls to prevent errors
 
   return (
     <>
@@ -125,16 +116,11 @@ export default function NotFound() {
           </div> */}
         </div>
       </main>
-      <Footer 
-        categories={categories} 
-        loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings__} 
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
+      <div className="mt-12 text-center">
+        <p className="text-gray-400 dark:text-gray-300 text-sm">
+          © 2024 Shop4Vouchers. All rights reserved.
+        </p>
+      </div>
     </>
   );
 }

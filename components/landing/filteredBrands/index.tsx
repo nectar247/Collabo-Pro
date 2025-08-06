@@ -54,7 +54,7 @@ const FilteredBrands = ({
                         </div>
 
                         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                            {filteredBrands.map((brand) => (
+                            {filteredBrands.map((brand, index) => (
                                 <Link
                                     key={brand.id}
                                     href={`/brands/${brand.slug}`}
@@ -70,7 +70,8 @@ const FilteredBrands = ({
                                                 className="w-full h-full object-cover"
                                                 fill
                                                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                                priority={false}
+                                                priority={index < 4}
+                                                {...(index === 0 && { fetchpriority: "high" })}
                                                 unoptimized={shouldDisableOptimization(brand.brandimg)}
                                             />
                                         </div>

@@ -18,7 +18,10 @@ export default async function DynamicPage({ params }: { params: { slug: string }
 
     return <DynamicPageContent slug={params.slug} content_={content} />;
   } catch (error) {
-    console.error('Error fetching content:', error);
+    // Only log error in development to reduce console noise in production
+    if (process.env.NODE_ENV === 'development') {
+      console.error('Error fetching content:', error);
+    }
     notFound(); // Redirect to 404 page on error
   }
 }

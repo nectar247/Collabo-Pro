@@ -19,7 +19,7 @@ function DealButton({ deal }: { deal: Deal }) {
       {deal.label !== 'GetCode' ?
         <button
           onClick={() => setIsModalOpen(true)}
-          className="w-full mt-1 bg-gradient-to-r from-secondary to-secondary-dark hover:from-secondary-dark hover:to-secondary text-white py-2 rounded-lg font-medium transition-all duration-300"
+          className="w-full mt-1 bg-gradient-to-r from-secondary to-secondary-dark hover:from-secondary-dark hover:to-secondary text-white py-3 px-4 min-h-[44px] rounded-lg font-medium transition-all duration-300"
         >
           {DealsLabel[deal.label]}
         </button>
@@ -28,7 +28,7 @@ function DealButton({ deal }: { deal: Deal }) {
           <div className="flex mt-[-16px]">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="w-full mt-4 bg-gradient-to-r from-secondary to-secondary-dark hover:from-secondary-dark hover:to-secondary text-white py-2 rounded-lg rounded-tr-none rounded-br-none font-medium transition-all duration-300"
+              className="w-full mt-4 bg-gradient-to-r from-secondary to-secondary-dark hover:from-secondary-dark hover:to-secondary text-white py-3 px-4 min-h-[44px] rounded-lg rounded-tr-none rounded-br-none font-medium transition-all duration-300"
             >
               {DealsLabel[deal.label]}
             </button>
@@ -157,7 +157,7 @@ function DealCard1({ deal }: { deal: any }) {
           <span className="text-tertiary dark:text-white text-xs md:text-sm mt-1 text-left">{deal.brand}</span>
           <Link
             href={`/brands/${encodeURIComponent(deal.brand)}`}
-            className="mt-2 text-xs text-primary hover:text-primary-dark transition-colors flex items-center gap-1 group"
+            className="mt-2 text-sm min-h-[44px] flex items-center text-primary hover:text-primary-dark transition-colors gap-1 group py-2"
           >
             <span>See all <span className='font-semibold underline'>{deal.brand} deals </span></span>
           </Link>

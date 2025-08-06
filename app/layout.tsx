@@ -52,6 +52,8 @@ export default function RootLayout({
         <link rel="preconnect" href="https://firebasestorage.googleapis.com" />
         <link rel="preconnect" href="https://assets.trendii.com" />
         <link rel="preconnect" href="https://tm.trendii.com" />
+        <link rel="preconnect" href="https://beeswax.trendii.com" />
+        <link rel="preconnect" href="https://www.dwin2.com" />
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
@@ -65,7 +67,7 @@ export default function RootLayout({
             />
           </main>
         </ThemeProvider>
-        <Script src="https://www.dwin2.com/pub.1822416.min.js" strategy="afterInteractive" />
+        <Script src="https://www.dwin2.com/pub.1822416.min.js" strategy="lazyOnload" />
       </body>
     </html>
   );
