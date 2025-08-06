@@ -1,7 +1,7 @@
 import BrandsGridSkeleton from '@/components/skeleton';
 import { truncateText } from '@/helper';
 import { Brand } from '@/lib/firebase/collections';
-import { optimizeFirebaseImage, IMAGE_PRESETS, getResponsiveSizes } from '@/lib/utils/imageOptimization';
+import { optimizeFirebaseImage, IMAGE_PRESETS, getResponsiveSizes, shouldDisableOptimization } from '@/lib/utils/imageOptimization';
 import { ArrowRight, ShoppingBag } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -71,6 +71,7 @@ const FilteredBrands = ({
                                                 fill
                                                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                                                 priority={false}
+                                                unoptimized={shouldDisableOptimization(brand.brandimg)}
                                             />
                                         </div>
 
@@ -83,6 +84,7 @@ const FilteredBrands = ({
                                                     height={58}
                                                     sizes="64px"
                                                     className="object-contain w-auto h-auto transition-transform duration-500 group-hover:scale-110"
+                                                    unoptimized={shouldDisableOptimization(brand.logo)}
                                                 />
                                             </div>
                                         </div>

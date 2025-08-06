@@ -1,5 +1,5 @@
 import { Deal } from '@/lib/firebase/collections';
-import { optimizeFirebaseImage, IMAGE_PRESETS } from '@/lib/utils/imageOptimization';
+import { optimizeFirebaseImage, IMAGE_PRESETS, shouldDisableOptimization } from '@/lib/utils/imageOptimization';
 import Image from 'next/image';
 import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
@@ -147,6 +147,7 @@ function DealCard1({ deal }: { deal: any }) {
           width={80}
           height={80}
           sizes="80px"
+          unoptimized={shouldDisableOptimization(deal.image || deal.brandDetails?.logo || '')}
           className="object-contain border aspect-square transition-transform duration-500 group-hover:scale-110 max-w-[80px] max-h-[80px] rounded-md bg-white/50"
         />
         <div className="flex flex-col mt-3">

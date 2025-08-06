@@ -20,12 +20,17 @@ export function optimizeFirebaseImage(
     return url;
   }
 
+  // Check if the URL is for an SVG file - SVGs should not be optimized
+  if (url.toLowerCase().includes('.svg')) {
+    return url;
+  }
+
   const { width, height, quality = 80, format = 'webp' } = options;
   
   try {
     const urlObj = new URL(url);
     
-    // Add compression parameters for Firebase Storage
+    // Add compression parameters for Firebase Storage (only for non-SVG images)
     if (width) urlObj.searchParams.set('w', width.toString());
     if (height) urlObj.searchParams.set('h', height.toString());
     if (quality && quality !== 100) urlObj.searchParams.set('q', quality.toString());
@@ -36,6 +41,21 @@ export function optimizeFirebaseImage(
     console.warn('Failed to optimize Firebase image URL:', error);
     return url;
   }
+}
+
+/**
+ * Checks if an image URL is an SVG file
+ */
+export function isSvgImage(url: string): boolean {
+  return url.toLowerCase().includes('.svg');
+}
+
+/**
+ * Determines if Next.js Image optimization should be disabled for this URL
+ */
+export function shouldDisableOptimization(url: string): boolean {
+  // Disable optimization for SVGs and other vector formats
+  return isSvgImage(url);
 }
 
 /**
