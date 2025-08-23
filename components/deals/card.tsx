@@ -139,19 +139,21 @@ function DealCard1({ deal }: { deal: any }) {
   }, [user, savedUnsaveDeals, isSaved, deal]);
 
   return (
-    <div className="bg-white shadow-g dark:bg-white/10 backdrop-blur-xl p-1 rounded-xl overflow-hidden border border-white/20 group hover:border-primary/20 transition-colors w-[100%] md:w-[100%]">
+    <div className="bg-white shadow-g dark:bg-white/10 backdrop-blur-xl p-1 rounded-xl overflow-hidden border border-white/20 group hover:border-primary/20 transition-colors w-[100%] md:w-[100%] relative">
       <div className="h-24 md:h-24 m-5 flex items-center space-x-4">
-        <Image
-          src={optimizeFirebaseImage(deal.image || deal.brandDetails?.logo, IMAGE_PRESETS.dealCard.thumbnail)}
-          alt={deal.brand}
-          width={80}
-          height={80}
-          sizes="80px"
-          unoptimized={shouldDisableOptimization(deal.image || deal.brandDetails?.logo || '')}
-          className="object-contain border aspect-square transition-transform duration-500 group-hover:scale-110 max-w-[80px] max-h-[80px] rounded-md bg-white/50"
-        />
-        <div className="flex flex-col mt-3">
-            <h3 className="md:text-md text-xs font-semibold text-primary dark:text-white group-hover:text-gray-500 transition-colors">
+        <div className="flex-shrink-0">
+          <Image
+            src={optimizeFirebaseImage(deal.image || deal.brandDetails?.logo, IMAGE_PRESETS.dealCard.thumbnail)}
+            alt={deal.brand}
+            width={80}
+            height={80}
+            sizes="80px"
+            unoptimized={shouldDisableOptimization(deal.image || deal.brandDetails?.logo || '')}
+            className="object-contain border aspect-square transition-transform duration-500 group-hover:scale-110 w-[80px] h-[80px] rounded-md bg-white/50"
+          />
+        </div>
+        <div className="flex flex-col mt-3 flex-grow min-w-0 pr-16">
+            <h3 className="md:text-md text-xs font-semibold text-primary dark:text-white group-hover:text-gray-500 transition-colors line-clamp-2 leading-tight max-w-full">
               {truncatedDescription}
             </h3>
           <span className="text-tertiary dark:text-white text-xs md:text-sm mt-1 text-left">{deal.brand}</span>
@@ -162,9 +164,7 @@ function DealCard1({ deal }: { deal: any }) {
             <span>See all <span className='font-semibold underline'>{deal.brand} deals </span></span>
           </Link>
         </div>
-        <div className="absolute top-2 right-7 flex items-center space-x-2">
-
-          
+        <div className="absolute top-2 right-2 flex items-center space-x-2 z-10">
           {deal.discount && (
             <div className="bg-primary/80 text-white px-[5px] py-[3px] rounded-sm text-xs backdrop-blur-xl">
               {deal.discount}
