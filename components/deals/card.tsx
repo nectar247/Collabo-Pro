@@ -158,7 +158,7 @@ function DealCard1({ deal }: { deal: any }) {
             </h3>
           <span className="text-tertiary dark:text-white text-xs md:text-sm mt-1 text-left">{deal.brand}</span>
           <Link
-            href={`/brands/${encodeURIComponent(deal.brand)}`}
+            href={`/brands/${deal.brandDetails?.slug || encodeURIComponent(deal.brand.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))}`}
             className="mt-2 text-sm min-h-[44px] flex items-center text-primary hover:text-primary-dark transition-colors gap-1 group py-2"
           >
             <span>See all <span className='font-semibold underline'>{deal.brand} deals </span></span>
