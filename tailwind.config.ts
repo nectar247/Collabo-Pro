@@ -23,8 +23,8 @@ const config: Config = {
           dark: '#FF8F00',
         },
         alternate: {
-          DEFAULT: '#FFDB00', // #FFDB00 or #F9E400
-          dark: '#FFDB00',
+          DEFAULT: '#F9E400', // #FFDB00 or #F9E400
+          dark: '#F9E400',
         },
         bgPrimary: {
           DEFAULT: '#e5e7eb80', //e5e7eb80
