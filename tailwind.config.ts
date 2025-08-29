@@ -23,11 +23,11 @@ const config: Config = {
           dark: '#FF8F00',
         },
         alternate: {
-          DEFAULT: '#FFDB00',
+          DEFAULT: '#FFDB00', // #FFDB00 or #F9E400
           dark: '#FFDB00',
         },
         bgPrimary: {
-          DEFAULT: '#e5e7eb80',
+          DEFAULT: '#e5e7eb80', //e5e7eb80
           dark: '#e5e7eb80', 
         },
         defaultAmber: '#92400E',

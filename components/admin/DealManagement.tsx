@@ -223,7 +223,8 @@ export default function DealManagement() {
           await addDeal({
               ...editDeal,
               expiresAt: new Date(editDeal.expiresAt?.seconds ? editDeal.expiresAt.seconds * 1000 : editDeal.expiresAt),
-              startsAt: new Date(editDeal.startsAt?.seconds ? editDeal.startsAt.seconds * 1000 : editDeal.startsAt)
+              startsAt: new Date(editDeal.startsAt?.seconds ? editDeal.startsAt.seconds * 1000 : editDeal.startsAt),
+              manuallyAdded: editDeal.manuallyAdded || false
           });
           
           addToast('Deal added successfully!', 'success');
@@ -245,7 +246,8 @@ export default function DealManagement() {
         ...updateData,
         status: new Date(updateData.expiresAt).getTime() < Date.now() ? 'inactive' : updateData.status,
         expiresAt: new Date(updateData.expiresAt?.seconds ? updateData.expiresAt.seconds * 1000 : updateData.expiresAt),
-        startsAt: new Date(updateData.startsAt?.seconds ? updateData.startsAt.seconds * 1000 : updateData.startsAt)
+        startsAt: new Date(updateData.startsAt?.seconds ? updateData.startsAt.seconds * 1000 : updateData.startsAt),
+        manuallyAdded: updateData.manuallyAdded || false
       });
       
       addToast('Deal updated successfully!', 'success');
@@ -421,8 +423,8 @@ export default function DealManagement() {
         </span>
       </div>
 
-      {/* Status */}
-      <div className="grid grid-cols-1">
+      {/* Status and Manual Flag */}
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-2">Status <span className="text-red-500">*</span></label>
           <select
@@ -435,6 +437,22 @@ export default function DealManagement() {
             <option value="inactive">inactive</option>
             <option value="active">active</option>
           </select>
+        </div>
+        
+        {/* Manually Added Flag */}
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Manually Added</label>
+          <label className="flex items-center gap-2 px-4 py-2 bg-gray-50 border border-gray-300 rounded-lg">
+            <input
+              type="checkbox"
+              checked={editDeal?.manuallyAdded || false}
+              onChange={(e) => setEditDeal({ ...editDeal, manuallyAdded: e.target.checked })}
+              className="rounded border-gray-300 text-secondary focus:ring-secondary"
+            />
+            <span className="text-sm text-gray-700">
+              Preserve during sync operations
+            </span>
+          </label>
         </div>
       </div>
 

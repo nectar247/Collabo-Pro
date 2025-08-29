@@ -166,7 +166,7 @@ function DealCard1({ deal }: { deal: any }) {
         </div>
         <div className="absolute top-2 right-2 flex items-center space-x-2 z-10">
           {deal.discount && (
-            <div className="bg-primary/80 text-white px-[5px] py-[3px] rounded-sm text-xs backdrop-blur-xl">
+            <div className="bg-alternate text-white px-[5px] py-[3px] rounded-sm text-xs backdrop-blur-xl">
               {deal.discount}
             </div>
           )}
