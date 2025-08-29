@@ -501,7 +501,7 @@ export function useDeals(options: UseDealsOptions = {}) {
     const {
       category,
       brand,
-      limit: queryLimit = 50,
+      limit: queryLimit = 200,
       orderByField = 'createdAt',
       orderDirection = 'desc'
     } = options;
@@ -540,22 +540,34 @@ export function useDeals(options: UseDealsOptions = {}) {
     
           await fetchDeals();
 
-          // Filter deals by active brands before processing
-          const activeDeals = filterDealsByActiveBrands(dealsData)
-            .filter((e: any) => 
-              e.expiresAt?.seconds && new Date(e.expiresAt.seconds * 1000) > new Date() 
-              && e.status === 'active'
-            )
-            .filter((item: any) => 
-              item.rawData?.regions?.all === true ||
-              item.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
-            );
+          // Group deals by brand to ensure diversity (1 deal per brand)
+          const dealsByBrand = new Map<string, any[]>();
+          
+          // Group all deals by brand first
+          dealsData.forEach((deal: any) => {
+            if (!dealsByBrand.has(deal.brand)) {
+              dealsByBrand.set(deal.brand, []);
+            }
+            dealsByBrand.get(deal.brand)!.push(deal);
+          });
+          
+          console.log('🔍 DEBUG - Total brands with deals:', dealsByBrand.size);
+          
+          // Get 1 random deal from each brand (up to 12 brands)
+          const brandsWithDeals = Array.from(dealsByBrand.keys());
+          const shuffledBrands = brandsWithDeals.sort(() => Math.random() - 0.5).slice(0, 12);
+          
+          const trendingDealsSelection: any[] = [];
+          shuffledBrands.forEach(brandName => {
+            const brandDeals = dealsByBrand.get(brandName)!;
+            const randomDeal = brandDeals[Math.floor(Math.random() * brandDeals.length)];
+            trendingDealsSelection.push(randomDeal);
+          });
+          
+          console.log('🔍 DEBUG - Selected from', shuffledBrands.length, 'brands');
+          console.log('🔍 DEBUG - Final trending deals:', trendingDealsSelection.length);
 
-          setTrendingDeals(
-            activeDeals
-            .sort(() => Math.random() - 0.5) // Shuffle array randomly
-            .slice(0, 12) // Select first 12 random deals
-          );
+          setTrendingDeals(trendingDealsSelection);
 
           setAllDeals(dealsData);
 
