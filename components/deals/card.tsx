@@ -74,6 +74,26 @@ function DealCard1({ deal }: { deal: any }) {
     }
   }, [deal, savedDeals, user]);
 
+  // Fetch brand details if not available
+  // TODO: Implement fallback to fetch brand logo when brandDetails is missing
+  // useEffect(() => {
+  //   const fetchBrandLogo = async () => {
+  //     // Only fetch if brandDetails is missing or doesn't have logo
+  //     if (deal.brand && (!deal.brandDetails || !deal.brandDetails.logo)) {
+  //       try {
+  //         const brandDetails = await getBrandDetails(deal.brand);
+  //         if (brandDetails && brandDetails.logo) {
+  //           setBrandLogo(brandDetails.logo);
+  //         }
+  //       } catch (error) {
+  //         console.error('Failed to fetch brand details for logo:', error);
+  //       }
+  //     }
+  //   };
+
+  //   fetchBrandLogo();
+  // }, [deal.brand, deal.brandDetails, getBrandDetails]);
+
   // Handle save/unsave deal with Sonner toast notifications
   const handleSaveDeal = useCallback(async (e: React.MouseEvent) => {
     e.preventDefault(); // Prevent any parent link navigation
