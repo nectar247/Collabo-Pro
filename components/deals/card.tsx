@@ -1,15 +1,14 @@
 import { Deal } from '@/lib/firebase/collections';
-import { optimizeFirebaseImage, IMAGE_PRESETS, shouldDisableOptimization } from '@/lib/utils/imageOptimization';
 import Image from 'next/image';
 import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
 import { motion } from 'framer-motion';
 import Link from 'next/link';
-import { Heart, ArrowRight, Check, ChevronDownCircle, ChevronRightCircle, Copy, LucideChevronsDown, LucideChevronsRight } from "lucide-react";
-import ShadowScale from '../shadow';
+import { Heart } from "lucide-react";
 import { DealsLabel, reformatDate, truncateText } from '@/helper';
 import DiscountModal from '../modal/DiscountModal';
 import { useAuth, useProfile } from '@/lib/firebase/hooks';
 import { toast } from 'sonner';
+import { useBrandLogo } from './useBrandLogo';
 
 function DealButton({ deal }: { deal: Deal }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -54,6 +53,9 @@ function DealCard1({ deal }: { deal: any }) {
   // Get auth and profile hooks
   const { user } = useAuth();
   const { savedDeals, savedUnsaveDeals } = useProfile();
+  
+  // Get brand logo with fallback
+  const { logo: brandLogo } = useBrandLogo(deal.brand, deal.image || deal.brandDetails?.logo);
 
   // Memoize expensive operations
   const formattedDate = useMemo(() => {
@@ -163,12 +165,11 @@ function DealCard1({ deal }: { deal: any }) {
       <div className="h-24 md:h-24 m-5 flex items-center space-x-4">
         <div className="flex-shrink-0">
           <Image
-            src={optimizeFirebaseImage(deal.image || deal.brandDetails?.logo, IMAGE_PRESETS.dealCard.thumbnail)}
-            alt={deal.brand}
+            src={brandLogo || 'data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iODAiIGhlaWdodD0iODAiIHZpZXdCb3g9IjAgMCA4MCA4MCIgZmlsbD0ibm9uZSIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj4KPHJlY3Qgd2lkdGg9IjgwIiBoZWlnaHQ9IjgwIiBmaWxsPSIjRjNGNEY2Ii8+CjxwYXRoIGQ9Ik00MCA0MEM0NiA0MCA1MCAzNiA1MCAzMEM1MCAyNCA0NiAyMCA0MCAyMEM0NSAyMCAzMCAyNCAzMCAzMEMzMCAzNiAzNCA0MCA0MCA0MFoiIGZpbGw9IiM5Q0EzQUYiLz4KPC9zdmc+Cg=='}
+            alt={deal.brand || 'Brand logo'}
             width={80}
             height={80}
             sizes="80px"
-            unoptimized={shouldDisableOptimization(deal.image || deal.brandDetails?.logo || '')}
             className="object-contain border aspect-square transition-transform duration-500 group-hover:scale-110 w-[80px] h-[80px] rounded-md bg-white/50"
           />
         </div>
