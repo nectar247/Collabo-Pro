@@ -9,6 +9,7 @@ import DiscountModal from '../modal/DiscountModal';
 import { useAuth, useProfile } from '@/lib/firebase/hooks';
 import { toast } from 'sonner';
 import { useBrandLogo } from './useBrandLogo';
+import { shouldDisableOptimization } from '@/lib/utils/imageOptimization';
 
 function DealButton({ deal }: { deal: Deal }) {
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -170,6 +171,7 @@ function DealCard1({ deal }: { deal: any }) {
             width={80}
             height={80}
             sizes="80px"
+            unoptimized={shouldDisableOptimization(brandLogo || '')}
             className="object-contain border aspect-square transition-transform duration-500 group-hover:scale-110 w-[80px] h-[80px] rounded-md bg-white/50"
           />
         </div>
