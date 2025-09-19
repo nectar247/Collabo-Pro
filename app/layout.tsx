@@ -4,6 +4,8 @@ import { ThemeProvider } from '@/components/theme/theme-provider';
 import Script from 'next/script';
 import { Metadata, Viewport } from 'next';
 import { Toaster } from 'sonner';
+import { Analytics } from '@vercel/analytics/next';
+import { SpeedInsights } from '@vercel/speed-insights/next';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
@@ -66,6 +68,8 @@ export default function RootLayout({
               closeButton
             />
           </main>
+          <Analytics />
+          <SpeedInsights />
         </ThemeProvider>
         <Script src="https://www.dwin2.com/pub.1822416.min.js" strategy="lazyOnload" />
       </body>
