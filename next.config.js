@@ -7,7 +7,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: { 
-    unoptimized: false,
+    unoptimized: true,
     formats: ['image/webp', 'image/avif'],
     remotePatterns: [
       {
