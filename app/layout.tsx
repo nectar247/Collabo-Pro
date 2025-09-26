@@ -11,7 +11,11 @@ const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
 // Add metadata export for your root layout
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'),
+  metadataBase: new URL(
+    process.env.VERCEL_URL 
+      ? `https://${process.env.VERCEL_URL}` 
+      : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
+  ),
   title: {
     template: '%s | Shop4Vouchers',
     default: 'Shop4Vouchers',
