@@ -71,7 +71,7 @@ const FilteredBrands = ({
                                                 fill
                                                 sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
                                                 priority={index < 4}
-                                                {...(index === 0 && { fetchpriority: "high" })}
+                                                {...(index === 0 && { fetchPriority: "high" })}
                                                 unoptimized={shouldDisableOptimization(brand.brandimg)}
                                             />
                                         </div>

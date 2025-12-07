@@ -3,11 +3,12 @@ import { db } from '@/lib/firebase';
 import DynamicPageContent from './DynamicPageContent';
 import { notFound } from 'next/navigation';
 
-export default async function DynamicPage({ params }: { params: { slug: string } }) {
+export default async function DynamicPage({ params }: { params: Promise<{ slug: string }> }) {
   try {
+    const { slug } = await params;
     const contentSnapshot = await getDocs(collection(db, 'content'));
     const content = contentSnapshot.docs
-      .find(doc => doc.data().slug === params.slug)?.data() || null;
+      .find(doc => doc.data().slug === slug)?.data() || null;
 
     if (!content) {
       notFound(); // Show 404 page if content is missing
@@ -16,7 +17,7 @@ export default async function DynamicPage({ params }: { params: { slug: string }
     content.createdAt = new Date(content.createdAt.seconds * 1000);
     content.updatedAt = new Date(content.updatedAt.seconds * 1000);
 
-    return <DynamicPageContent slug={params.slug} content_={content} />;
+    return <DynamicPageContent slug={slug} content_={content} />;
   } catch (error) {
     // Only log error in development to reduce console noise in production
     if (process.env.NODE_ENV === 'development') {
