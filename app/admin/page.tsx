@@ -7,7 +7,8 @@ export const dynamic = 'force-dynamic'; // optional, if this page uses runtime d
 export const fetchCache = 'force-no-store'; // optional, disables caching
 
 export default async function AdminPage() {
-  const token = cookies().get('authToken')?.value;
+  const cookieStore = await cookies();
+  const token = cookieStore.get('authToken')?.value;
 
   if (!token) {
     redirect('/sign-in');

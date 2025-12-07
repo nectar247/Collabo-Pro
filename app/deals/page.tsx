@@ -1,10 +1,8 @@
 // app/deals/page.tsx
 export const revalidate = 600; // ← Enables ISR: rebuilds page every 60 seconds
 
-import dynamic from "next/dynamic";
 import { generateMetadata as createMetadata } from '@/lib/metadata';
-
-const DealsPageClient = dynamic(() => import('../search/SearchPage'), { ssr: false });
+import DealsPageClient from './DealsPageClient';
 
 // Add metadata export for this page
 export const metadata = createMetadata({

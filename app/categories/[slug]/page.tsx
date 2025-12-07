@@ -50,9 +50,10 @@ function doesCategoryMatch(dealCategory: any, searchCategory: string) {
   );
 }
 
-export default async function DynamicPage({ params }: { params: { slug: string } }) {
+export default async function DynamicPage({ params }: { params: Promise<{ slug: string }> }) {
   try {
-    const decodedSlug = decodeURIComponent(params.slug);
+    const { slug } = await params;
+    const decodedSlug = decodeURIComponent(slug);
     
     // Option 1: Try exact category match first (most efficient)
     let categoryDeals: any[] = [];
@@ -151,8 +152,8 @@ export default async function DynamicPage({ params }: { params: { slug: string }
     console.log('Server-side: Returning', serializedDeals.length, 'serialized deals');
 
     return (
-      <CategoryPageClient 
-        slug={params.slug} 
+      <CategoryPageClient
+        slug={slug}
         initialDeals={serializedDeals}
         categoryName={decodedSlug}
       />

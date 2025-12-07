@@ -5,9 +5,10 @@ import { getDeal } from '@/lib/firebase/server';
 import { Suspense } from 'react';
 import DealContent from './DealContent';
 
-export default async function DealPage({ params }: { params: { id: string } }) {
+export default async function DealPage({ params }: { params: Promise<{ id: string }> }) {
   try {
-    const content = await getDeal(params.id);
+    const { id } = await params;
+    const content = await getDeal(id);
 
     if (!content) {
       notFound(); // Show 404 page if content is missing
