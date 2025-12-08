@@ -3,6 +3,7 @@ const path = require('path');
 
 const nextConfig = {
   output: 'standalone',
+  serverComponentsExternalPackages: ['recharts', 'eventemitter3'],
   eslint: {
     ignoreDuringBuilds: true,
   },
@@ -121,11 +122,16 @@ const nextConfig = {
       }
     ]
   },
-  webpack: (config) => {
+  webpack: (config, { isServer }) => {
     config.resolve.alias = {
       ...config.resolve.alias,
       'undici': false
     };
+
+    // Configure webpack output for server to avoid 'self' usage
+    if (isServer) {
+      config.output.globalObject = 'globalThis';
+    }
 
     config.optimization.splitChunks = {
       chunks: 'all',
