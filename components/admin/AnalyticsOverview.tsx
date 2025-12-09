@@ -2,7 +2,7 @@
 
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { Users, Tag, DollarSign, Clock, TrendingUp } from 'lucide-react';
-import { collection, query, where, getDocs, orderBy, limit } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, limit, getCountFromServer } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import { db } from '@/lib/firebase';
 
@@ -38,18 +38,20 @@ export default function AnalyticsOverview() {
   useEffect(() => {
     async function fetchAnalytics() {
       try {
+        setLoading(true); // Force loading state on each fetch
+
         // Fetch total users
         const usersQuery = query(collection(db, 'profiles'));
         const usersSnapshot = await getDocs(usersQuery);
         const totalUsers = usersSnapshot.size;
 
-        // Fetch active deals
+        // Fetch active deals with getCountFromServer for accurate count
         const dealsQuery = query(
           collection(db, 'deals_fresh'),
           where('status', '==', 'active')
         );
-        const dealsSnapshot = await getDocs(dealsQuery);
-        const activeDeals = dealsSnapshot.size;
+        const dealsCount = await getCountFromServer(dealsQuery);
+        const activeDeals = dealsCount.data().count;
 
         // Calculate monthly revenue (from completed transactions)
         const now = new Date();
@@ -101,6 +103,13 @@ export default function AnalyticsOverview() {
     }
 
     fetchAnalytics();
+
+    // Auto-refresh every 30 seconds to keep data fresh
+    const refreshInterval = setInterval(() => {
+      fetchAnalytics();
+    }, 30000);
+
+    return () => clearInterval(refreshInterval);
   }, [timeRange]);
 
   const stats = [
