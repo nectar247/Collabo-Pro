@@ -2,10 +2,8 @@
 
 import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Save, Mail, Bell, Key, Globe, Shield, CheckCircle, AlertCircle, HelpCircle, FileText } from 'lucide-react';
+import { Save, Mail, Bell, Key, Globe, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 import { useSettings } from '@/lib/firebase/hooks';
-import FAQManagement from './FAQManagement';
-import AboutManagement from './aboutManagement';
 import ContentPreloader from '../loaders/ContentPreloader';
 import ContentErrorLoader from '../loaders/ContentErrorLoader';
 
@@ -453,11 +451,9 @@ export default function SettingsManagement() {
               {activeSection === 'emailNotifications' && renderEmailSettings()}
               {activeSection === 'apiKeys' && renderApiSettings()}
               {activeSection === 'security' && renderSecuritySettings()}
-              {(activeSection) === 'faq' && <FAQManagement />}
-              {(activeSection) === 'about' && <AboutManagement />}
 
-              {/* Save Button - Only for non-FAQ/About */}
-              {((activeSection) !== 'faq' && (activeSection) !== 'about') && (
+              {/* Save Button */}
+              {(
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

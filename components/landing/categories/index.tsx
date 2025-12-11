@@ -27,6 +27,7 @@ const CategoriesSection = ({
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
                     {categories.slice(0,8).map((data)=>{
+                        console.log(`📦 Category: ${data.name} | Icon: ${data.icon}`);
                         return {
                             ...data,
                             icon: <DynamicIcon name={data.icon} /> as any,
