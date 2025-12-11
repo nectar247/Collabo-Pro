@@ -127,6 +127,15 @@ const nextConfig = {
       'undici': false
     };
 
+    // Exclude functions directory from build
+    config.externals = config.externals || [];
+    if (isServer) {
+      config.externals.push({
+        'firebase-functions': 'commonjs firebase-functions',
+        'firebase-functions/v1': 'commonjs firebase-functions/v1',
+      });
+    }
+
     // Configure webpack output for server to avoid 'self' usage
     if (isServer) {
       config.output.globalObject = 'globalThis';
