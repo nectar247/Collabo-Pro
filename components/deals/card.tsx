@@ -19,7 +19,7 @@ function DealButton({ deal }: { deal: Deal }) {
       {deal.label !== 'GetCode' ?
         <button
           onClick={() => setIsModalOpen(true)}
-          className="w-full mt-1 bg-gradient-to-r from-secondary to-secondary-dark hover:from-secondary-dark hover:to-secondary text-white py-3 px-4 min-h-[44px] rounded-lg font-medium transition-all duration-300"
+          className="w-full mt-1 bg-gradient-to-r from-secondary to-tertiary hover:shadow-lg text-white py-3 px-4 min-h-[44px] rounded-xl font-semibold transition-all duration-300"
         >
           {DealsLabel[deal.label]}
         </button>
@@ -28,14 +28,14 @@ function DealButton({ deal }: { deal: Deal }) {
           <div className="flex mt-[-16px]">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="w-full mt-4 bg-gradient-to-r from-secondary to-secondary-dark hover:from-secondary-dark hover:to-secondary text-white py-3 px-4 min-h-[44px] rounded-lg rounded-tr-none rounded-br-none font-medium transition-all duration-300"
+              className="w-full mt-4 bg-gradient-to-r from-secondary to-tertiary hover:shadow-lg text-white py-3 px-4 min-h-[44px] rounded-xl rounded-tr-none rounded-br-none font-semibold transition-all duration-300"
             >
               {DealsLabel[deal.label]}
             </button>
             <div className='relative'>
               <div className='fold-corner-1 fixed right-[-22px] bottom-[-2px] shadow-xl'></div>
             </div>
-            <div className="w-[70px] mt-4 text-dark-700 py-2 rounded-lg rounded-tl-none rounded-bl-none font-medium ps-1 bg-secondary/10 border-secondary border-dashed border-2">
+            <div className="w-[70px] mt-4 text-dark-700 py-2 rounded-xl rounded-tl-none rounded-bl-none font-semibold ps-1 bg-secondary/10 border-secondary border-dashed border-2">
               {deal.code.slice(-2)}
             </div>
           </div>
@@ -162,7 +162,7 @@ function DealCard1({ deal }: { deal: any }) {
   }, [user, savedUnsaveDeals, isSaved, deal]);
 
   return (
-    <div className="bg-white shadow-g dark:bg-white/10 backdrop-blur-xl p-1 rounded-xl overflow-hidden border border-white/20 group hover:border-primary/20 transition-colors w-[100%] md:w-[100%] relative">
+    <div className="bg-white shadow-lg dark:bg-white/10 backdrop-blur-xl p-1 rounded-2xl overflow-hidden border border-gray-200 group hover:border-primary/30 hover:shadow-xl transition-all duration-300 w-[100%] md:w-[100%] relative">
       <div className="h-24 md:h-24 m-5 flex items-center space-x-4">
         <div className="flex-shrink-0">
           <Image
@@ -172,24 +172,24 @@ function DealCard1({ deal }: { deal: any }) {
             height={80}
             sizes="80px"
             unoptimized={shouldDisableOptimization(brandLogo || '')}
-            className="object-contain border aspect-square transition-transform duration-500 group-hover:scale-110 w-[80px] h-[80px] rounded-md bg-white/50"
+            className="object-contain border border-gray-200 aspect-square transition-transform duration-500 group-hover:scale-110 w-[80px] h-[80px] rounded-xl bg-white/50"
           />
         </div>
         <div className="flex flex-col mt-3 flex-grow min-w-0 pr-16">
-            <h3 className="md:text-md text-xs font-semibold text-primary dark:text-white group-hover:text-gray-500 transition-colors line-clamp-2 leading-tight max-w-full">
+            <h3 className="md:text-base text-sm font-bold text-primary dark:text-white group-hover:text-gray-600 transition-colors line-clamp-2 leading-tight max-w-full">
               {truncatedDescription}
             </h3>
-          <span className="text-tertiary dark:text-white text-xs md:text-sm mt-1 text-left">{deal.brand}</span>
+          <span className="text-gray-600 dark:text-white text-xs md:text-sm mt-1 text-left font-medium">{deal.brand}</span>
           <Link
             href={`/brands/${deal.brandDetails?.slug || encodeURIComponent(deal.brand.toLowerCase().replace(/\s+/g, '-').replace(/[^a-z0-9-]/g, ''))}`}
-            className="mt-2 text-sm min-h-[44px] flex items-center text-primary hover:text-primary-dark transition-colors gap-1 group py-2"
+            className="mt-2 text-sm min-h-[44px] flex items-center text-primary hover:text-secondary transition-colors gap-1 group py-2 font-medium"
           >
             <span>See all <span className='font-semibold underline'>{deal.brand} deals </span></span>
           </Link>
         </div>
         <div className="absolute top-2 right-2 flex items-center space-x-2 z-10">
           {deal.discount && (
-            <div className="bg-alternate text-primary px-[5px] py-[3px] rounded-sm text-xs backdrop-blur-xl">
+            <div className="bg-gradient-to-r from-secondary/10 to-tertiary/10 text-primary px-3 py-1.5 rounded-lg text-xs font-semibold border border-secondary/20 backdrop-blur-xl">
               {deal.discount}
             </div>
           )}
