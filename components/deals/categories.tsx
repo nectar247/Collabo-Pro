@@ -85,7 +85,7 @@ function CategoryCard1({category, index}: {category: any, index?: number}) {
         if (name.includes('beauty') || name.includes('sport')) return gradients[7];
 
         // Default: cycle through gradients based on category name hash
-        const hash = category.name.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+        const hash = category.name.split('').reduce((acc: number, char: string) => acc + char.charCodeAt(0), 0);
         return gradients[hash % gradients.length];
     };
 
