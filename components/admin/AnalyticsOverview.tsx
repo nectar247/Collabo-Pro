@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useEffect, lazy, Suspense } from 'react';
-import { Users, Tag, DollarSign, Clock, TrendingUp } from 'lucide-react';
+import { useState, useEffect, lazy, Suspense, useCallback } from 'react';
+import { Users, Tag, DollarSign, Clock, TrendingUp, RefreshCw } from 'lucide-react';
 import { collection, query, where, getDocs, orderBy, limit, getCountFromServer } from 'firebase/firestore';
 import { motion } from 'framer-motion';
 import { db } from '@/lib/firebase';
+import ExpiredDealsCleanup from './ExpiredDealsCleanup';
 
 // Lazy load heavy chart components
 const LineChart = lazy(() => import('./charts/LineChart'));
@@ -23,6 +24,7 @@ interface AnalyticsData {
 
 export default function AnalyticsOverview() {
   const [timeRange, setTimeRange] = useState('7d');
+  const [lastFetch, setLastFetch] = useState<string>('');
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData>({
     totalUsers: 0,
     activeDeals: 0,
@@ -34,24 +36,32 @@ export default function AnalyticsOverview() {
     sessionGrowth: 0
   });
   const [loading, setLoading] = useState(true);
+  const [isRefreshing, setIsRefreshing] = useState(false);
 
-  useEffect(() => {
-    async function fetchAnalytics() {
+  const fetchAnalytics = useCallback(async () => {
       try {
         setLoading(true); // Force loading state on each fetch
+
+        console.log('🔄 Fetching analytics data...', new Date().toISOString());
 
         // Fetch total users
         const usersQuery = query(collection(db, 'profiles'));
         const usersSnapshot = await getDocs(usersQuery);
         const totalUsers = usersSnapshot.size;
 
+        console.log('👥 Total users:', totalUsers);
+
         // Fetch active deals with getCountFromServer for accurate count
         const dealsQuery = query(
           collection(db, 'deals_fresh'),
           where('status', '==', 'active')
         );
+
+        console.log('🔍 Querying active deals...');
         const dealsCount = await getCountFromServer(dealsQuery);
         const activeDeals = dealsCount.data().count;
+
+        console.log('✅ Active deals count:', activeDeals);
 
         // Calculate monthly revenue (from completed transactions)
         const now = new Date();
@@ -95,13 +105,23 @@ export default function AnalyticsOverview() {
           revenueGrowth,
           sessionGrowth
         });
+        setLastFetch(new Date().toLocaleTimeString());
         setLoading(false);
+
+        console.log('✅ Analytics updated successfully');
       } catch (error) {
-        console.error('Error fetching analytics:', error);
+        console.error('❌ Error fetching analytics:', error);
         setLoading(false);
       }
-    }
+  }, []);
 
+  const handleManualRefresh = async () => {
+    setIsRefreshing(true);
+    await fetchAnalytics();
+    setIsRefreshing(false);
+  };
+
+  useEffect(() => {
     fetchAnalytics();
 
     // Auto-refresh every 30 seconds to keep data fresh
@@ -110,7 +130,7 @@ export default function AnalyticsOverview() {
     }, 30000);
 
     return () => clearInterval(refreshInterval);
-  }, [timeRange]);
+  }, [timeRange, fetchAnalytics]);
 
   const stats = [
     {
@@ -210,8 +230,25 @@ export default function AnalyticsOverview() {
 
   return (
     <div className="space-y-8">
-      {/* Time Range Selector */}
-      <div className="flex justify-end space-x-2">
+      {/* Time Range Selector and Refresh */}
+      <div className="flex justify-between items-center">
+        <div className="flex items-center gap-3">
+          <button
+            onClick={handleManualRefresh}
+            disabled={isRefreshing}
+            className="flex items-center gap-2 px-4 py-2 bg-tertiary text-white rounded-lg hover:bg-tertiary/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+          <ExpiredDealsCleanup onCleanupComplete={handleManualRefresh} />
+          {lastFetch && (
+            <span className="text-sm text-gray-600">
+              Last updated: {lastFetch}
+            </span>
+          )}
+        </div>
+        <div className="flex space-x-2">
         {['24h', '7d', '30d', '90d'].map((range) => (
           <button
             key={range}
@@ -225,6 +262,7 @@ export default function AnalyticsOverview() {
             {range}
           </button>
         ))}
+        </div>
       </div>
 
       {/* Stats Grid */}

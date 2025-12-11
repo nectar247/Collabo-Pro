@@ -1,0 +1,73 @@
+
+═══════════════════════════════════════════════════════════════
+  INVESTIGATION COMPLETE: Active Deals Count Analysis
+═══════════════════════════════════════════════════════════════
+
+✅ STATUS: Analysis Complete
+
+📊 FINDINGS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  • Total Active Deals:       1,473
+  • Actually Active:           1,023 (69.4%)
+  • Expired (but active):      450 (30.6%)
+  • Total in Collection:       1,478
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+🎯 ROOT CAUSE:
+The count IS accurate at 1,473. The real issue is that 450 deals
+have expired but are still marked as 'active' in the database.
+
+📁 FILES GENERATED FOR YOUR INSPECTION:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+1. scripts/expired-active-deals.csv (151 KB)
+   → Open in Excel for easy inspection
+   → Contains all 450 expired deals
+
+2. scripts/expired-active-deals.json (737 KB)
+   → Full data export with API source info
+   → Use for programmatic processing
+
+3. scripts/README.md
+   → Master guide with instructions
+
+4. scripts/EXPIRED_DEALS_SUMMARY.md
+   → Overview and recommendations
+
+5. scripts/BRAND_ANALYSIS.md
+   → Top brands with expired deals
+
+🔝 TOP 5 BRANDS TO REVIEW:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. GhostBikes.com         66 expired deals (14.7%)
+  2. Xiaomi UK              32 expired deals (7.1%)
+  3. Flower Station Ltd     24 expired deals (5.3%)
+  4. The Jewel Hut          21 expired deals (4.7%)
+  5. Stylevana UK           18 expired deals (4.0%)
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+📋 QUICK START:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  1. Open:  scripts/expired-active-deals.csv
+  2. Sort by brand to group similar deals
+  3. Check API source for each brand
+  4. Decide: Refresh, Deactivate, or Delete
+
+🔧 USEFUL COMMANDS:
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+  # Open CSV in Excel
+  open scripts/expired-active-deals.csv
+
+  # View all files
+  ls -lh scripts/*.{json,csv,md}
+
+  # Re-run check
+  npx tsx scripts/checkActiveDeals.ts
+
+  # Count by brand
+  cat scripts/expired-active-deals.json | jq -r '.[].brand' | sort | uniq -c | sort -rn
+
+═══════════════════════════════════════════════════════════════
+Need help with bulk cleanup or automation? Just ask\!
+═══════════════════════════════════════════════════════════════
+

@@ -4,7 +4,6 @@ import { motion } from 'framer-motion';
 import { Search, Shield, Users, Sparkles, TrendingUp, CheckCircle2, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
-import { handleSearchClick } from '@/helper';
 import Image from 'next/image';
 
 interface HeroMinimalistProps {
@@ -128,7 +127,7 @@ const HeroMinimalist = ({
                             className="inline-flex items-center gap-2 bg-gradient-to-r from-secondary/10 to-tertiary/10 px-5 py-2.5 rounded-full mb-8 border border-secondary/20"
                         >
                             <Star className="h-4 w-4 text-tertiary" fill="currentColor" />
-                            <span className="text-sm font-semibold text-primary">Trusted by 50,000+ UK shoppers</span>
+                            <span className="text-sm font-semibold text-primary">Trusted by online shoppers</span>
                         </motion.div>
 
                         <motion.h1
@@ -205,8 +204,8 @@ const HeroMinimalist = ({
                         </motion.div>
                     </div>
 
-                    {/* Trust Metrics */}
-                    <motion.div
+                    {/* Trust Metrics - Hidden for new sites, uncomment when you have real numbers */}
+                    {/* <motion.div
                         initial={{ opacity: 0, y: 30 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.6, delay: 0.5 }}
@@ -231,7 +230,7 @@ const HeroMinimalist = ({
                                 </div>
                             </motion.div>
                         ))}
-                    </motion.div>
+                    </motion.div> */}
 
                     {/* Testimonial Carousel */}
                     <motion.div
@@ -270,26 +269,6 @@ const HeroMinimalist = ({
                         </div>
                     </motion.div>
 
-                    {/* Popular searches */}
-                    {popularSearches.length > 0 && (
-                        <motion.div
-                            initial={{ opacity: 0 }}
-                            animate={{ opacity: 1 }}
-                            transition={{ duration: 0.6, delay: 0.9 }}
-                            className="flex flex-wrap justify-center gap-3 items-center mt-12"
-                        >
-                            <span className="text-gray-500 font-medium">Popular searches:</span>
-                            {popularSearches.slice(0, 5).map((search) => (
-                                <button
-                                    key={search}
-                                    onClick={() => handleSearchClick(router, search)}
-                                    className="text-sm text-primary hover:text-secondary px-4 py-2 rounded-lg bg-gray-100 hover:bg-gray-200 border border-gray-200 hover:border-secondary/30 transition-all duration-300 font-medium"
-                                >
-                                    {search}
-                                </button>
-                            ))}
-                        </motion.div>
-                    )}
                 </div>
             </div>
         </section>

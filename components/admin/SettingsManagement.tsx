@@ -41,8 +41,32 @@ export default function SettingsManagement() {
     const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'success' | 'error'>('idle');
     const [successMessage, setSuccessMessage] = useState('Settings saved successfully')
     const [errorMessage, setErrorMessage] = useState('Error saving settings')
-    const [localSettings, setLocalSettings] = useState<SystemSettings | null>(null);
-  
+    const [localSettings, setLocalSettings] = useState<SystemSettings>({
+      emailNotifications: {
+        dealAlerts: false,
+        weeklyNewsletter: false,
+        adminNotifications: false,
+      },
+      apiKeys: {
+        stripePublicKey: '',
+        stripeSecretKey: '',
+        googleAnalyticsId: '',
+      },
+      general: {
+        siteName: '',
+        siteUrl: '',
+        supportEmail: '',
+        supportPhone: '',
+        supportAddress: '',
+        maintenanceMode: false,
+      },
+      security: {
+        requireEmailVerification: false,
+        maxLoginAttempts: 5,
+        sessionTimeout: 30,
+      },
+    });
+
     // Initialize local settings from database settings
     useEffect(() => {
       if (dbSettings) {
@@ -51,7 +75,6 @@ export default function SettingsManagement() {
     }, [dbSettings]);
   
     const handleSave = async () => {
-        if (!localSettings) return;
         setSaveStatus('saving');
         try {
             if(!localSettings.general.siteName || !localSettings.general.siteUrl){
@@ -76,7 +99,7 @@ export default function SettingsManagement() {
       { id: 'security', label: 'Security', icon: Shield },
       { id: 'faq', label: 'FAQ', icon: HelpCircle },
       { id: 'about', label: 'About', icon: FileText }
-    ] as any;
+    ];
 
     const renderToggleButton = (
         checked: boolean,
@@ -119,12 +142,12 @@ export default function SettingsManagement() {
           </label>
           <input
             type="text"
-            value={localSettings?.general.siteName}
+            value={localSettings.general.siteName}
             onChange={(e) =>
               setLocalSettings({
                 ...localSettings,
-                general: { ...localSettings?.general, siteName: e.target.value }
-              } as any)
+                general: { ...localSettings.general, siteName: e.target.value }
+              })
             }
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
@@ -137,12 +160,12 @@ export default function SettingsManagement() {
           </label>
           <input
             type="url"
-            value={localSettings?.general.siteUrl}
+            value={localSettings.general.siteUrl}
             onChange={(e) =>
               setLocalSettings({
                 ...localSettings,
-                general: { ...localSettings?.general, siteUrl: e.target.value }
-              } as any)
+                general: { ...localSettings.general, siteUrl: e.target.value }
+              })
             }
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
@@ -155,12 +178,12 @@ export default function SettingsManagement() {
           </label>
           <input
             type="email"
-            value={localSettings?.general.supportEmail}
+            value={localSettings.general.supportEmail}
             onChange={(e) =>
               setLocalSettings({
                 ...localSettings,
-                general: { ...localSettings?.general, supportEmail: e.target.value }
-              } as any)
+                general: { ...localSettings.general, supportEmail: e.target.value }
+              })
             }
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
@@ -173,12 +196,12 @@ export default function SettingsManagement() {
           </label>
           <input
             type="text"
-            value={localSettings?.general.supportPhone}
+            value={localSettings.general.supportPhone}
             onChange={(e) =>
               setLocalSettings({
                 ...localSettings,
-                general: { ...localSettings?.general, supportPhone: e.target.value }
-              } as any)
+                general: { ...localSettings.general, supportPhone: e.target.value }
+              })
             }
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
@@ -191,12 +214,12 @@ export default function SettingsManagement() {
           </label>
           <input
             type="text"
-            value={localSettings?.general.supportAddress}
+            value={localSettings.general.supportAddress}
             onChange={(e) =>
               setLocalSettings({
                 ...localSettings,
-                general: { ...localSettings?.general, supportAddress: e.target.value }
-              } as any)
+                general: { ...localSettings.general, supportAddress: e.target.value }
+              })
             }
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
@@ -204,12 +227,12 @@ export default function SettingsManagement() {
       
         {/* Maintenance Mode Toggle */}
         {renderToggleButton(
-          localSettings?.general?.maintenanceMode as any,
+          localSettings.general.maintenanceMode,
           (checked) =>
             setLocalSettings({
               ...localSettings,
-              general: { ...localSettings?.general, maintenanceMode: checked }
-            } as any),
+              general: { ...localSettings.general, maintenanceMode: checked }
+            }),
           "Enable Maintenance Mode"
         )}
       </div>
@@ -218,41 +241,41 @@ export default function SettingsManagement() {
     const renderEmailSettings = () => (
       <div className="space-y-6 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
         {renderToggleButton(
-          localSettings?.emailNotifications?.dealAlerts as any,
+          localSettings.emailNotifications.dealAlerts,
           (checked) =>
             setLocalSettings({
               ...localSettings,
               emailNotifications: {
-                ...localSettings?.emailNotifications,
+                ...localSettings.emailNotifications,
                 dealAlerts: checked,
               },
-            } as any),
+            }),
           "Send Deal Alert Emails"
         )}
 
         {renderToggleButton(
-          localSettings?.emailNotifications?.weeklyNewsletter as any,
+          localSettings.emailNotifications.weeklyNewsletter,
           (checked) =>
             setLocalSettings({
               ...localSettings,
               emailNotifications: {
-                ...localSettings?.emailNotifications,
+                ...localSettings.emailNotifications,
                 weeklyNewsletter: checked,
               },
-            } as any),
+            }),
           "Send Weekly Newsletter"
         )}
 
         {renderToggleButton(
-          localSettings?.emailNotifications?.adminNotifications as any,
+          localSettings.emailNotifications.adminNotifications,
           (checked) =>
             setLocalSettings({
               ...localSettings,
               emailNotifications: {
-                ...localSettings?.emailNotifications,
+                ...localSettings.emailNotifications,
                 adminNotifications: checked,
               },
-            } as any),
+            }),
           "Send Admin Notifications"
         )}
       </div>
@@ -267,15 +290,15 @@ export default function SettingsManagement() {
           </label>
           <input
             type="text"
-            value={localSettings?.apiKeys?.stripePublicKey}
+            value={localSettings.apiKeys.stripePublicKey || ''}
             onChange={(e) =>
               setLocalSettings({
                 ...localSettings,
                 apiKeys: {
-                  ...localSettings?.apiKeys,
+                  ...localSettings.apiKeys,
                   stripePublicKey: e.target.value,
                 },
-              } as any)
+              })
             }
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
@@ -288,15 +311,15 @@ export default function SettingsManagement() {
           </label>
           <input
             type="password"
-            value={localSettings?.apiKeys?.stripeSecretKey}
+            value={localSettings.apiKeys.stripeSecretKey || ''}
             onChange={(e) =>
               setLocalSettings({
                 ...localSettings,
                 apiKeys: {
-                  ...localSettings?.apiKeys,
+                  ...localSettings.apiKeys,
                   stripeSecretKey: e.target.value,
                 },
-              } as any)
+              })
             }
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
@@ -309,15 +332,15 @@ export default function SettingsManagement() {
           </label>
           <input
             type="text"
-            value={localSettings?.apiKeys?.googleAnalyticsId}
+            value={localSettings.apiKeys.googleAnalyticsId || ''}
             onChange={(e) =>
               setLocalSettings({
                 ...localSettings,
                 apiKeys: {
-                  ...localSettings?.apiKeys,
+                  ...localSettings.apiKeys,
                   googleAnalyticsId: e.target.value,
                 },
-              } as any)
+              })
             }
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
@@ -329,15 +352,15 @@ export default function SettingsManagement() {
       <div className="space-y-6 bg-white border border-gray-200 rounded-xl p-6 shadow-sm">
         {/* Email Verification Toggle */}
         {renderToggleButton(
-          localSettings?.security?.requireEmailVerification as any,
+          localSettings.security.requireEmailVerification,
           (checked) =>
             setLocalSettings({
               ...localSettings,
               security: {
-                ...localSettings?.security,
+                ...localSettings.security,
                 requireEmailVerification: checked,
               },
-            } as any),
+            }),
           "Require Email Verification"
         )}
 
@@ -350,15 +373,15 @@ export default function SettingsManagement() {
             type="number"
             min="1"
             max="10"
-            value={localSettings?.security?.maxLoginAttempts}
+            value={localSettings.security.maxLoginAttempts || 5}
             onChange={(e) =>
               setLocalSettings({
                 ...localSettings,
                 security: {
-                  ...localSettings?.security,
+                  ...localSettings.security,
                   maxLoginAttempts: parseInt(e.target.value),
                 },
-              } as any)
+              })
             }
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
@@ -373,15 +396,15 @@ export default function SettingsManagement() {
             type="number"
             min="5"
             max="1440"
-            value={localSettings?.security?.sessionTimeout}
+            value={localSettings.security.sessionTimeout || 30}
             onChange={(e) =>
               setLocalSettings({
                 ...localSettings,
                 security: {
-                  ...localSettings?.security,
+                  ...localSettings.security,
                   sessionTimeout: parseInt(e.target.value),
                 },
-              } as any)
+              })
             }
             className="w-full px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-900 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-secondary/50 shadow-sm"
           />
@@ -432,11 +455,11 @@ export default function SettingsManagement() {
               {activeSection === 'emailNotifications' && renderEmailSettings()}
               {activeSection === 'apiKeys' && renderApiSettings()}
               {activeSection === 'security' && renderSecuritySettings()}
-              {(activeSection as any) === 'faq' && <FAQManagement />}
-              {(activeSection as any) === 'about' && <AboutManagement />}
+              {(activeSection) === 'faq' && <FAQManagement />}
+              {(activeSection) === 'about' && <AboutManagement />}
 
               {/* Save Button - Only for non-FAQ/About */}
-              {((activeSection as any) !== 'faq' && (activeSection as any) !== 'about') && (
+              {((activeSection) !== 'faq' && (activeSection) !== 'about') && (
                 <motion.div
                   initial={{ opacity: 0 }}
                   animate={{ opacity: 1 }}

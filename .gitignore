@@ -5,6 +5,12 @@
 /.pnp
 .pnp.js
 
+/functions/node_modules
+/scheduledBrandsDealCountUpdate
+/scheduledCategoriesDealCountUpdate
+/syncAwinBrands
+/syncAwinPromotions
+
 # testing
 /coverage
 /.bolt/

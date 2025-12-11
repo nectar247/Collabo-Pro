@@ -1,0 +1,3 @@
+{
+  "include": ["src/**/*", "functions/**/*", "**/*.ts", "**/*.js", "eslint.config.js"],
+}

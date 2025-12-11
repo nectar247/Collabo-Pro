@@ -33,8 +33,8 @@ const CategoriesSection = ({
                             color: getCategoryColor(data.name),
                             count: data.dealCount || 0,
                         };
-                    }).map((category) => (
-                        <CategoryCard1 category={category} key={category.name} />
+                    }).map((category, index) => (
+                        <CategoryCard1 category={category} index={index} key={category.name} />
                     ))}
                 </div>
                 <div className="mt-5 flex justify-end">

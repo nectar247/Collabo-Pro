@@ -3,7 +3,7 @@
 
 import { useAuth, useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 import Maintenance from '@/components/ui/maintenance';
-import HeroSection from '@/components/landing/hero';
+import HeroMinimalist from '@/components/landing/hero/HeroMinimalist';
 import { SkeletonLanding } from '@/components/skeleton';
 import Navigation from '@/components/navigation';
 import Footer from '@/components/footer';
@@ -58,7 +58,7 @@ export default function HomePageClient() {
       <div className="overflow-hidden">
 
         {/* Hero Section */}
-        <HeroSection 
+        <HeroMinimalist
           popularSearches={popularSearches}
           setPopularSearches={setPopularSearches}
           loadingSearches={loadingSearches}
