@@ -1317,12 +1317,13 @@ type FetchAdminBrandsOptions = {
 export function useBrands(options: UseBrandsOptions = {}) {
   const [featuredBrands, setFeaturedBrands] = useState<Brand[]>([]);
   const [featuredBrandss, setFeaturedBrandss] = useState<Brand[]>([]);
+  const [footerBrands, setFooterBrands] = useState<Brand[]>([]);
   const [allBrands, setAllBrands] = useState<Brand[]>([]);
   const [activeBrands, setActiveBrands] = useState<Brand[]>([]); // Added back
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
   const [activeBrandsLoaded, setActiveBrandsLoaded] = useState(false); // Added back
-  
+
   const [adminBrands, setAdminBrands] = useState<Brand[]>([]);
   const [allAdminBrands, setAllAdminBrands] = useState<Brand[]>([]);
   const [totalBrandsCount, setTotalBrandsCount] = useState<number>(0);
@@ -1398,6 +1399,28 @@ export function useBrands(options: UseBrandsOptions = {}) {
       setError(err as Error);
     } finally {
       setLoading(false);
+    }
+  }, []);
+
+  // Fetch brands for footer - returns 15 brands with active deals
+  const fetchFooterBrands = useCallback(async () => {
+    try {
+      const snapshot = await getDocs(query(
+        collection(db, 'brands'),
+        where('status', '==', 'active'),
+        orderBy('activeDeals', 'desc'),
+        limit(15)
+      ));
+
+      const brands = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })).filter((b: any) => b.activeDeals > 0) as Brand[];
+
+      setFooterBrands(brands);
+    } catch (err) {
+      console.error('Error fetching footer brands:', err);
+      setError(err as Error);
     }
   }, []);
 
@@ -1615,15 +1638,19 @@ export function useBrands(options: UseBrandsOptions = {}) {
   useEffect(() => {
     fetchFeaturedBrands();
   }, [fetchFeaturedBrands]);
-  
+
   useEffect(() => {
     fetchFeaturedBrandss();
   }, [fetchFeaturedBrandss]);
-  
+
+  useEffect(() => {
+    fetchFooterBrands();
+  }, [fetchFooterBrands]);
+
   useEffect(() => {
     fetchAllBrands();
   }, [fetchAllBrands]);
-  
+
   useEffect(() => {
     fetchAdminBrands();
   }, [fetchAdminBrands]);
@@ -1767,6 +1794,7 @@ export function useBrands(options: UseBrandsOptions = {}) {
   return {
     featuredBrands,
     featuredBrandss,
+    footerBrands,
     allBrands,
     activeBrands, // Added back
     activeBrandsLoaded, // Added back

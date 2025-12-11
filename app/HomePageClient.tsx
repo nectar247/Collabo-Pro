@@ -14,6 +14,9 @@ import SearchesSection from '@/components/landing/searches';
 import SearchDialog from '@/components/search/SearchDialog';
 import { useEffect, useState } from 'react';
 import { getPopularSearches } from '@/lib/firebase/search';
+import { collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
+import { Brand } from '@/lib/firebase/collections';
 
 export default function HomePageClient() {
   const { user, isAdmin, loading: authLoading } = useAuth();
@@ -25,19 +28,49 @@ export default function HomePageClient() {
   const { links: dynamicLinks, loading: loadingDynamicLinks, error } = useDynamicLinks();
   const [popularSearches, setPopularSearches] = useState<string[]>([]);
   const [loadingSearches, setLoadingSearches] = useState<boolean>(true);
-  
+  const [footerBrands, setFooterBrands] = useState<Brand[]>([]);
+  const [loadingFooterBrands, setLoadingFooterBrands] = useState<boolean>(true);
+
   // Add search modal state
   const [isSearchOpen, setIsSearchOpen] = useState(false);
 
   useEffect(() => {
       async function fetchData() {
           try {
+              console.log('🔄 [HomePage] Starting to fetch popular searches and footer brands...');
+
               // Fetch popular searches from recent search history
               const searchesQuery = await getPopularSearches();
               const searchTerms = searchesQuery.map((doc: any) => doc.term);
               setPopularSearches(searchTerms);
+              console.log('✅ [HomePage] Popular searches fetched:', searchTerms.length);
+
+              // Fetch footer brands - 15 brands with most active deals
+              console.log('🔄 [HomePage] Fetching footer brands...');
+              const startTime = performance.now();
+
+              const brandsSnapshot = await getDocs(query(
+                collection(db, 'brands'),
+                where('status', '==', 'active'),
+                where('activeDeals', '>', 0),
+                orderBy('activeDeals', 'desc'),
+                limit(15)
+              ));
+
+              const brands = brandsSnapshot.docs.map(doc => ({
+                id: doc.id,
+                ...doc.data()
+              })) as Brand[];
+
+              const endTime = performance.now();
+              console.log(`✅ [HomePage] Footer brands fetched: ${brands.length} brands in ${(endTime - startTime).toFixed(2)}ms`);
+              console.log('📊 [HomePage] Footer brands:', brands.map(b => b.name));
+
+              setFooterBrands(brands);
+              setLoadingFooterBrands(false);
           } catch (error) {
-              console.error("Error fetching data:", error);
+              console.error("❌ [HomePage] Error fetching data:", error);
+              setLoadingFooterBrands(false);
           } finally {
               setLoadingSearches(false);
           }
@@ -92,12 +125,12 @@ export default function HomePageClient() {
 
       </div>
       
-      <Footer 
-        categories={categories} 
+      <Footer
+        categories={categories}
         loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings} 
+        brands={footerBrands}
+        loadingBrands={loadingFooterBrands}
+        settings={settings}
         settLoading={settLoading}
         dynamicLinks={dynamicLinks}
         loadingDynamicLinks={loadingDynamicLinks}

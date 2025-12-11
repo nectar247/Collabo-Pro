@@ -96,9 +96,7 @@ export default function SettingsManagement() {
       { id: 'general', label: 'General', icon: Globe },
       { id: 'emailNotifications', label: 'Email Notifications', icon: Mail },
       { id: 'apiKeys', label: 'API Keys', icon: Key },
-      { id: 'security', label: 'Security', icon: Shield },
-      { id: 'faq', label: 'FAQ', icon: HelpCircle },
-      { id: 'about', label: 'About', icon: FileText }
+      { id: 'security', label: 'Security', icon: Shield }
     ];
 
     const renderToggleButton = (
