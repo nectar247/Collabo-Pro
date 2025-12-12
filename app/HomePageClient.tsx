@@ -2,7 +2,7 @@
 "use client";
 
 import HeroMinimalist from '@/components/landing/hero/HeroMinimalist';
-import Navigation from '@/components/navigation';
+import NavigationLite from '@/components/NavigationLite';
 import Footer from '@/components/footer';
 import FilteredBrands from '@/components/landing/filteredBrands';
 import CategoriesSection from '@/components/landing/categories';
@@ -35,7 +35,7 @@ export default function HomePageClient({
 
   return (
     <>
-      <Navigation onOpenSearch={() => setIsSearchOpen(true)} />
+      <NavigationLite onOpenSearch={() => setIsSearchOpen(true)} />
       <div className="overflow-hidden">
 
         {/* Hero Section */}

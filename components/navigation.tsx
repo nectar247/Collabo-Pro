@@ -3,14 +3,13 @@
 import { useState, useEffect, memo, useCallback } from "react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
-import { motion, AnimatePresence } from "framer-motion";
 import { useTheme } from "next-themes";
-import { 
-  Search, 
-  Menu, 
-  X, 
-  TagsIcon, 
-  ShoppingCart, 
+import {
+  Search,
+  Menu,
+  X,
+  TagsIcon,
+  ShoppingCart,
   User,
   LogIn,
   UserPlus,
@@ -22,22 +21,29 @@ import { useAuth, useSiteSettings } from "@/lib/firebase/hooks";
 import { signOut } from "@/lib/auth";
 import { ThemeToggle } from "./theme/theme-toggle";
 import SearchDialog from "./search/SearchDialog";
-import { toast } from "sonner"; // Add Sonner toast
+import { toast } from "sonner";
 
 interface NavigationProps {
-  onOpenSearch?: () => void; // Optional prop for external control
+  onOpenSearch?: () => void;
+  skipAuth?: boolean; // Allow skipping auth on homepage
 }
 
-function Navigation({ onOpenSearch }: NavigationProps) {
-  
-  const { settings } = useSiteSettings();
+function Navigation({ onOpenSearch, skipAuth = false }: NavigationProps) {
+
+  // Skip expensive Firestore hooks on homepage for performance
+  const settingsResult = skipAuth ? { settings: null, loading: false } : useSiteSettings();
+  const { settings } = settingsResult;
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
-  const [isSearchOpen, setIsSearchOpen] = useState(false); // Internal search state
+  const [isSearchOpen, setIsSearchOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const router = useRouter();
-  const { user, isAdmin, loading: authLoading } = useAuth();
+
+  // Skip Firebase Auth on homepage - defer until user interaction
+  const authResult = skipAuth ? { user: null, isAdmin: false, loading: false } : useAuth();
+  const { user, isAdmin, loading: authLoading } = authResult;
   const [cartItemCount] = useState(0);
 
   useEffect(() => {
