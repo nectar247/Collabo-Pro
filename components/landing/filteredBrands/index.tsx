@@ -64,29 +64,40 @@ const FilteredBrands = ({
                                 >
                                     <div>
                                         <div className="relative h-40 overflow-hidden border-b-2 border-tertiary/80">
-                                            <Image
-                                                src={optimizeFirebaseImage(brand.brandimg, IMAGE_PRESETS.brandCard.banner)}
-                                                alt={`${brand.name} banner`}
-                                                className="w-full h-full object-cover"
-                                                fill
-                                                sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
-                                                priority={index < 4}
-                                                {...(index === 0 && { fetchPriority: "high" })}
-                                                unoptimized={shouldDisableOptimization(brand.brandimg)}
-                                            />
+                                            {brand.brandimg ? (
+                                                <Image
+                                                    src={brand.brandimg}
+                                                    alt={`${brand.name} banner`}
+                                                    className="w-full h-full object-cover"
+                                                    fill
+                                                    sizes="(max-width: 768px) 100vw, (max-width: 1024px) 50vw, 25vw"
+                                                    priority={index < 4}
+                                                    unoptimized
+                                                />
+                                            ) : (
+                                                <div className="w-full h-full bg-gradient-to-br from-gray-100 to-gray-200 dark:from-gray-800 dark:to-gray-900 flex items-center justify-center">
+                                                    <ShoppingBag className="h-12 w-12 text-gray-400" />
+                                                </div>
+                                            )}
                                         </div>
 
                                         <div className="relative -mt-8 ml-4">
                                             <div className="w-[64px] h-[64px] flex items-center justify-center rounded-md border bg-white/90 overflow-hidden">
-                                                <Image
-                                                    src={optimizeFirebaseImage(brand.logo, IMAGE_PRESETS.brandCard.logo)}
-                                                    alt={`${brand.name} logo`}
-                                                    width={58}
-                                                    height={58}
-                                                    sizes="64px"
-                                                    className="object-contain w-auto h-auto transition-transform duration-500 group-hover:scale-110"
-                                                    unoptimized={shouldDisableOptimization(brand.logo)}
-                                                />
+                                                {brand.logo ? (
+                                                    <Image
+                                                        src={brand.logo}
+                                                        alt={`${brand.name} logo`}
+                                                        width={58}
+                                                        height={58}
+                                                        sizes="64px"
+                                                        className="object-contain w-auto h-auto transition-transform duration-500 group-hover:scale-110"
+                                                        unoptimized
+                                                    />
+                                                ) : (
+                                                    <div className="text-xs font-bold text-gray-600 text-center p-2">
+                                                        {brand.name?.substring(0, 2)}
+                                                    </div>
+                                                )}
                                             </div>
                                         </div>
 

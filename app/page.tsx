@@ -1,6 +1,6 @@
 // app/page.tsx
 import HomePageClient from './HomePageClient';
-import { doc, getDoc } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Metadata } from 'next';
 
@@ -21,13 +21,48 @@ export default async function HomePage() {
     const cacheSnap = await getDoc(cacheRef);
 
     if (!cacheSnap.exists()) {
-      console.warn('Homepage cache not found, using empty data');
+      console.warn('Homepage cache not found, fetching data directly as fallback...');
+
+      // Fallback: fetch data directly
+      const categoriesQuery = query(
+        collection(db, 'categories'),
+        where('status', '==', 'active'),
+        where('dealCount', '>', 0),
+        orderBy('dealCount', 'desc'),
+        limit(8)
+      );
+      const categoriesSnap = await getDocs(categoriesQuery);
+      const categories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const brandsQuery = query(
+        collection(db, 'brands'),
+        where('status', '==', 'active'),
+        where('brandimg', '!=', ''),
+        where('activeDeals', '>', 0),
+        orderBy('brandimg', 'asc'),
+        orderBy('activeDeals', 'desc'),
+        limit(50)
+      );
+      const brandsSnap = await getDocs(brandsQuery);
+      const featuredBrands = brandsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const dealsQuery = query(
+        collection(db, 'deals_fresh'),
+        where('status', '==', 'active'),
+        orderBy('createdAt', 'desc'),
+        limit(20)
+      );
+      const dealsSnap = await getDocs(dealsQuery);
+      const trendingDeals = dealsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      const serializeData = (data: any) => JSON.parse(JSON.stringify(data));
+
       return <HomePageClient
-        categories={[]}
-        featuredBrands={[]}
-        trendingDeals={[]}
+        categories={serializeData(categories)}
+        featuredBrands={serializeData(featuredBrands)}
+        trendingDeals={serializeData(trendingDeals)}
         popularSearches={[]}
-        footerBrands={[]}
+        footerBrands={serializeData(featuredBrands.slice(0, 15))}
       />;
     }
 

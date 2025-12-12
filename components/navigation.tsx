@@ -233,14 +233,8 @@ function Navigation({ onOpenSearch, skipAuth = false }: NavigationProps) {
                   <User className="h-5 w-5 text-gray-700 dark:text-gray-300" />
                 </button>
 
-                <AnimatePresence>
-                  {isUserMenuOpen && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      exit={{ opacity: 0, y: 10 }}
-                      className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden"
-                    >
+                {isUserMenuOpen && (
+                    <div className="absolute right-0 mt-2 w-48 bg-white dark:bg-gray-800 rounded-xl shadow-lg border border-gray-200 dark:border-gray-700 overflow-hidden transition-all duration-200">
                       {!user ? (
                         <div className="py-2">
                           <Link
@@ -299,9 +293,8 @@ function Navigation({ onOpenSearch, skipAuth = false }: NavigationProps) {
                           </button>
                         </div>
                       )}
-                    </motion.div>
+                    </div>
                   )}
-                </AnimatePresence>
               </div>
             </div>
 
@@ -320,14 +313,8 @@ function Navigation({ onOpenSearch, skipAuth = false }: NavigationProps) {
           </div>
 
           {/* Mobile Menu */}
-          <AnimatePresence>
-            {isMenuOpen && (
-              <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
-                className="md:hidden overflow-hidden border-t border-gray-200 dark:border-gray-700"
-              >
+          {isMenuOpen && (
+              <div className="md:hidden overflow-hidden border-t border-gray-200 dark:border-gray-700 transition-all duration-200">
                 <div className="py-4 space-y-4">
                   {/* Mobile Search */}
                   <div className="px-4">
@@ -467,9 +454,8 @@ function Navigation({ onOpenSearch, skipAuth = false }: NavigationProps) {
                     )}
                   </div>
                 </div>
-              </motion.div>
+              </div>
             )}
-          </AnimatePresence>
         </div>
       </header>
 

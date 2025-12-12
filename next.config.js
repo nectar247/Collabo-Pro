@@ -7,7 +7,7 @@ const nextConfig = {
     ignoreDuringBuilds: true,
   },
   images: {
-    unoptimized: false, // Enable Next.js image optimization
+    unoptimized: true, // Temporarily true for dev - set to false for production
     formats: ['image/webp', 'image/avif'],
     remotePatterns: [
       {
