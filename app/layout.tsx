@@ -12,8 +12,8 @@ const inter = Inter({ subsets: ['latin'], display: 'swap' });
 // Add metadata export for your root layout
 export const metadata: Metadata = {
   metadataBase: new URL(
-    process.env.VERCEL_URL 
-      ? `https://${process.env.VERCEL_URL}` 
+    process.env.VERCEL_URL
+      ? `https://${process.env.VERCEL_URL}`
       : process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000'
   ),
   title: {
@@ -32,6 +32,10 @@ export const metadata: Metadata = {
     apple: '/icon-512x512.png',
   },
   manifest: '/manifest.json',
+  // Add explicit charset
+  other: {
+    charset: 'utf-8',
+  },
 };
 
 // Move themeColor to viewport export
@@ -45,29 +49,26 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {  
   return (
-    <html 
-      lang="en" 
-      className={inter.className} 
+    <html
+      lang="en"
+      className={inter.className}
       suppressHydrationWarning
     >
       <head>
+        <meta charSet="utf-8" />
         <link rel="preconnect" href="https://fonts.googleapis.com" />
         <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
         <link rel="preconnect" href="https://vouched4vouchers.firebaseapp.com" />
         <link rel="preconnect" href="https://firestore.googleapis.com" />
         <link rel="preconnect" href="https://firebasestorage.googleapis.com" />
-        <link rel="preconnect" href="https://assets.trendii.com" />
-        <link rel="preconnect" href="https://tm.trendii.com" />
-        <link rel="preconnect" href="https://beeswax.trendii.com" />
-        <link rel="preconnect" href="https://www.dwin2.com" />
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
           <main className="flex-grow">
             {children}
-            <Toaster 
-              position="top-right" 
-              richColors 
+            <Toaster
+              position="top-right"
+              richColors
               expand={true}
               closeButton
             />
@@ -75,7 +76,7 @@ export default function RootLayout({
           <Analytics />
           <SpeedInsights />
         </ThemeProvider>
-        <Script src="https://www.dwin2.com/pub.1822416.min.js" strategy="lazyOnload" />
+        {/* Removed third-party ad script that was causing performance issues */}
       </body>
     </html>
   );

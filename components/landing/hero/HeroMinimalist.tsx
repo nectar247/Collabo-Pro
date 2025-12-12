@@ -1,6 +1,5 @@
 "use client";
 
-import { motion } from 'framer-motion';
 import { Search, Shield, Users, Sparkles, TrendingUp, CheckCircle2, Star } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import React, { useState, useEffect } from 'react';
@@ -89,53 +88,19 @@ const HeroMinimalist = ({
                 <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_120%,#26355D,transparent)]" />
             </div>
 
-            {/* Floating shapes */}
-            <motion.div
-                animate={{
-                    y: [0, -20, 0],
-                    rotate: [0, 5, 0],
-                }}
-                transition={{
-                    duration: 6,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                }}
-                className="absolute top-20 right-20 w-32 h-32 border-2 border-secondary/20 rounded-full"
-            />
-            <motion.div
-                animate={{
-                    y: [0, 20, 0],
-                    rotate: [0, -5, 0],
-                }}
-                transition={{
-                    duration: 7,
-                    repeat: Infinity,
-                    ease: "easeInOut",
-                }}
-                className="absolute bottom-32 left-20 w-24 h-24 border-2 border-tertiary/20 rounded-2xl"
-            />
+            {/* Removed expensive floating shape animations for better performance */}
 
             <div className="container mx-auto px-4 relative z-10">
                 <div className="max-w-5xl mx-auto">
 
                     {/* Main Content */}
                     <div className="text-center mb-16">
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6 }}
-                            className="inline-flex items-center gap-2 bg-gradient-to-r from-secondary/10 to-tertiary/10 px-5 py-2.5 rounded-full mb-8 border border-secondary/20"
-                        >
+                        <div className="inline-flex items-center gap-2 bg-gradient-to-r from-secondary/10 to-tertiary/10 px-5 py-2.5 rounded-full mb-8 border border-secondary/20">
                             <Star className="h-4 w-4 text-tertiary" fill="currentColor" />
                             <span className="text-sm font-semibold text-primary">Trusted by online shoppers</span>
-                        </motion.div>
+                        </div>
 
-                        <motion.h1
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.1 }}
-                            className="text-4xl lg:text-6xl xl:text-7xl font-bold text-primary mb-6 leading-tight"
-                        >
+                        <h1 className="text-4xl lg:text-6xl xl:text-7xl font-bold text-primary mb-6 leading-tight">
                             Find the Best{' '}
                             <span className="relative inline-block">
                                 <span className="bg-gradient-to-r from-secondary via-tertiary to-secondary bg-clip-text text-transparent">
@@ -144,25 +109,15 @@ const HeroMinimalist = ({
                             </span>
                             <br />
                             in Seconds
-                        </motion.h1>
+                        </h1>
 
-                        <motion.p
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.2 }}
-                            className="text-lg lg:text-xl text-gray-600 mb-12 max-w-2xl mx-auto"
-                        >
+                        <p className="text-lg lg:text-xl text-gray-600 mb-12 max-w-2xl mx-auto">
                             Shop smarter with verified vouchers from your favorite UK brands.
                             All codes tested and working.
-                        </motion.p>
+                        </p>
 
                         {/* Search Bar */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.3 }}
-                            className="max-w-3xl mx-auto mb-8"
-                        >
+                        <div className="max-w-3xl mx-auto mb-8">
                             <div className="relative group">
                                 <div className="absolute inset-0 bg-gradient-to-r from-secondary to-tertiary rounded-2xl blur-xl opacity-20 group-hover:opacity-30 transition-opacity" />
                                 <div className="relative flex items-center bg-white border-2 border-gray-200 rounded-2xl shadow-xl hover:shadow-2xl hover:border-primary/30 transition-all duration-300">
@@ -181,15 +136,10 @@ const HeroMinimalist = ({
                                     </button>
                                 </div>
                             </div>
-                        </motion.div>
+                        </div>
 
                         {/* Benefits */}
-                        <motion.div
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ duration: 0.6, delay: 0.4 }}
-                            className="flex flex-wrap justify-center gap-6 mb-16"
-                        >
+                        <div className="flex flex-wrap justify-center gap-6 mb-16">
                             {benefits.map((benefit, index) => (
                                 <div
                                     key={index}
@@ -201,7 +151,7 @@ const HeroMinimalist = ({
                                     <span className="font-medium">{benefit.text}</span>
                                 </div>
                             ))}
-                        </motion.div>
+                        </div>
                     </div>
 
                     {/* Trust Metrics - Hidden for new sites, uncomment when you have real numbers */}
@@ -233,12 +183,7 @@ const HeroMinimalist = ({
                     </motion.div> */}
 
                     {/* Testimonial Carousel */}
-                    <motion.div
-                        initial={{ opacity: 0, y: 30 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ duration: 0.6, delay: 0.8 }}
-                        className="max-w-3xl mx-auto"
-                    >
+                    <div className="max-w-3xl mx-auto">
                         <div className="bg-gradient-to-br from-gray-50 to-white rounded-2xl p-8 border border-gray-200 shadow-lg">
                             <div className="flex justify-center mb-4">
                                 {[...Array(testimonials[currentTestimonial].rating)].map((_, i) => (
@@ -267,7 +212,7 @@ const HeroMinimalist = ({
                                 ))}
                             </div>
                         </div>
-                    </motion.div>
+                    </div>
 
                 </div>
             </div>

@@ -38,10 +38,10 @@ const nextConfig = {
     deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
+  outputFileTracingRoot: path.resolve(__dirname), // Ensures proper file tracing
   experimental: {
     optimizeCss: true,
     optimizePackageImports: ['lucide-react', '@radix-ui/react-dialog'],
-    outputFileTracingRoot: path.resolve(__dirname), // Ensures proper file tracing
   },
   //matcher: ['/admin/:path*', '/dashboard/:path*', '/:path*/settings/:path*', '/:path*/settings'],
   compiler: {
@@ -107,12 +107,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               `default-src 'self' https://vouched4vouchers.firebaseapp.com`,
-              `script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://*.trendii.com https://www.googletagmanager.com https://www.dwin2.com https://*.firebaseapp.com https://apis.google.com`,
-              `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://*.trendii.com https://www.googletagmanager.com https://www.dwin2.com https://*.firebaseapp.com https://apis.google.com`,
-              `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.firebaseapp.com https://tm.trendii.com`,
+              `script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.firebaseapp.com https://apis.google.com`,
+              `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.firebaseapp.com https://apis.google.com`,
+              `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.firebaseapp.com`,
               `img-src 'self' https://ui.awin.com https://awin.com https://awin1.com https://a1.awin1.com https://images.unsplash.com https://*.firebaseapp.com https://firebasestorage.googleapis.com data:`,
-              `font-src 'self' https://fonts.gstatic.com https://tm.trendii.com`,
-              `connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://beeswax.trendii.com https://ingress.trendii.com https://tm.trendii.com https://*.firebaseapp.com`,
+              `font-src 'self' https://fonts.gstatic.com`,
+              `connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com`,
               `frame-src 'self' https://vouched4vouchers.firebaseapp.com`,
               `child-src 'self' https://vouched4vouchers.firebaseapp.com`,
             ].join('; ')
