@@ -1,10 +1,7 @@
 // HomePageClient.tsx
 "use client";
 
-import { useAuth, useSettings } from '@/lib/firebase/hooks';
-import Maintenance from '@/components/ui/maintenance';
 import HeroMinimalist from '@/components/landing/hero/HeroMinimalist';
-import { SkeletonLanding } from '@/components/skeleton';
 import Navigation from '@/components/navigation';
 import Footer from '@/components/footer';
 import FilteredBrands from '@/components/landing/filteredBrands';
@@ -30,16 +27,11 @@ export default function HomePageClient({
   popularSearches: initialPopularSearches,
   footerBrands,
 }: HomePageClientProps) {
-  const { user, isAdmin, loading: authLoading } = useAuth();
-  const { settings, loading: settLoading } = useSettings();
+  // Defer auth loading - Navigation will handle it lazily when user interacts
+  // This prevents Firebase Auth iframe from blocking initial page load
 
   const [popularSearches, setPopularSearches] = useState<string[]>(initialPopularSearches);
   const [isSearchOpen, setIsSearchOpen] = useState(false);
-
-  if(authLoading || settLoading)
-    return <SkeletonLanding />;
-  if( settings?.general.maintenanceMode && ( !user || (user && !isAdmin) ) )
-    return <Maintenance />;
 
   return (
     <>
@@ -86,8 +78,8 @@ export default function HomePageClient({
         loadingCategories={false}
         brands={footerBrands}
         loadingBrands={false}
-        settings={settings}
-        settLoading={settLoading}
+        settings={null}
+        settLoading={false}
         dynamicLinks={[]}
         loadingDynamicLinks={false}
       />

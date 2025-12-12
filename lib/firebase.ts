@@ -16,15 +16,6 @@ const firebaseConfig = {
 // Initialize Firebase
 let app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
 
-// Lazy auth initialization to avoid blocking iframe on initial load
-let _auth: ReturnType<typeof getAuth> | null = null;
-const getAuthInstance = () => {
-  if (!_auth) {
-    _auth = getAuth(app);
-  }
-  return _auth;
-};
-
 const db =
   typeof window !== 'undefined'
     ? initializeFirestore(app, {
@@ -35,6 +26,16 @@ const db =
 
 const storage = getStorage(app);
 
-// Export auth as a getter to defer initialization
+// Lazy auth initialization - only initialize when first accessed
+// This prevents the auth iframe from loading on initial page load
+let _auth: ReturnType<typeof getAuth> | null = null;
+export const auth = new Proxy({} as ReturnType<typeof getAuth>, {
+  get(_target, prop) {
+    if (!_auth) {
+      _auth = getAuth(app);
+    }
+    return (_auth as any)[prop];
+  }
+});
+
 export { app, db, storage };
-export const auth = getAuthInstance();
