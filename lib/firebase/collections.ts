@@ -22,6 +22,7 @@ export const settingsCollection = collection(db, 'settings');
 export const faqCollection = collection(db, 'faqs');
 export const mediaCollection = collection(db, 'media_files');
 export const aboutCollection = collection(db, 'about');
+export const homepageCacheCollection = collection(db, 'homepageCache');
 
 // Type definitions
 export interface MediaFile {
@@ -217,6 +218,17 @@ export interface FAQ {
   status: 'published' | 'draft';
   createdAt: Date;
   updatedAt: Date;
+}
+
+export interface HomepageCache {
+  id: string;
+  categories: Category[];
+  featuredBrands: Brand[];
+  trendingDeals: Deal[];
+  popularSearches: string[];
+  footerBrands: Brand[];
+  lastUpdated: Date;
+  version: number;
 }
 
 export interface AboutContent {

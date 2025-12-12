@@ -311,5 +311,93 @@ export const scheduledCategoriesDealCountUpdate = functions
     console.log("✔️ BulkWriter: All categories updated.");
     return null;
 });
+/**
+ * Homepage Cache Refresh Function
+ * Runs every 6 hours to pre-calculate and cache homepage data
+ * This dramatically improves homepage performance by eliminating multiple Firebase queries
+ */
+export const refreshHomepageCache = functions
+    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .pubsub.schedule("every 6 hours")
+    .onRun(async () => {
+    console.log("🔄 [HomepageCache] Starting homepage cache refresh...");
+    const firestore = admin.firestore();
+    const startTime = Date.now();
+    try {
+        // 1️⃣ Fetch Top 8 Active Categories (with deals, sorted by dealCount)
+        console.log("📦 [HomepageCache] Fetching categories...");
+        const categoriesSnapshot = await firestore
+            .collection("categories")
+            .where("status", "==", "active")
+            .where("dealCount", ">", 0)
+            .orderBy("dealCount", "desc")
+            .limit(8)
+            .get();
+        const categories = categoriesSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        console.log(`✅ [HomepageCache] Found ${categories.length} categories`);
+        // 2️⃣ Fetch Featured Brands (with images, active deals > 0)
+        console.log("📦 [HomepageCache] Fetching featured brands...");
+        const featuredBrandsSnapshot = await firestore
+            .collection("brands")
+            .where("status", "==", "active")
+            .where("brandimg", "!=", "")
+            .where("activeDeals", ">", 0)
+            .orderBy("brandimg", "asc")
+            .orderBy("activeDeals", "desc")
+            .limit(50)
+            .get();
+        const featuredBrands = featuredBrandsSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        console.log(`✅ [HomepageCache] Found ${featuredBrands.length} featured brands`);
+        // 3️⃣ Fetch Trending Deals (top 20)
+        console.log("📦 [HomepageCache] Fetching trending deals...");
+        const trendingDealsSnapshot = await firestore
+            .collection("deals_fresh")
+            .where("status", "==", "active")
+            .orderBy("createdAt", "desc")
+            .limit(20)
+            .get();
+        const trendingDeals = trendingDealsSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        console.log(`✅ [HomepageCache] Found ${trendingDeals.length} trending deals`);
+        // 4️⃣ Fetch Popular Searches (top 10 from search history)
+        console.log("📦 [HomepageCache] Fetching popular searches...");
+        const searchesSnapshot = await firestore
+            .collection("search_history")
+            .orderBy("count", "desc")
+            .limit(10)
+            .get();
+        const popularSearches = searchesSnapshot.docs.map(doc => doc.data().term);
+        console.log(`✅ [HomepageCache] Found ${popularSearches.length} popular searches`);
+        // 5️⃣ Fetch Footer Brands (top 15 by activeDeals)
+        console.log("📦 [HomepageCache] Fetching footer brands...");
+        const footerBrandsSnapshot = await firestore
+            .collection("brands")
+            .where("status", "==", "active")
+            .where("activeDeals", ">", 0)
+            .orderBy("activeDeals", "desc")
+            .limit(15)
+            .get();
+        const footerBrands = footerBrandsSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        console.log(`✅ [HomepageCache] Found ${footerBrands.length} footer brands`);
+        // 6️⃣ Write to homepageCache collection
+        const cacheData = {
+            categories,
+            featuredBrands,
+            trendingDeals,
+            popularSearches,
+            footerBrands,
+            lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+            version: 1
+        };
+        await firestore.collection("homepageCache").doc("current").set(cacheData);
+        const duration = Date.now() - startTime;
+        console.log(`🎉 [HomepageCache] Cache refreshed successfully in ${duration}ms`);
+        console.log(`📊 [HomepageCache] Stats: ${categories.length} cats, ${featuredBrands.length} brands, ${trendingDeals.length} deals`);
+        return null;
+    }
+    catch (error) {
+        console.error("❌ [HomepageCache] Error refreshing cache:", error instanceof Error ? error.message : error);
+        return null;
+    }
+});
 // EOF functions/src/index.ts - signed Dcsn
 //# sourceMappingURL=index.js.map
