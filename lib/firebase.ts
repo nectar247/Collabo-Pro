@@ -15,8 +15,15 @@ const firebaseConfig = {
 
 // Initialize Firebase
 let app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApps()[0];
-const auth = getAuth(app);
-// const db = getFirestore(app);
+
+// Lazy auth initialization to avoid blocking iframe on initial load
+let _auth: ReturnType<typeof getAuth> | null = null;
+const getAuthInstance = () => {
+  if (!_auth) {
+    _auth = getAuth(app);
+  }
+  return _auth;
+};
 
 const db =
   typeof window !== 'undefined'
@@ -28,4 +35,6 @@ const db =
 
 const storage = getStorage(app);
 
-export { app, auth, db, storage };
+// Export auth as a getter to defer initialization
+export { app, db, storage };
+export const auth = getAuthInstance();

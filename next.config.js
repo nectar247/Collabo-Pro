@@ -6,8 +6,8 @@ const nextConfig = {
   eslint: {
     ignoreDuringBuilds: true,
   },
-  images: { 
-    unoptimized: true,
+  images: {
+    unoptimized: false, // Enable Next.js image optimization
     formats: ['image/webp', 'image/avif'],
     remotePatterns: [
       {

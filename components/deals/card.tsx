@@ -1,7 +1,6 @@
 import { Deal } from '@/lib/firebase/collections';
 import Image from 'next/image';
 import React, { useState, useEffect, memo, useCallback, useMemo } from 'react';
-import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Heart } from "lucide-react";
 import { DealsLabel, reformatDate, truncateText } from '@/helper';
@@ -238,29 +237,23 @@ function DealCard1({ deal }: { deal: any }) {
             </> : ''}
                       {/* Enhanced Heart Icon with Save Functionality */}
           {user ? (
-            <motion.button
-              whileHover={{ scale: 1.1 }}
-              whileTap={{ scale: 0.9 }}
+            <button
               onClick={handleSaveDeal}
-              className="p-1 rounded-full hover:bg-white/10 transition-all duration-200 relative"
+              className="p-1 rounded-full hover:bg-white/10 hover:scale-110 active:scale-90 transition-all duration-200 relative"
               title={isSaved ? "Remove from saved deals" : "Save deal"}
             >
-              <Heart 
+              <Heart
                 className={`h-5 w-5 transition-all duration-200 ${
-                  isSaved 
-                    ? 'text-tertiary fill-tertiary drop-shadow-sm' 
+                  isSaved
+                    ? 'text-tertiary fill-tertiary drop-shadow-sm'
                     : 'text-gray-400 hover:text-red-400 hover:scale-105'
-                }`} 
+                }`}
               />
               {/* Small indicator when saved */}
               {isSaved && (
-                <motion.div
-                  initial={{ scale: 0 }}
-                  animate={{ scale: 1 }}
-                  className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white"
-                />
+                <div className="absolute -top-1 -right-1 w-3 h-3 bg-green-500 rounded-full border-2 border-white" />
               )}
-            </motion.button>
+            </button>
           ) : (
             <button
               onClick={(e) => {
