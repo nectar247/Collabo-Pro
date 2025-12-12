@@ -169,7 +169,7 @@ const HeroMinimalist = ({
                                     <Search className="absolute left-6 h-6 w-6 text-gray-400" />
                                     <input
                                         type="text"
-                                        placeholder="Search brands, categories, or products..."
+                                        placeholder="Search"
                                         onClick={handleExploreDealsClick}
                                         className="w-full pl-16 pr-40 py-5 text-lg text-gray-800 rounded-2xl focus:outline-none bg-transparent"
                                     />

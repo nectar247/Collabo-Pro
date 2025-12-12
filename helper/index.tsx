@@ -262,6 +262,24 @@ const reformatDate = (date: any) => {
     );
 };
 
+// Convert category name to URL-friendly slug
+const categoryToSlug = (categoryName: string): string => {
+    return categoryName
+        .toLowerCase()
+        .replace(/\s+/g, '-')      // Replace spaces with hyphens
+        .replace(/&/g, 'and')      // Replace & with 'and'
+        .replace(/[^\w-]/g, '')    // Remove all non-word chars except hyphens
+        .replace(/--+/g, '-')      // Replace multiple hyphens with single hyphen
+        .replace(/^-+|-+$/g, '');  // Trim hyphens from start and end
+};
+
+// Convert slug back to category name for matching
+const slugToCategory = (slug: string): string => {
+    return slug
+        .replace(/-/g, ' ')        // Replace hyphens with spaces
+        .replace(/\band\b/g, '&'); // Replace 'and' with &
+};
+
 export {
     getCategoryColor,
     DynamicIcon,
@@ -270,4 +288,6 @@ export {
     DealsLabel,
     truncateText,
     reformatDate,
+    categoryToSlug,
+    slugToCategory,
 }

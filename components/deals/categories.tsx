@@ -1,59 +1,23 @@
-import React, { useState, useEffect } from 'react';
-import { motion, useMotionValue, useTransform, useSpring } from 'framer-motion';
+import React, { useState } from 'react';
+import { motion } from 'framer-motion';
 import Link from 'next/link';
 import { Star } from 'lucide-react';
-import { truncateText } from '@/helper';
-import { useDeals } from '@/lib/firebase/hooks';
-import { Deal } from '@/lib/firebase/collections';
+import { truncateText, categoryToSlug } from '@/helper';
 import { toast } from 'sonner';
 
 function CategoryCard1({category, index}: {category: any, index?: number}) {
-    const { deals, loading } = useDeals();
-    const [categoryDeals, setCategoryDeals] = useState<Deal[]>([]);
     const [isHovered, setIsHovered] = useState(false);
 
-    // 3D transform values
-    const x = useMotionValue(0);
-    const y = useMotionValue(0);
-    const rotateX = useTransform(y, [-100, 100], [10, -10]);
-    const rotateY = useTransform(x, [-100, 100], [-10, 10]);
-    const springConfig = { damping: 20, stiffness: 300 };
-    const rotateXSpring = useSpring(rotateX, springConfig);
-    const rotateYSpring = useSpring(rotateY, springConfig);
-
-    useEffect(() => {
-        if (!loading && deals) {
-            const filteredDeals = deals.filter(deal =>
-                deal.category.toLowerCase() === category.name.toLowerCase()
-            );
-            setCategoryDeals(filteredDeals);
-        }
-    }, [deals, loading, category.name]);
-
     const handleCategoryClick = () => {
-        const dealCount = category.count || categoryDeals.length;
+        const dealCount = category.count || category.dealCount || 0;
         toast.info(`Loading ${category.name} deals`, {
             description: `Browsing ${dealCount}+ available deals in this category`,
         });
     };
 
-    const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        const centerX = rect.left + rect.width / 2;
-        const centerY = rect.top + rect.height / 2;
-        x.set(e.clientX - centerX);
-        y.set(e.clientY - centerY);
-    };
-
-    const handleMouseLeave = () => {
-        x.set(0);
-        y.set(0);
-        setIsHovered(false);
-    };
-
-    // Use deal count instead of discount
-    const dealCount = category.count || categoryDeals.length || 0;
-    const badge = category.badge || (category.count > 50 ? "Hot" : category.count > 20 ? "Popular" : "New");
+    // Use deal count from category data
+    const dealCount = category.count || category.dealCount || 0;
+    const badge = category.badge || (dealCount > 50 ? "Hot" : dealCount > 20 ? "Popular" : "New");
 
     // Array of 8 unique vibrant gradients
     const gradients = [
@@ -94,30 +58,22 @@ function CategoryCard1({category, index}: {category: any, index?: number}) {
     return (
         <motion.div
             key={category.name}
-            initial={{ opacity: 0, y: 50, scale: 0.9 }}
-            whileInView={{ opacity: 1, y: 0, scale: 1 }}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-            style={{
-                rotateX: rotateXSpring,
-                rotateY: rotateYSpring,
-                transformStyle: "preserve-3d",
-            }}
-            onMouseMove={handleMouseMove}
+            transition={{ duration: 0.3 }}
+            whileHover={{ scale: 1.02 }}
             onMouseEnter={() => setIsHovered(true)}
-            onMouseLeave={handleMouseLeave}
-            className="relative cursor-pointer perspective-1000"
+            onMouseLeave={() => setIsHovered(false)}
+            className="relative cursor-pointer"
         >
             <Link
-                href={`/categories/${encodeURIComponent(category.name.toLowerCase())}`}
+                href={`/categories/${categoryToSlug(category.name)}`}
                 className="group block"
                 onClick={handleCategoryClick}
             >
                 <div
-                    className={`relative bg-gradient-to-br ${gradient} rounded-2xl p-6 shadow-2xl border border-white/20 transition-all duration-300 ${
-                        isHovered ? 'shadow-3xl scale-105' : ''
-                    }`}
-                    style={{ transform: "translateZ(50px)" }}
+                    className={`relative bg-gradient-to-br ${gradient} rounded-2xl p-6 shadow-2xl border border-white/20 transition-all duration-300`}
                 >
                     {/* Shine effect */}
                     {isHovered && (
@@ -162,9 +118,6 @@ function CategoryCard1({category, index}: {category: any, index?: number}) {
                     100% {
                         background-position: 200% 0;
                     }
-                }
-                .perspective-1000 {
-                    perspective: 1000px;
                 }
             `}</style>
         </motion.div>

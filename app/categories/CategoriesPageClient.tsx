@@ -35,13 +35,13 @@ export default function CategoriesPageClient() {
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-8">
-          {categories.map((data) => ({
+          {categories.map((data, index) => ({
             ...data,
             icon: <DynamicIcon name={data.icon} /> as any,
             color: getCategoryColor(data.name),
             count: data.dealCount || 0,
-          })).map((category) => (
-            <CategoryCard1 category={category} key={category.name} />
+          })).map((category, index) => (
+            <CategoryCard1 category={category} index={index} key={category.name} />
           ))}
 
           </div>

@@ -3,6 +3,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
 import CategoryPageClient from './CategoryPageClient';
+import { slugToCategory } from '@/helper';
 
 // Enhanced category matching for server-side
 function doesCategoryMatch(dealCategory: any, searchCategory: string) {
@@ -53,15 +54,16 @@ function doesCategoryMatch(dealCategory: any, searchCategory: string) {
 export default async function DynamicPage({ params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
-    const decodedSlug = decodeURIComponent(slug);
+    // Convert slug back to category name (e.g., "home-and-garden" -> "home & garden")
+    const categoryName = slugToCategory(slug);
     
     // Option 1: Try exact category match first (most efficient)
     let categoryDeals: any[] = [];
-    
+
     try {
       const exactQuery = query(
         collection(db, 'deals_fresh'),
-        where('category', '==', decodedSlug)
+        where('category', '==', categoryName)
       );
       const exactSnapshot = await getDocs(exactQuery);
       categoryDeals = exactSnapshot.docs.map(doc => ({
@@ -71,7 +73,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
     } catch (exactError) {
       // Silently continue to flexible matching
     }
-    
+
     // Option 2: If no exact matches, fall back to flexible matching
     // Only do this if exact match returned no results
     if (categoryDeals.length === 0) {
@@ -84,10 +86,10 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
           ...data
         } as any; // Type assertion for Firestore data
       });
-      
+
       // Filter with flexible matching
-      categoryDeals = allDeals.filter(deal => 
-        doesCategoryMatch(deal.category, decodedSlug)
+      categoryDeals = allDeals.filter(deal =>
+        doesCategoryMatch(deal.category, categoryName)
       );
     }
 
@@ -95,10 +97,10 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
     if (categoryDeals.length === 0) {
       const categoriesSnapshot = await getDocs(collection(db, 'categories'));
       const categoryExists = categoriesSnapshot.docs.some(doc => {
-        const categoryName = doc.data().name;
-        return doesCategoryMatch(categoryName, decodedSlug);
+        const catName = doc.data().name;
+        return doesCategoryMatch(catName, categoryName);
       });
-      
+
       if (!categoryExists) {
         notFound();
       }
@@ -155,7 +157,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
       <CategoryPageClient
         slug={slug}
         initialDeals={serializedDeals}
-        categoryName={decodedSlug}
+        categoryName={categoryName}
       />
     );
     
@@ -168,14 +170,15 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
 // Generate static params for popular categories (optional optimization)
 export async function generateStaticParams() {
   try {
+    const { categoryToSlug } = await import('@/helper');
     const categoriesSnapshot = await getDocs(collection(db, 'categories'));
     const categories = categoriesSnapshot.docs
       .map(doc => doc.data().name)
       .filter(Boolean)
       .slice(0, 20); // Limit to top 20 categories
-    
+
     return categories.map(category => ({
-      slug: encodeURIComponent(category.toLowerCase())
+      slug: categoryToSlug(category)
     }));
   } catch (error) {
     console.error('Error generating static params:', error);
