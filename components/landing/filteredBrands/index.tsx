@@ -15,11 +15,23 @@ const FilteredBrands = ({
     brands: Brand[];
     loadingBrands: boolean;
 }) => {
+    const [mounted, setMounted] = React.useState(false);
+
+    React.useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Deterministic selection on server, random on client after mount
     const filteredBrands = useMemo(() => {
+        if (!mounted) {
+            // Server-side: just take first 8 (deterministic)
+            return brands.slice(0, 8);
+        }
+        // Client-side: randomize after hydration
         return brands
             .sort(() => Math.random() - 0.5)
             .slice(0, 8);
-    }, [brands]);
+    }, [brands, mounted]);
 
     // Handle brand click with toast feedback
     const handleBrandClick = useCallback((brandName: string, activeDeals?: number) => {
