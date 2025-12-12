@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import Link from "next/link";
 import {
   Search,
@@ -9,8 +9,10 @@ import {
   TagsIcon,
   LogIn,
   UserPlus,
+  Sun,
+  Moon,
 } from "lucide-react";
-import { ThemeToggle } from "./theme/theme-toggle";
+import { useTheme } from "next-themes";
 
 interface NavigationLiteProps {
   onOpenSearch?: () => void;
@@ -22,21 +24,13 @@ interface NavigationLiteProps {
  */
 export default function NavigationLite({ onOpenSearch }: NavigationLiteProps) {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-
-  useEffect(() => {
-    setMounted(true);
-  }, []);
+  const { theme, setTheme } = useTheme();
 
   const handleSearchClick = () => {
     if (onOpenSearch) {
       onOpenSearch();
     }
   };
-
-  if (!mounted) {
-    return null; // Prevent hydration mismatch
-  }
 
   return (
     <header className="sticky top-0 z-40 w-full border-b bg-white/95 dark:bg-gray-900/95 backdrop-blur supports-[backdrop-filter]:bg-white/60 dark:supports-[backdrop-filter]:bg-gray-900/60">
@@ -87,7 +81,15 @@ export default function NavigationLite({ onOpenSearch }: NavigationLiteProps) {
               <Search className="h-5 w-5" />
             </button>
 
-            <ThemeToggle />
+            <button
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+              className="p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-700 dark:text-gray-300 transition-colors"
+              aria-label="Toggle theme"
+              suppressHydrationWarning
+            >
+              <Sun className="h-5 w-5 rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
+              <Moon className="absolute h-5 w-5 rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
+            </button>
 
             <Link
               href="/sign-in"
