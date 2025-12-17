@@ -9,8 +9,6 @@ import { signUp } from "@/lib/auth";
 import { validateEmail, validatePassword, sanitizeInput } from "@/lib/utils/sanitize";
 
 import Navigation from "@/components/navigation";
-import Footer from '@/components/footer';
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
@@ -19,14 +17,6 @@ export default function SignUp() {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const router = useRouter();
-
-  const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -182,16 +172,6 @@ export default function SignUp() {
           </div>
         </motion.div>
       </div>
-      <Footer 
-        categories={categories} 
-        loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings__} 
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
     </>
   );
 }

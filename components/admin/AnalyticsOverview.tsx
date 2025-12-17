@@ -40,54 +40,100 @@ export default function AnalyticsOverview() {
 
   const fetchAnalytics = useCallback(async () => {
       try {
-        setLoading(true); // Force loading state on each fetch
+        setLoading(true);
 
         console.log('🔄 Fetching analytics data...', new Date().toISOString());
 
-        // Fetch total users
-        const usersQuery = query(collection(db, 'profiles'));
-        const usersSnapshot = await getDocs(usersQuery);
-        const totalUsers = usersSnapshot.size;
+        // Fetch total users - using simple query instead of aggregation
+        let totalUsers = 0;
+        try {
+          console.log('👥 Fetching all profiles...');
+          const usersQuery = query(collection(db, 'profiles'));
+          const usersSnapshot = await getDocs(usersQuery);
+          totalUsers = usersSnapshot.size;
+          console.log('✅ Total users:', totalUsers);
+        } catch (error) {
+          console.error('❌ Error fetching users:', error);
+          console.error('Error details:', error);
+        }
 
-        console.log('👥 Total users:', totalUsers);
+        // Fetch active deals - using getDocs instead of getCountFromServer
+        let activeDeals = 0;
+        try {
+          console.log('📊 Fetching all deals...');
+          // Get ALL deals with status='active'
+          const dealsQuery = query(
+            collection(db, 'deals_fresh'),
+            where('status', '==', 'active')
+          );
+          const dealsSnapshot = await getDocs(dealsQuery);
+          activeDeals = dealsSnapshot.size;
+          console.log('✅ Active deals count:', activeDeals);
 
-        // Fetch active deals with getCountFromServer for accurate count
-        const dealsQuery = query(
-          collection(db, 'deals_fresh'),
-          where('status', '==', 'active')
-        );
+          // Also log first few deals for debugging
+          if (dealsSnapshot.size > 0) {
+            console.log('📊 Sample active deals:');
+            dealsSnapshot.docs.slice(0, 3).forEach(doc => {
+              const data = doc.data();
+              console.log(`  - ${doc.id}: "${data.title?.substring(0, 40)}" (status: ${data.status})`);
+            });
+          } else {
+            // If no active deals, let's check what statuses exist
+            console.log('⚠️ No deals with status="active" found. Checking all deals...');
+            const allDealsQuery = query(collection(db, 'deals_fresh'), limit(10));
+            const allDealsSnapshot = await getDocs(allDealsQuery);
+            console.log('📊 Total deals in collection (sample):', allDealsSnapshot.size);
 
-        console.log('🔍 Querying active deals...');
-        const dealsCount = await getCountFromServer(dealsQuery);
-        const activeDeals = dealsCount.data().count;
-
-        console.log('✅ Active deals count:', activeDeals);
+            const statusValues = new Set();
+            allDealsSnapshot.docs.forEach(doc => {
+              const status = doc.data().status;
+              statusValues.add(status);
+              console.log(`  Deal ${doc.id}: status="${status}"`);
+            });
+            console.log('📊 Unique status values:', Array.from(statusValues));
+          }
+        } catch (error) {
+          console.error('❌ Error fetching deals:', error);
+          console.error('Error details:', error);
+        }
 
         // Calculate monthly revenue (from completed transactions)
-        const now = new Date();
-        const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
-        const transactionsQuery = query(
-          collection(db, 'transactions'),
-          where('createdAt', '>=', monthStart),
-          orderBy('createdAt', 'desc')
-        );
-        const transactionsSnapshot = await getDocs(transactionsQuery);
-        const monthlyRevenue = transactionsSnapshot.docs.reduce(
-          (sum, doc) => sum + doc.data().amount,
-          0
-        );
+        let monthlyRevenue = 0;
+        try {
+          const now = new Date();
+          const monthStart = new Date(now.getFullYear(), now.getMonth(), 1);
+          const transactionsQuery = query(
+            collection(db, 'transactions'),
+            where('createdAt', '>=', monthStart),
+            orderBy('createdAt', 'desc')
+          );
+          const transactionsSnapshot = await getDocs(transactionsQuery);
+          monthlyRevenue = transactionsSnapshot.docs.reduce(
+            (sum, doc) => sum + (doc.data().amount || 0),
+            0
+          );
+          console.log('💰 Monthly revenue:', monthlyRevenue);
+        } catch (error) {
+          console.error('❌ Error fetching transactions (collection may not exist):', error);
+        }
 
         // Calculate average session duration
-        const sessionsQuery = query(
-          collection(db, 'sessions'),
-          orderBy('duration', 'desc'),
-          limit(100)
-        );
-        const sessionsSnapshot = await getDocs(sessionsQuery);
-        const avgSessionDuration = sessionsSnapshot.docs.reduce(
-          (sum, doc) => sum + doc.data().duration,
-          0
-        ) / (sessionsSnapshot.size || 1);
+        let avgSessionDuration = 0;
+        try {
+          const sessionsQuery = query(
+            collection(db, 'sessions'),
+            orderBy('duration', 'desc'),
+            limit(100)
+          );
+          const sessionsSnapshot = await getDocs(sessionsQuery);
+          avgSessionDuration = sessionsSnapshot.docs.reduce(
+            (sum, doc) => sum + (doc.data().duration || 0),
+            0
+          ) / (sessionsSnapshot.size || 1);
+          console.log('⏱️ Avg session duration:', avgSessionDuration);
+        } catch (error) {
+          console.error('❌ Error fetching sessions (collection may not exist):', error);
+        }
 
         // Calculate growth percentages (comparing to previous period)
         const userGrowth = 12; // Example: 12% growth
@@ -95,7 +141,7 @@ export default function AnalyticsOverview() {
         const revenueGrowth = 18; // Example: 18% growth
         const sessionGrowth = 7;  // Example: 7% growth
 
-        setAnalyticsData({
+        const newData = {
           totalUsers,
           activeDeals,
           monthlyRevenue,
@@ -104,13 +150,23 @@ export default function AnalyticsOverview() {
           dealGrowth,
           revenueGrowth,
           sessionGrowth
-        });
+        };
+
+        console.log('📊 Final analytics data:', newData);
+
+        setAnalyticsData(newData);
         setLastFetch(new Date().toLocaleTimeString());
-        setLoading(false);
 
         console.log('✅ Analytics updated successfully');
       } catch (error) {
         console.error('❌ Error fetching analytics:', error);
+        // Even if there's an error, try to set whatever data we have
+        setAnalyticsData(prev => ({
+          ...prev,
+          totalUsers: 0,
+          activeDeals: 0
+        }));
+      } finally {
         setLoading(false);
       }
   }, []);

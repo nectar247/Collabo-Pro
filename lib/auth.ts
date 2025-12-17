@@ -49,82 +49,49 @@ export async function signUp(email: string, password: string, name: string) {
 
 export async function signIn(email: string, password: string) {
   try {
-    // Get security settings
-    const settingsDoc = await getDoc(doc(db, 'settings', 'system'));
-    const securitySettings = settingsDoc.data()?.security || {
-      maxLoginAttempts: 5,
-      sessionTimeout: 30
-    };
-
-    // Proceed with sign in if user is active or doesn't exist yet
+    // Proceed with sign in
     const { user } = await signInWithEmailAndPassword(auth, email, password);
-    
-    // Check status again after sign in (in case user was found after sign in)
+
+    // Check profile status and update login in a single read
     const profileDoc = await getDoc(doc(db, 'profiles', user.uid));
-    if (profileDoc.exists() && profileDoc.data()?.status === 'inactive') {
-      // Sign out the user if they're inactive
-      await firebaseSignOut(auth);
-      throw new Error('Your account has been deactivated. Please contact support.');
-    }
 
     if (profileDoc.exists()) {
       const profile = profileDoc.data();
 
       // Check if account is locked
-      if (profile?.lockedUntil && new Date(profile?.lockedUntil) > new Date()) {
+      if (profile?.lockedUntil && new Date(profile.lockedUntil.toDate?.() || profile.lockedUntil).getTime() > Date.now()) {
+        await firebaseSignOut(auth);
         const remainingTime = Math.ceil(
-          (new Date(profile.lockedUntil).getTime() - new Date().getTime()) / 1000 / 60
+          (new Date(profile.lockedUntil.toDate?.() || profile.lockedUntil).getTime() - Date.now()) / 1000 / 60
         );
         throw new Error(`Account is locked. Try again in ${remainingTime} minutes.`);
       }
 
       // Check if account is inactive
       if (profile.status === 'inactive') {
+        await firebaseSignOut(auth);
         throw new Error('Your account has been deactivated. Please contact support.');
       }
     }
 
-    // Update last login timestamp
-    await setDoc(doc(db, 'profiles', user.uid), {
+    // Update last login timestamp (non-blocking - fire and forget)
+    setDoc(doc(db, 'profiles', user.uid), {
       loginAttempts: 0,
       lastLoginAttempt: null,
       lockedUntil: null,
       updatedAt: serverTimestamp(),
       lastLogin: serverTimestamp()
-    }, { merge: true });
+    }, { merge: true }).catch(err => console.error('Failed to update login timestamp:', err));
 
     return { user };
   } catch (error: any) {
     // Handle failed login attempt
-    if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found') {
-      const userDoc = doc(db, 'profiles', auth.currentUser?.uid || '');
-      const profile = await getDoc(userDoc);
-
-      if (profile.exists()) {
-        const currentAttempts = (profile.data().loginAttempts || 0) + 1;
-        const settingsDoc = await getDoc(doc(db, 'settings', 'system'));
-        const maxAttempts = settingsDoc.data()?.security?.maxLoginAttempts || 5;
-
-        // Update login attempts
-        await setDoc(userDoc, {
-          loginAttempts: currentAttempts,
-          lastLoginAttempt: serverTimestamp(),
-          lockedUntil: currentAttempts >= maxAttempts 
-            ? new Date(Date.now() + 30 * 60 * 1000) // Lock for 30 minutes
-            : null,
-          updatedAt: serverTimestamp()
-        }, { merge: true });
-
-        if (currentAttempts >= maxAttempts) {
-          throw new Error('Account locked due to too many failed attempts. Try again in 30 minutes.');
-        }
-
-        const remainingAttempts = maxAttempts - currentAttempts;
-        throw new Error(`Invalid credentials. ${remainingAttempts} attempts remaining.`);
-      }
+    if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+      // For failed attempts, we don't have a user.uid, so skip the attempt tracking
+      throw new Error('Invalid email or password.');
     }
     // Handle specific error for inactive users
-    if (error.message.includes('deactivated')) {
+    if (error.message.includes('deactivated') || error.message.includes('locked')) {
       throw error;
     }
     throw new Error(error.message);

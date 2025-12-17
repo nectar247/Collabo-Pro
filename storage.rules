@@ -1,0 +1,93 @@
+rules_version = '2';
+
+// Storage security rules for vouched4vouchers
+service firebase.storage {
+  match /b/{bucket}/o {
+
+    // Helper function to check if user is authenticated
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    // Helper function to check if user is admin
+    function isAdmin() {
+      return isAuthenticated() &&
+             firestore.get(/databases/(default)/documents/profiles/$(request.auth.uid)).data.isAdmin == true;
+    }
+
+    // Helper function to check if user owns the file
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    // Helper function to validate file size (max 5MB for images, 10MB for videos)
+    function validSize() {
+      return request.resource.size < 5 * 1024 * 1024;
+    }
+
+    // Helper function to validate image file types
+    function validImageType() {
+      return request.resource.contentType.matches('image/.*');
+    }
+
+    // Public assets (logos, brand images, deal images) - Public read, admin write
+    match /public/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
+    // Brand logos - Public read, admin write
+    match /brands/{brandId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && validImageType() && validSize();
+    }
+
+    // Deal images - Public read, admin write
+    match /deals/{dealId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && validImageType() && validSize();
+    }
+
+    // Category images - Public read, admin write
+    match /categories/{categoryId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && validImageType() && validSize();
+    }
+
+    // Blog post images - Public read, admin write
+    match /blog/{postId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && validImageType() && validSize();
+    }
+
+    // Media library - Public read, admin write
+    match /media/{fileId}/{allPaths=**} {
+      allow read: if true;
+      allow write: if isAdmin() && validSize();
+    }
+
+    // User profile pictures - Users can read/write their own, public can read
+    match /users/{userId}/profile/{allPaths=**} {
+      allow read: if true;
+      allow write: if isOwner(userId) && validImageType() && validSize();
+    }
+
+    // User private files - Only the user can access
+    match /users/{userId}/private/{allPaths=**} {
+      allow read: if isOwner(userId);
+      allow write: if isOwner(userId) && validSize();
+    }
+
+    // Temporary uploads - Users can write, admins can read/write
+    match /temp/{userId}/{allPaths=**} {
+      allow read: if isOwner(userId) || isAdmin();
+      allow write: if isOwner(userId) && validSize();
+      allow delete: if isOwner(userId) || isAdmin();
+    }
+
+    // Default: deny all other access
+    match /{allPaths=**} {
+      allow read, write: if false;
+    }
+  }
+}

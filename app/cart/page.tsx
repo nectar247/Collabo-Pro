@@ -10,19 +10,9 @@ import Preloader from '@/components/loaders/preloader';
 import ErrorLoader from '@/components/loaders/ErrorLoader';
 
 import Navigation from "@/components/navigation";
-import Footer from '@/components/footer';
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function CartPage() {
   const { cartItems, loading, error, updateQuantity, removeItem } = useCart();
-
-  const { settings, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   if (loading) {
     return <Preloader text="Loading cart..." />;
@@ -138,16 +128,6 @@ export default function CartPage() {
           </div>
         </div>
       </main>
-      <Footer 
-        categories={categories} 
-        loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings} 
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
     </>
   );
 }

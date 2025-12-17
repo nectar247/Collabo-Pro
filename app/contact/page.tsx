@@ -3,23 +3,10 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { Send, Loader2 } from "lucide-react";
-import { useSiteSettings } from "@/lib/firebase/hooks";
 
 import Navigation from "@/components/navigation";
-import Footer from '@/components/footer';
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function ContactPage() {
-
-  const { settings } = useSiteSettings();
-
-  const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   const [ isSending, setIsSending ] = useState(false);
   const [ error, setError ] = useState('');
@@ -162,16 +149,6 @@ export default function ContactPage() {
           </div>
         </div>
       </main>
-      <Footer 
-        categories={categories} 
-        loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings__} 
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
     </>
   );
 }

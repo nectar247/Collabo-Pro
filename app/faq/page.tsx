@@ -9,26 +9,17 @@ import Preloader from "@/components/loaders/preloader";
 import ErrorLoader from "@/components/loaders/ErrorLoader";
 
 import Navigation from "@/components/navigation";
-import Footer from '@/components/footer';
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
+import { useSettings } from '@/lib/firebase/hooks';
 
 export default function FAQPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("all");
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const { faqs, loading, error } = useFAQs();
-  const {settings} = useSettings();
+  const { settings } = useSettings();
 
   // Get unique categories from FAQs
   const categories = ['all', ...new Set(faqs.map(faq => faq.category))];
-
-  const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories: categories__, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   const filteredFaqs = faqs.filter(faq => {
     const matchesSearch = faq.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -188,16 +179,6 @@ export default function FAQPage() {
           </div>
         </div>
       </main>
-      <Footer 
-        categories={categories__} 
-        loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings__} 
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
     </>
   );
 }

@@ -13,19 +13,11 @@ import Preloader from '@/components/loaders/preloader';
 import ErrorLoader from '@/components/loaders/ErrorLoader';
 import { DealCard1 } from '@/components/deals/card';
 import Navigation from "@/components/navigation";
-import Footer from '@/components/footer';
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function SavedDealsPage() {
   const { user, loading: authLoading } = useAuth();
   const [deals, setDeals] = useState<Deal[]>([]);
   const {savedDeals, savedUnsaveDeals, loading, error} = useProfile();
-  const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories: categories__, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   useEffect(()=>{
       let deals = [] as Deal[];
@@ -64,16 +56,6 @@ export default function SavedDealsPage() {
             </div>
           </div>
         </div>
-        <Footer 
-          categories={categories__} 
-          loadingCategories={loadingCategories}
-          brands={featuredBrands} 
-          loadingBrands={loadingBrands}
-          settings={settings__} 
-          settLoading={settLoading}
-          dynamicLinks={dynamicLinks}
-          loadingDynamicLinks={loadingDynamicLinks}
-        />
     </>
     );
   }
@@ -118,16 +100,6 @@ export default function SavedDealsPage() {
           )}
         </div>
       </main>
-      <Footer 
-        categories={categories__} 
-        loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings__} 
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
   </>
   );
 }

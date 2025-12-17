@@ -27,8 +27,6 @@ import Preloader from "@/components/loaders/preloader";
 import SavedDeals from "@/components/users/SavedDeals";
 
 import Navigation from "@/components/navigation";
-import Footer from '@/components/footer';
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function Dashboard() {
   const { user, isAdmin, loading: userLoading } = useAuth();
@@ -42,14 +40,6 @@ export default function Dashboard() {
     // { id: "history", label: "History", icon: Clock },
     // { id: "settings", label: "Profile Settings", icon: Settings }
   ];
-
-  const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
 
 
@@ -168,16 +158,6 @@ export default function Dashboard() {
           </div>
         </div>
       </div>
-      <Footer 
-        categories={categories} 
-        loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings__} 
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
     </>
   );
 }

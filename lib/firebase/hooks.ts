@@ -17,24 +17,31 @@ export function useAuth() {
   const [error, setError] = useState<Error | null>(null);
 
   useEffect(() => {
+    console.log('🔐 useAuth: Setting up auth listener');
     let profileUnsubscribe: (() => void) | null = null;
 
     const authUnsubscribe = auth.onAuthStateChanged(async (user) => {
+      console.log('🔐 useAuth: Auth state changed', user ? `User: ${user.uid}` : 'No user');
+
       // Clean up previous profile listener
       if (profileUnsubscribe) {
         profileUnsubscribe();
         profileUnsubscribe = null;
       }
-      
+
       if (user) {
+        console.log('🔐 useAuth: Setting up profile listener for', user.uid);
         // Set up real-time listener for profile changes
         profileUnsubscribe = onSnapshot(
           doc(db, 'profiles', user.uid),
           async (doc) => {
+            console.log('🔐 useAuth: Profile snapshot received', doc.exists() ? 'exists' : 'not exists');
             if (doc.exists()) {
               const data = doc.data();
+              console.log('🔐 useAuth: Profile data:', { status: data.status, isAdmin: data.isAdmin });
               // Check if user is inactive
               if (data.status === 'inactive') {
+                console.log('🔐 useAuth: User is inactive, signing out');
                 try {
                   await signOut();
                   setUser(null);
@@ -44,25 +51,29 @@ export function useAuth() {
                   console.error('Error signing out inactive user:', err);
                 }
               } else {
+                console.log('🔐 useAuth: User is active, setting state');
                 setUser(user);
                 setIsAdmin(data.isAdmin || false);
                 setError(null);
               }
             } else {
+              console.log('🔐 useAuth: Profile does not exist');
               setUser(user);
               setIsAdmin(false);
               setError(null);
             }
+            console.log('🔐 useAuth: Setting loading to false');
             setLoading(false);
           },
           (error) => {
-            console.error('Error fetching profile:', error);
+            console.error('❌ useAuth: Error fetching profile:', error);
             setIsAdmin(false);
             setLoading(false);
             setError(error as Error);
           }
         );
       } else {
+        console.log('🔐 useAuth: No user, setting loading to false');
         setUser(null);
         setIsAdmin(false);
         setLoading(false);
@@ -71,6 +82,7 @@ export function useAuth() {
     });
 
     return () => {
+      console.log('🔐 useAuth: Cleaning up listeners');
       authUnsubscribe();
       if (profileUnsubscribe) {
         profileUnsubscribe();
