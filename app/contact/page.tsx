@@ -4,7 +4,7 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Send, Loader2 } from "lucide-react";
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 
 export default function ContactPage() {
 
@@ -48,7 +48,7 @@ export default function ContactPage() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center mb-12">

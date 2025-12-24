@@ -13,7 +13,7 @@ import { useAuth, useProfile } from '@/lib/firebase/hooks';
 import DiscountModal from '@/components/modal/DiscountModal';
 import { DealButton } from '@/components/deals/card';
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
@@ -112,7 +112,7 @@ export default function DealContent({ deal }: DealContentProps) {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-12">
         <div className="container mx-auto px-4">
           {/* Back Button */}

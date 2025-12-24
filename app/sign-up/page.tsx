@@ -8,7 +8,7 @@ import { Mail, Lock, User, ArrowRight } from "lucide-react";
 import { signUp } from "@/lib/auth";
 import { validateEmail, validatePassword, sanitizeInput } from "@/lib/utils/sanitize";
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 
 export default function SignUp() {
   const [email, setEmail] = useState("");
@@ -56,7 +56,7 @@ export default function SignUp() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <div className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black flex items-center justify-center px-4">
         <div className="absolute inset-0 bg-[url('/grid.svg')] bg-center [mask-image:linear-gradient(180deg,white,rgba(255,255,255,0))]" />
         

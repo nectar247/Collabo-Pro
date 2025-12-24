@@ -4,7 +4,7 @@ import { motion } from "framer-motion";
 import Link from "next/link";
 import { Search, ArrowRight, Home, Tag, ShoppingBag } from "lucide-react";
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 export default function NotFound() {
   const quickLinks = [
     {
@@ -31,7 +31,7 @@ export default function NotFound() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen flex items-center justify-center p-4 bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black">
         <div className="w-full max-w-4xl mx-auto text-center">
           {/* 404 Animation */}

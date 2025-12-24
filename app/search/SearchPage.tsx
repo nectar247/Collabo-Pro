@@ -15,7 +15,7 @@ import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { Deal } from '@/lib/firebase/collections';
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
@@ -371,7 +371,7 @@ export default function SearchPage() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-8">
         <div className="container mx-auto px-4">
           {/* Search Header */}

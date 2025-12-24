@@ -112,3 +112,5 @@
   - [x] Regional pricing
   - [x] Localization
 -
+
+rm -rf .next && npm run dev 

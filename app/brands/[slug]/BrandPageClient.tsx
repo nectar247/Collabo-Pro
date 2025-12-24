@@ -13,7 +13,7 @@ import { collection, query, where, getDocs, orderBy, Timestamp } from 'firebase/
 import { db } from '@/lib/firebase';
 import { Deal } from '@/lib/firebase/collections';
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
@@ -123,7 +123,7 @@ export default function BrandPageClient() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-6">
         <div className="container mx-auto px-4">
           {/* Header */}

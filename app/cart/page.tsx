@@ -9,7 +9,7 @@ import { useCart } from '@/lib/firebase/hooks';
 import Preloader from '@/components/loaders/preloader';
 import ErrorLoader from '@/components/loaders/ErrorLoader';
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 
 export default function CartPage() {
   const { cartItems, loading, error, updateQuantity, removeItem } = useCart();
@@ -28,7 +28,7 @@ export default function CartPage() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto">

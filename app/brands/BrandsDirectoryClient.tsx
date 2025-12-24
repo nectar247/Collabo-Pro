@@ -6,7 +6,7 @@ import Link from "next/link";
 import { Search, X } from "lucide-react";
 import Preloader from "@/components/loaders/preloader";
 import ErrorLoader from "@/components/loaders/ErrorLoader";
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 import { toast } from "sonner"; // Add simple toast
@@ -85,7 +85,7 @@ export default function BrandsDirectoryClient() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-gray-50 dark:bg-gray-900">
         <header className="relative bg-white dark:bg-gray-800 border-b py-6 text-center">
           <h1 className="text-4xl font-bold text-primary dark:text-white mb-4">Featured Brands</h1>

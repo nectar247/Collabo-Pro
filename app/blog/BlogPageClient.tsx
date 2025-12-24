@@ -8,7 +8,7 @@ import { useBlogPosts } from "@/lib/firebase/hooks";
 import Preloader from "@/components/loaders/preloader";
 import ErrorLoader from "@/components/loaders/ErrorLoader";
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
@@ -33,7 +33,7 @@ export default function BlogPageClient() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen py-12 bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black">
         <div className="container mx-auto px-4">
           <div className="max-w-2xl mx-auto text-center mb-12">

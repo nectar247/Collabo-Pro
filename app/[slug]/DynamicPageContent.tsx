@@ -10,7 +10,7 @@ import Link from "next/link";
 import Preloader from "@/components/loaders/preloader";
 import { DynamicIcon } from "@/helper";
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
@@ -63,7 +63,7 @@ export default function DynamicPageContent({
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-white py-12">
         <div className="container mx-auto px-4">
           <motion.div

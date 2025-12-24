@@ -35,7 +35,7 @@ export default function HomePageClient({
 
   return (
     <>
-      <NavigationLite onOpenSearch={() => setIsSearchOpen(true)} />
+      <NavigationLite onOpenSearch={() => setIsSearchOpen(true)} skipAuth={true} />
       <div className="overflow-hidden">
 
         {/* Hero Section */}

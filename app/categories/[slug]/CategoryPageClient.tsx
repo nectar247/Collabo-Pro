@@ -4,7 +4,7 @@
 import { Tag, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { DealCard1 } from '@/components/deals/card';
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useSettings, useDynamicLinks } from '@/lib/firebase/hooks';
 
@@ -65,7 +65,7 @@ export default function CategoryPageClient({
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-6">
         <div className="container mx-auto px-4">
           {/* Header */}

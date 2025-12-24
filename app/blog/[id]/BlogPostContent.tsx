@@ -11,7 +11,7 @@ import type { BlogPost } from '@/lib/firebase/collections';
 import ShareButtons from '@/components/social/ShareButtons';
 import Preloader from '@/components/loaders/preloader';
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
@@ -83,7 +83,7 @@ export default function BlogPostContent({
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen py-12 bg-white">
         <div className="container mx-auto px-4">
           {/* Back Button */}

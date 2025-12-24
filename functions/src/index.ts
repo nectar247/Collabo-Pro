@@ -385,6 +385,42 @@ export const scheduledCategoriesDealCountUpdate = functions
   });
 
 /**
+ * Shuffle deals to avoid consecutive deals from the same brand
+ * Uses a greedy algorithm to maximize brand diversity
+ */
+function shuffleDealsAvoidConsecutiveBrands(deals: any[]): any[] {
+  if (deals.length <= 1) return deals;
+
+  const result: any[] = [];
+  const remaining = [...deals];
+
+  // Pick first deal randomly
+  const firstIndex = Math.floor(Math.random() * remaining.length);
+  result.push(remaining.splice(firstIndex, 1)[0]);
+
+  // For each subsequent position, try to pick a deal from a different brand
+  while (remaining.length > 0) {
+    const lastBrand = result[result.length - 1].brand;
+
+    // Find deals from different brands
+    const differentBrandDeals = remaining.filter(deal => deal.brand !== lastBrand);
+
+    if (differentBrandDeals.length > 0) {
+      // Pick randomly from deals with different brands
+      const randomIndex = Math.floor(Math.random() * differentBrandDeals.length);
+      const selectedDeal = differentBrandDeals[randomIndex];
+      const indexInRemaining = remaining.indexOf(selectedDeal);
+      result.push(remaining.splice(indexInRemaining, 1)[0]);
+    } else {
+      // All remaining deals are from the same brand, just pick the first one
+      result.push(remaining.splice(0, 1)[0]);
+    }
+  }
+
+  return result;
+}
+
+/**
  * Homepage Cache Refresh Function
  * Runs every 6 hours to pre-calculate and cache homepage data
  * This dramatically improves homepage performance by eliminating multiple Firebase queries
@@ -441,11 +477,14 @@ export const refreshHomepageCache = functions
         .limit(20)
         .get();
 
-      const trendingDeals = trendingDealsSnapshot.docs.map(doc => ({
+      const trendingDealsRaw = trendingDealsSnapshot.docs.map(doc => ({
         id: doc.id,
         ...doc.data()
       }));
-      console.log(`✅ [HomepageCache] Found ${trendingDeals.length} trending deals`);
+
+      // Shuffle deals to avoid consecutive deals from the same brand
+      const trendingDeals = shuffleDealsAvoidConsecutiveBrands(trendingDealsRaw);
+      console.log(`✅ [HomepageCache] Found ${trendingDeals.length} trending deals (shuffled)`);
 
       // 4️⃣ Fetch Popular Searches (top 10 from search history)
       console.log("📦 [HomepageCache] Fetching popular searches...");

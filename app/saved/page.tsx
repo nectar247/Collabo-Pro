@@ -12,7 +12,7 @@ import type { Deal } from '@/lib/firebase/collections';
 import Preloader from '@/components/loaders/preloader';
 import ErrorLoader from '@/components/loaders/ErrorLoader';
 import { DealCard1 } from '@/components/deals/card';
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 
 export default function SavedDealsPage() {
   const { user, loading: authLoading } = useAuth();
@@ -34,7 +34,7 @@ export default function SavedDealsPage() {
   if (!user) {
     return (
       <>
-        <Navigation />
+        <NavigationLite />
         <div className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black flex items-center justify-center">
           <div className="text-center">
             <Heart className="h-16 w-16 text-primary dark:text-gray-600 mx-auto mb-4" />
@@ -66,7 +66,7 @@ export default function SavedDealsPage() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-12">
         <div className="container mx-auto px-4">
           <div className="max-w-4xl mx-auto mb-12">

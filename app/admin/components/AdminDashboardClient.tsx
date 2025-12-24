@@ -3,7 +3,7 @@
 import { useState, Suspense, useEffect } from "react";
 import dynamic from "next/dynamic";
 import { Shield, BarChart3, Users, ShoppingBag, Tag, Settings, FileText, File, Grid2X2, ChevronRight } from "lucide-react";
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 import Footer from "@/components/footer";
 import Preloader from "@/components/loaders/preloader";
 import Link from "next/link";
@@ -107,7 +107,7 @@ export default function AdminDashboardClient() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-8">
         <div className="container mx-auto px-4">
           <div className="mb-8">

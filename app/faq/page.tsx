@@ -8,7 +8,7 @@ import { useFAQs } from "@/lib/firebase/hooks";
 import Preloader from "@/components/loaders/preloader";
 import ErrorLoader from "@/components/loaders/ErrorLoader";
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 import { useSettings } from '@/lib/firebase/hooks';
 
 export default function FAQPage() {
@@ -38,7 +38,7 @@ export default function FAQPage() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <main className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black py-12">
         <div className="container mx-auto px-4">
           {/* Back Button */}

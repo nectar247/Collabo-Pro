@@ -107,12 +107,12 @@ const nextConfig = {
             key: 'Content-Security-Policy',
             value: [
               `default-src 'self' https://vouched4vouchers.firebaseapp.com`,
-              `script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.firebaseapp.com https://apis.google.com`,
-              `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.firebaseapp.com https://apis.google.com`,
+              `script-src-elem 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.firebaseapp.com https://apis.google.com https://va.vercel-scripts.com`,
+              `script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.googletagmanager.com https://*.firebaseapp.com https://apis.google.com https://va.vercel-scripts.com`,
               `style-src 'self' 'unsafe-inline' https://fonts.googleapis.com https://*.firebaseapp.com`,
               `img-src 'self' https://ui.awin.com https://awin.com https://awin1.com https://a1.awin1.com https://images.unsplash.com https://*.firebaseapp.com https://firebasestorage.googleapis.com data:`,
               `font-src 'self' https://fonts.gstatic.com`,
-              `connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com`,
+              `connect-src 'self' https://*.firebaseio.com https://*.googleapis.com https://*.firebaseapp.com https://vitals.vercel-insights.com`,
               `frame-src 'self' https://vouched4vouchers.firebaseapp.com`,
               `child-src 'self' https://vouched4vouchers.firebaseapp.com`,
             ].join('; ')

@@ -26,7 +26,7 @@ import { useAuth, useProfile } from "@/lib/firebase/hooks";
 import Preloader from "@/components/loaders/preloader";
 import SavedDeals from "@/components/users/SavedDeals";
 
-import Navigation from "@/components/navigation";
+import NavigationLite from "@/components/NavigationLite";
 
 export default function Dashboard() {
   const { user, isAdmin, loading: userLoading } = useAuth();
@@ -67,7 +67,7 @@ export default function Dashboard() {
 
   return (
     <>
-      <Navigation />
+      <NavigationLite />
       <div className="min-h-screen bg-bgPrimary dark:bg-gradient-to-br dark:from-gray-900 dark:via-gray-800 dark:to-black">
         <div className="container mx-auto px-4 py-8">
 

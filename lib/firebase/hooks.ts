@@ -130,41 +130,56 @@ export function useProfile() {
 
   useEffect(() => {
     if (!user) {
+      setSavedDeals([]);
       return;
     }
 
-    const unsubscribe = onSnapshot(
-      query(
-        collection(db, 'deals_saved'),
-        where('profileId', '==', user.uid) // Filter by user UID
-      ),
-      async (snapshot) => {
-        try {
-          if (!snapshot.empty) {
-            const savedDeals = await Promise.all(
-              snapshot.docs.map(async (doc) => {
-                if(!doc.data().dealId)
-                    return null;
-                const dealData = await getDeal(doc.data().dealId);
-                return { id: doc.id, ...doc.data(), dealData };
-              })
-            ) as any;
-            setSavedDeals(savedDeals.filter((deal: any)=>deal));
-          } else {
-            setSavedDeals([]);
+    // Small delay to ensure auth token is ready
+    const timeoutId = setTimeout(() => {
+      const unsubscribe = onSnapshot(
+        query(
+          collection(db, 'deals_saved'),
+          where('profileId', '==', user.uid) // Filter by user UID
+        ),
+        async (snapshot) => {
+          try {
+            if (!snapshot.empty) {
+              const savedDeals = await Promise.all(
+                snapshot.docs.map(async (doc) => {
+                  if(!doc.data().dealId)
+                      return null;
+                  const dealData = await getDeal(doc.data().dealId);
+                  return { id: doc.id, ...doc.data(), dealData };
+                })
+              ) as any;
+              setSavedDeals(savedDeals.filter((deal: any)=>deal));
+            } else {
+              setSavedDeals([]);
+            }
+          } catch (error) {
+            console.error('Error processing deals:', error);
+            // Only set error if it's not a permission error during initial load
+            if (!(error as any).code?.includes('permission-denied')) {
+              setError(error as Error);
+            }
           }
-        } catch (error) {
-          console.error('Error processing deals:', error);
-          setError(error as Error);
+        },
+        (err) => {
+          // Silently ignore permission errors during auth initialization
+          if ((err as any).code === 'permission-denied') {
+            console.warn('Waiting for auth to initialize...');
+            setSavedDeals([]);
+          } else {
+            console.error('Error fetching saved deals:', err);
+            setError(err as Error);
+          }
         }
-      },
-      (err) => {
-        console.error('Error fetching saved deals:', err);
-        setError(err as Error);
-      }
-    );
+      );
 
-    return unsubscribe;
+      return () => unsubscribe();
+    }, 100); // Small delay to let auth settle
+
+    return () => clearTimeout(timeoutId);
   }, [user]);
 
   // Function to get brand details
