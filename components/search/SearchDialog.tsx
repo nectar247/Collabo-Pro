@@ -6,6 +6,8 @@ import { useRouter } from 'next/navigation';
 import { Search, X, TrendingUp, Sparkles, Loader2, Tag, Store, Grid3X3 } from 'lucide-react';
 import { useCategories, useDeals } from '@/lib/firebase/hooks';
 import { getPopularSearches, recordSearch } from '@/lib/firebase/search';
+import { fuzzyMatchWithScore } from '@/lib/utils/fuzzy-search';
+import { sortByRelevance, ScoredDeal } from '@/lib/utils/search-ranking';
 
 interface SearchDialogProps {
   isOpen: boolean;
@@ -63,50 +65,61 @@ export default function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
     }
   }, [onClose, isOpen]);
 
-  // Generate search suggestions from deals, brands, and categories
+  // Generate search suggestions from deals, brands, and categories with debounce
   useEffect(() => {
     if (searchQuery.length > 1) {
-      const query = searchQuery.toLowerCase();
-      const suggestions: SearchSuggestion[] = [];
+      // Debounce search suggestions by 300ms
+      const timeoutId = setTimeout(() => {
+        const suggestions: SearchSuggestion[] = [];
 
-      // Search through deals
-      const dealMatches = allPublicDeals
-        .filter(deal => 
-          deal.title?.toLowerCase().includes(query) ||
-          deal.description?.toLowerCase().includes(query)
-        )
-        .slice(0, 4)
-        .map(deal => ({
-          text: deal.brand + ": " + deal.title,
-          type: 'deal' as const,
-          icon: Tag
-        }));
+        // Search through deals with fuzzy matching and ranking
+        const dealMatches = sortByRelevance(allPublicDeals, searchQuery)
+          .filter(deal => deal.relevanceScore >= 10) // Minimum score threshold
+          .slice(0, 2) // Show max 2 deals
+          .map(deal => ({
+            text: deal.brand + ": " + deal.title,
+            type: 'deal' as const,
+            icon: Tag
+          }));
 
-      // Search through brands
-      const uniqueBrands = [...new Set(allPublicDeals.map(deal => deal.brand))];
-      const brandMatches = uniqueBrands
-        .filter(brand => brand?.toLowerCase().includes(query))
-        .slice(0, 3)
-        .map(brand => ({
-          text: brand,
-          type: 'brand' as const,
-          icon: Store
-        }));
+        // Search through brands with fuzzy matching
+        const uniqueBrands = [...new Set(allPublicDeals.map(deal => deal.brand))];
+        const brandMatches = uniqueBrands
+          .map(brand => {
+            const match = fuzzyMatchWithScore(searchQuery, brand, 60); // Lower threshold for suggestions
+            return { brand, ...match };
+          })
+          .filter(result => result.isMatch)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 2) // Show max 2 brands
+          .map(result => ({
+            text: result.brand,
+            type: 'brand' as const,
+            icon: Store
+          }));
 
-      // Search through categories
-      const categoryMatches = categories
-        .filter(cat => cat.name.toLowerCase().includes(query))
-        .slice(0, 2)
-        .map(cat => ({
-          text: cat.name,
-          type: 'category' as const,
-          icon: Sparkles
-        }));
+        // Search through categories with fuzzy matching
+        const categoryMatches = categories
+          .map(cat => {
+            const match = fuzzyMatchWithScore(searchQuery, cat.name, 60);
+            return { category: cat, ...match };
+          })
+          .filter(result => result.isMatch)
+          .sort((a, b) => b.score - a.score)
+          .slice(0, 2) // Show max 2 categories
+          .map(result => ({
+            text: result.category.name,
+            type: 'category' as const,
+            icon: Sparkles
+          }));
 
-      // Combine and prioritize: deals first, then brands, then categories
-      suggestions.push(...dealMatches, ...brandMatches, ...categoryMatches);
-      
-      setSearchSuggestions(suggestions.slice(0, 6)); // Limit to 6 total suggestions
+        // Combine and prioritize: brands first (high intent), then deals, then categories
+        suggestions.push(...brandMatches, ...dealMatches, ...categoryMatches);
+
+        setSearchSuggestions(suggestions.slice(0, 6)); // Limit to 6 total suggestions
+      }, 300); // 300ms debounce
+
+      return () => clearTimeout(timeoutId);
     } else {
       setSearchSuggestions([]);
     }
@@ -114,10 +127,12 @@ export default function SearchDialog({ isOpen, onClose }: SearchDialogProps) {
 
   const handleSearch = async (term: string) => {
     if (!term.trim()) return;
-    
+
     setIsSearching(true);
     try {
-      await recordSearch(term.trim());
+      // Note: We don't await recordSearch here as SearchPage will record with results count
+      // This just ensures the search is captured even if user navigates away quickly
+      recordSearch(term.trim());
       router.push(`/search?q=${encodeURIComponent(term.trim())}`);
       onClose();
       setSearchQuery("");

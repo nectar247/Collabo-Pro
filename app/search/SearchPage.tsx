@@ -14,6 +14,8 @@ import { recordSearch } from '@/lib/firebase/search';
 import { db } from '@/lib/firebase';
 import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'firebase/firestore';
 import { Deal } from '@/lib/firebase/collections';
+import { fuzzyMatchWithScore } from '@/lib/utils/fuzzy-search';
+import { sortByRelevance, ScoredDeal } from '@/lib/utils/search-ranking';
 
 import NavigationLite from "@/components/NavigationLite";
 import Footer from '@/components/footer';
@@ -107,11 +109,11 @@ export default function SearchPage() {
     }
   };
 
-  // Function to search the entire database
+  // Function to search the entire database with fuzzy matching and ranking
   const searchEntireDatabase = async (searchQuery: string) => {
     try {
       setIsSearching(true);
-      console.log("🔍 Searching entire database for:", searchQuery);
+      console.log("🔍 Searching entire database with fuzzy matching for:", searchQuery);
 
       // Get all active deals from the database
       const dealsQuery = query(
@@ -121,10 +123,10 @@ export default function SearchPage() {
         orderBy("expiresAt"),
         limit(1000) // Increase limit for comprehensive search
       );
-      
+
       const snapshot = await getDocs(dealsQuery);
       console.log("🔍 Total deals fetched for search:", snapshot.docs.length);
-      
+
       if (snapshot.empty) {
         return [];
       }
@@ -138,26 +140,38 @@ export default function SearchPage() {
         };
       }) as Deal[];
 
-      // Perform comprehensive search across all text fields
-      const searchLower = searchQuery.toLowerCase();
+      // Use fuzzy matching on all searchable fields
       const searchResults = allDeals.filter((deal: any) => {
-        const searchableFields = [
-          deal.title || '',
-          deal.description || '',
-          deal.brand || '',
-          deal.category || '',
-          deal.tags?.join(' ') || '',
-          deal.store || '',
-          deal.couponCode || ''
-        ];
-        
-        return searchableFields.some(field => 
-          field.toLowerCase().includes(searchLower)
+        // Check exact and fuzzy matches on all fields
+        const titleMatch = fuzzyMatchWithScore(searchQuery, deal.title || '', 70);
+        const descMatch = fuzzyMatchWithScore(searchQuery, deal.description || '', 70);
+        const brandMatch = fuzzyMatchWithScore(searchQuery, deal.brand || '', 70);
+        const categoryMatch = fuzzyMatchWithScore(searchQuery, deal.category || '', 70);
+        const tagsMatch = deal.tags
+          ? fuzzyMatchWithScore(searchQuery, deal.tags.join(' '), 70)
+          : { isMatch: false, score: 0, matchType: 'none' as const };
+
+        // Return true if any field matches
+        return (
+          titleMatch.isMatch ||
+          descMatch.isMatch ||
+          brandMatch.isMatch ||
+          categoryMatch.isMatch ||
+          tagsMatch.isMatch
         );
       });
 
-      console.log("🔍 Search results found:", searchResults.length);
-      return searchResults;
+      // Rank results by relevance
+      const rankedResults = sortByRelevance(searchResults, searchQuery);
+
+      console.log("🔍 Fuzzy search results found:", rankedResults.length);
+      console.log("🏆 Top 5 results by relevance:", rankedResults.slice(0, 5).map(d => ({
+        title: d.title,
+        brand: d.brand,
+        score: d.relevanceScore
+      })));
+
+      return rankedResults;
 
     } catch (error) {
       console.error('❌ Error searching database:', error);
@@ -181,6 +195,8 @@ export default function SearchPage() {
           const searchResults = await searchEntireDatabase(queryString);
           setDeals(searchResults);
           setTotalDeals(searchResults.length);
+          // Record search with results count
+          await recordSearch(queryString, searchResults.length);
         } else {
           // If no search query, load deals with pagination
           console.log("📄 Loading deals with pagination");
