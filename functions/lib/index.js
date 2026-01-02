@@ -379,18 +379,23 @@ export const refreshHomepageCache = functions
             .get();
         const featuredBrands = featuredBrandsSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
         console.log(`✅ [HomepageCache] Found ${featuredBrands.length} featured brands`);
-        // 3️⃣ Fetch Trending Deals (top 20)
+        // 3️⃣ Fetch Trending Deals (top 20, excluding expired)
         console.log("📦 [HomepageCache] Fetching trending deals...");
+        const now = admin.firestore.Timestamp.now();
         const trendingDealsSnapshot = await firestore
             .collection("deals_fresh")
             .where("status", "==", "active")
+            .where("expiresAt", ">", now)
+            .orderBy("expiresAt", "asc")
             .orderBy("createdAt", "desc")
-            .limit(20)
+            .limit(30)
             .get();
-        const trendingDealsRaw = trendingDealsSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        const trendingDealsRaw = trendingDealsSnapshot.docs
+            .map(doc => (Object.assign({ id: doc.id }, doc.data())))
+            .slice(0, 20);
         // Shuffle deals to avoid consecutive deals from the same brand
         const trendingDeals = shuffleDealsAvoidConsecutiveBrands(trendingDealsRaw);
-        console.log(`✅ [HomepageCache] Found ${trendingDeals.length} trending deals (shuffled)`);
+        console.log(`✅ [HomepageCache] Found ${trendingDeals.length} trending deals (shuffled, non-expired)`);
         // 4️⃣ Fetch Popular Searches (top 10 from search history)
         console.log("📦 [HomepageCache] Fetching popular searches...");
         const searchesSnapshot = await firestore

@@ -1,6 +1,6 @@
 // app/page.tsx
 import HomePageClient from './HomePageClient';
-import { doc, getDoc, collection, query, where, orderBy, limit, getDocs } from 'firebase/firestore';
+import { doc, getDoc, collection, query, where, orderBy, limit, getDocs, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { Metadata } from 'next';
 
@@ -46,9 +46,12 @@ export default async function HomePage() {
       const brandsSnap = await getDocs(brandsQuery);
       const featuredBrands = brandsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+      const now = new Date();
       const dealsQuery = query(
         collection(db, 'deals_fresh'),
         where('status', '==', 'active'),
+        where('expiresAt', '>', now),
+        orderBy('expiresAt', 'asc'),
         orderBy('createdAt', 'desc'),
         limit(20)
       );
