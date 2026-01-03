@@ -10,7 +10,7 @@ import TrendingDeals from '@/components/landing/trendingDeals';
 import SearchesSection from '@/components/landing/searches';
 import SearchDialog from '@/components/search/SearchDialog';
 import { useState } from 'react';
-import { Brand, Category, Deal } from '@/lib/firebase/collections';
+import { Brand, Category, Deal, ContentSection } from '@/lib/firebase/collections';
 
 interface HomePageClientProps {
   categories: Category[];
@@ -18,6 +18,7 @@ interface HomePageClientProps {
   trendingDeals: Deal[];
   popularSearches: string[];
   footerBrands: Brand[];
+  dynamicLinks: ContentSection[];
 }
 
 export default function HomePageClient({
@@ -26,6 +27,7 @@ export default function HomePageClient({
   trendingDeals,
   popularSearches: initialPopularSearches,
   footerBrands,
+  dynamicLinks,
 }: HomePageClientProps) {
   // Defer auth loading - Navigation will handle it lazily when user interacts
   // This prevents Firebase Auth iframe from blocking initial page load
@@ -80,7 +82,7 @@ export default function HomePageClient({
         loadingBrands={false}
         settings={null}
         settLoading={false}
-        dynamicLinks={[]}
+        dynamicLinks={dynamicLinks}
         loadingDynamicLinks={false}
       />
 

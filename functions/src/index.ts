@@ -518,13 +518,29 @@ export const refreshHomepageCache = functions
       }));
       console.log(`✅ [HomepageCache] Found ${footerBrands.length} footer brands`);
 
-      // 6️⃣ Write to homepageCache collection
+      // 6️⃣ Fetch Dynamic Links (legal and help content)
+      console.log("📦 [HomepageCache] Fetching dynamic links...");
+      const dynamicLinksSnapshot = await firestore
+        .collection("content")
+        .where("status", "==", "published")
+        .where("type", "in", ["legal", "help"])
+        .orderBy("order", "asc")
+        .get();
+
+      const dynamicLinks = dynamicLinksSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log(`✅ [HomepageCache] Found ${dynamicLinks.length} dynamic links`);
+
+      // 7️⃣ Write to homepageCache collection
       const cacheData = {
         categories,
         featuredBrands,
         trendingDeals,
         popularSearches,
         footerBrands,
+        dynamicLinks,
         lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
         version: 1
       };
@@ -533,7 +549,7 @@ export const refreshHomepageCache = functions
 
       const duration = Date.now() - startTime;
       console.log(`🎉 [HomepageCache] Cache refreshed successfully in ${duration}ms`);
-      console.log(`📊 [HomepageCache] Stats: ${categories.length} cats, ${featuredBrands.length} brands, ${trendingDeals.length} deals`);
+      console.log(`📊 [HomepageCache] Stats: ${categories.length} cats, ${featuredBrands.length} brands, ${trendingDeals.length} deals, ${dynamicLinks.length} links`);
 
       return null;
     } catch (error) {

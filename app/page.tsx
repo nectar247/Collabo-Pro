@@ -58,6 +58,16 @@ export default async function HomePage() {
       const dealsSnap = await getDocs(dealsQuery);
       const trendingDeals = dealsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 
+      // Fetch dynamic links as fallback
+      const dynamicLinksQuery = query(
+        collection(db, 'content'),
+        where('status', '==', 'published'),
+        where('type', 'in', ['legal', 'help']),
+        orderBy('order', 'asc')
+      );
+      const dynamicLinksSnap = await getDocs(dynamicLinksQuery);
+      const dynamicLinks = dynamicLinksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
       const serializeData = (data: any) => JSON.parse(JSON.stringify(data));
 
       return <HomePageClient
@@ -66,6 +76,7 @@ export default async function HomePage() {
         trendingDeals={serializeData(trendingDeals)}
         popularSearches={[]}
         footerBrands={serializeData(featuredBrands.slice(0, 15))}
+        dynamicLinks={serializeData(dynamicLinks)}
       />;
     }
 
@@ -82,6 +93,7 @@ export default async function HomePage() {
       trendingDeals={serializeData(cacheData.trendingDeals || [])}
       popularSearches={cacheData.popularSearches || []}
       footerBrands={serializeData(cacheData.footerBrands || [])}
+      dynamicLinks={serializeData(cacheData.dynamicLinks || [])}
     />;
   } catch (error) {
     console.error('Error fetching homepage cache:', error);
@@ -92,6 +104,7 @@ export default async function HomePage() {
       trendingDeals={[]}
       popularSearches={[]}
       footerBrands={[]}
+      dynamicLinks={[]}
     />;
   }
 }
