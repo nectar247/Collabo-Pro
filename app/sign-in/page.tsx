@@ -32,13 +32,14 @@ export default function SignIn() {
     try {
       const {user} = await signIn(email, password);
 
-      // After successful sign-in
-      const token = await user.getIdToken(); // Firebase token
+      // After successful sign-in, get Firebase token
+      const token = await user.getIdToken();
 
-      document.cookie = `authToken=${token}; path=/; max-age=86400; secure`;
+      // Set auth cookie with proper security attributes for Next.js 15
+      document.cookie = `authToken=${token}; path=/; max-age=86400; secure; samesite=lax`;
 
+      // Navigate to deals page (router.push handles navigation and refresh)
       router.push("/deals");
-      router.refresh();
     } catch (error: any) {
       setError(error.message);
     } finally {

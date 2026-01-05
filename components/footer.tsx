@@ -350,7 +350,7 @@ export default function Footer(
         <div className="mt-12 pt-8 border-t border-gray-800 text-xs text-center">
           <div className="w-[50%] mx-auto text-gray-400">
             <p className="mb-2">
-              {settings?.general.siteName} is a voucher, coupon, and discount deals website in the UK.
+              {settings?.general.siteName || 'Shop4Vouchers'} is a voucher, coupon, and discount deals website in the UK.
             </p>
             <p>
               Shop4Vouchers.co.uk is operated by Transecure Consulting Limited, a company registered in England and Wales
@@ -358,7 +358,7 @@ export default function Footer(
             </p>
           </div>
           <p className="text-gray-400 mt-4">
-            © {new Date().getFullYear()} {settings?.general.siteName}. All rights reserved.
+            © {new Date().getFullYear()} {settings?.general.siteName || 'Shop4Vouchers'}. All rights reserved.
           </p>
         </div>
       </div>

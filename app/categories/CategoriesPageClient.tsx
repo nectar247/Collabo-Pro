@@ -12,7 +12,7 @@ export default function CategoriesPageClient() {
 
   const { settings, loading: settLoading } = useSettings();
   const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { featuredBrands, loading: loadingBrands } = useBrands();
+  const { featuredBrands, footerBrands, loading: loadingBrands } = useBrands();
   const { trendingDeals, loading: loadingDeals } = useDeals();
   const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
@@ -47,12 +47,12 @@ export default function CategoriesPageClient() {
           </div>
         </div>
       </main>
-      <Footer 
-        categories={categories} 
+      <Footer
+        categories={categories}
         loadingCategories={loadingCategories}
-        brands={featuredBrands} 
+        brands={footerBrands}
         loadingBrands={loadingBrands}
-        settings={settings} 
+        settings={settings}
         settLoading={settLoading}
         dynamicLinks={dynamicLinks}
         loadingDynamicLinks={loadingDynamicLinks}

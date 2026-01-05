@@ -16,45 +16,84 @@ import { collection, query, where, getDocs, orderBy, limit, Timestamp } from 'fi
 import { Deal } from '@/lib/firebase/collections';
 import { fuzzyMatchWithScore } from '@/lib/utils/fuzzy-search';
 import { sortByRelevance, ScoredDeal } from '@/lib/utils/search-ranking';
+import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import NavigationLite from "@/components/NavigationLite";
 import Footer from '@/components/footer';
 import { useBrands, useCategories, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
+import { Brand, Category, ContentSection } from '@/lib/firebase/collections';
 
-export default function SearchPage() {
+interface SearchPageProps {
+  serverInitialDeals?: Deal[];
+  serverTotalCount?: number;
+  serverCategories?: Category[];
+  serverBrands?: Brand[];
+  serverDynamicLinks?: ContentSection[];
+}
+
+export default function SearchPage({
+  serverInitialDeals,
+  serverTotalCount,
+  serverCategories,
+  serverBrands,
+  serverDynamicLinks
+}: SearchPageProps = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
   const queryString = searchParams.get('q') || '';
-  
+
   // Ref for scroll position preservation
   const loadMoreButtonRef = useRef<HTMLButtonElement>(null);
   const dealsGridRef = useRef<HTMLDivElement>(null);
-  
+
   // States
-  const [deals, setDeals] = useState<Deal[]>([]);
+  const [deals, setDeals] = useState<Deal[]>(serverInitialDeals || []);
   const [searchTerm, setSearchTerm] = useState(queryString);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!serverInitialDeals); // Don't show loading if we have server data
   const [error, setError] = useState<Error | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [isSearching, setIsSearching] = useState(false);
-  
+
   // Pagination states
   const [currentPage, setCurrentPage] = useState(1);
-  const [totalDeals, setTotalDeals] = useState(0);
+  const [totalDeals, setTotalDeals] = useState(serverTotalCount || 0);
   const [isLoadingMore, setIsLoadingMore] = useState(false);
   const dealsPerPage = 24;
-  
+
   // Filter states
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'expiring' | 'popular'>('newest');
-  
-  // Hooks
+
+  // Hooks - only fetch if server data not provided
   const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands } = useBrands();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
+  const { categories: clientCategories, loading: loadingCategories } = useCategories();
+  const { allBrands, featuredBrands: clientFeaturedBrands, footerBrands: clientFooterBrands, loading: loadingBrands } = useBrands();
+  const { links: clientDynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
+
+  // Use server data if available AND not empty, otherwise use client hooks
+  const categories = (serverCategories && serverCategories.length > 0) ? serverCategories : clientCategories;
+  const featuredBrands = (serverBrands && serverBrands.length > 0) ? serverBrands : clientFeaturedBrands;
+  const footerBrands = (serverBrands && serverBrands.length > 0) ? serverBrands : clientFooterBrands;
+  const dynamicLinks = (serverDynamicLinks && serverDynamicLinks.length > 0) ? serverDynamicLinks : clientDynamicLinks;
+
+  // Debug: Log data sources
+  console.log('[SearchPage] Data sources:', {
+    serverCategories: serverCategories?.length || 0,
+    clientCategories: clientCategories?.length || 0,
+    categories: categories?.length || 0,
+    serverBrands: serverBrands?.length || 0,
+    clientFooterBrands: clientFooterBrands?.length || 0,
+    footerBrands: footerBrands?.length || 0,
+    serverDynamicLinks: serverDynamicLinks?.length || 0,
+    dynamicLinks: dynamicLinks?.length || 0
+  });
+
+  // Override loading states when server data is provided AND not empty
+  const actualLoadingBrands = (serverBrands && serverBrands.length > 0) ? false : loadingBrands;
+  const actualLoadingCategories = (serverCategories && serverCategories.length > 0) ? false : loadingCategories;
+  const actualLoadingDynamicLinks = (serverDynamicLinks && serverDynamicLinks.length > 0) ? false : loadingDynamicLinks;
 
   // Update search term when URL changes
   useEffect(() => {
@@ -109,80 +148,82 @@ export default function SearchPage() {
     }
   };
 
-  // Function to search the entire database with fuzzy matching and ranking
-  const searchEntireDatabase = async (searchQuery: string) => {
+  // Function to search using server-side Firebase Function
+  const searchUsingServerFunction = async (searchQuery: string) => {
     try {
       setIsSearching(true);
-      console.log("🔍 Searching entire database with fuzzy matching for:", searchQuery);
+      console.log("🔍 [Server Search] Searching for:", searchQuery);
 
-      // Get all active deals from the database
-      const dealsQuery = query(
-        collection(db, "deals_fresh"),
-        where("status", "==", "active"),
-        where("expiresAt", ">", Timestamp.now()),
-        orderBy("expiresAt"),
-        limit(1000) // Increase limit for comprehensive search
-      );
+      const functions = getFunctions();
+      const searchDealsFunc = httpsCallable(functions, 'searchDeals');
 
-      const snapshot = await getDocs(dealsQuery);
-      console.log("🔍 Total deals fetched for search:", snapshot.docs.length);
-
-      if (snapshot.empty) {
-        return [];
-      }
-
-      // Get all deals
-      const allDeals = snapshot.docs.map((doc) => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data,
-        };
-      }) as Deal[];
-
-      // Use fuzzy matching on all searchable fields
-      const searchResults = allDeals.filter((deal: any) => {
-        // Check exact and fuzzy matches on all fields
-        const titleMatch = fuzzyMatchWithScore(searchQuery, deal.title || '', 70);
-        const descMatch = fuzzyMatchWithScore(searchQuery, deal.description || '', 70);
-        const brandMatch = fuzzyMatchWithScore(searchQuery, deal.brand || '', 70);
-        const categoryMatch = fuzzyMatchWithScore(searchQuery, deal.category || '', 70);
-        const tagsMatch = deal.tags
-          ? fuzzyMatchWithScore(searchQuery, deal.tags.join(' '), 70)
-          : { isMatch: false, score: 0, matchType: 'none' as const };
-
-        // Return true if any field matches
-        return (
-          titleMatch.isMatch ||
-          descMatch.isMatch ||
-          brandMatch.isMatch ||
-          categoryMatch.isMatch ||
-          tagsMatch.isMatch
-        );
+      const result = await searchDealsFunc({
+        query: searchQuery,
+        limit: 100
       });
 
-      // Rank results by relevance
-      const rankedResults = sortByRelevance(searchResults, searchQuery);
+      const data = result.data as { results: Deal[], total: number };
 
-      console.log("🔍 Fuzzy search results found:", rankedResults.length);
-      console.log("🏆 Top 5 results by relevance:", rankedResults.slice(0, 5).map(d => ({
-        title: d.title,
-        brand: d.brand,
-        score: d.relevanceScore
-      })));
+      console.log("✅ [Server Search] Found:", data.total, "results");
+      return data.results;
 
-      return rankedResults;
-
-    } catch (error) {
-      console.error('❌ Error searching database:', error);
-      throw error;
+    } catch (error: any) {
+      console.error('❌ [Server Search] Error:', error);
+      // Fallback to client-side search on error
+      console.log("⚠️ Falling back to client-side search");
+      return searchEntireDatabaseFallback(searchQuery);
     } finally {
       setIsSearching(false);
     }
   };
 
+  // Fallback client-side search (only used if server search fails)
+  const searchEntireDatabaseFallback = async (searchQuery: string) => {
+    try {
+      console.log("🔍 [Fallback] Client-side fuzzy search for:", searchQuery);
+
+      const dealsQuery = query(
+        collection(db, "deals_fresh"),
+        where("status", "==", "active"),
+        where("expiresAt", ">", Timestamp.now()),
+        orderBy("expiresAt"),
+        limit(500)
+      );
+
+      const snapshot = await getDocs(dealsQuery);
+      const allDeals = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      })) as Deal[];
+
+      // Use fuzzy matching
+      const searchResults = allDeals.filter((deal: any) => {
+        const titleMatch = fuzzyMatchWithScore(searchQuery, deal.title || '', 70);
+        const descMatch = fuzzyMatchWithScore(searchQuery, deal.description || '', 70);
+        const brandMatch = fuzzyMatchWithScore(searchQuery, deal.brand || '', 70);
+        const categoryMatch = fuzzyMatchWithScore(searchQuery, deal.category || '', 70);
+
+        return titleMatch.isMatch || descMatch.isMatch || brandMatch.isMatch || categoryMatch.isMatch;
+      });
+
+      const rankedResults = sortByRelevance(searchResults, searchQuery);
+      console.log("✅ [Fallback] Found:", rankedResults.length, "results");
+
+      return rankedResults;
+    } catch (error) {
+      console.error('❌ [Fallback] Error:', error);
+      return [];
+    }
+  };
+
   // Fetch deals on initial load and URL changes
   useEffect(() => {
+    // Skip initial fetch if we have server data and no query string
+    if (serverInitialDeals && serverInitialDeals.length > 0 && !queryString.trim()) {
+      console.log("✅ Using server-provided data, skipping client fetch");
+      return;
+    }
+
     const fetchDeals = async () => {
       try {
         setLoading(true);
@@ -190,9 +231,9 @@ export default function SearchPage() {
         setCurrentPage(1); // Reset pagination
 
         if (queryString.trim()) {
-          // If there's a search query, search the entire database
-          console.log("🔍 Performing database search for:", queryString);
-          const searchResults = await searchEntireDatabase(queryString);
+          // If there's a search query, use server-side search
+          console.log("🔍 Performing server-side search for:", queryString);
+          const searchResults = await searchUsingServerFunction(queryString);
           setDeals(searchResults);
           setTotalDeals(searchResults.length);
           // Record search with results count
@@ -207,7 +248,7 @@ export default function SearchPage() {
           setDeals(paginatedDeals);
           setTotalDeals(totalCount);
         }
-        
+
         setLoading(false);
 
       } catch (error: any) {
@@ -216,9 +257,9 @@ export default function SearchPage() {
         setLoading(false);
       }
     };
-    
+
     fetchDeals();
-  }, [queryString]);
+  }, [queryString, serverInitialDeals]);
 
   // Function to load more deals (pagination) with scroll position preservation
   const loadMoreDeals = async () => {
@@ -347,7 +388,7 @@ export default function SearchPage() {
         // If it's the same query, just refresh the search
         try {
           setIsSearching(true);
-          const searchResults = await searchEntireDatabase(trimmedSearchTerm);
+          const searchResults = await searchUsingServerFunction(trimmedSearchTerm);
           setDeals(searchResults);
         } catch (error: any) {
           setError(error);
@@ -682,15 +723,15 @@ export default function SearchPage() {
           )}
         </div>
       </main>
-      <Footer 
-        categories={categories} 
-        loadingCategories={loadingCategories}
-        brands={featuredBrands} 
-        loadingBrands={loadingBrands}
-        settings={settings__} 
+      <Footer
+        categories={categories}
+        loadingCategories={actualLoadingCategories}
+        brands={footerBrands}
+        loadingBrands={actualLoadingBrands}
+        settings={settings__}
         settLoading={settLoading}
         dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
+        loadingDynamicLinks={actualLoadingDynamicLinks}
       />
     </>
   );

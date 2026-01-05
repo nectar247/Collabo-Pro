@@ -29,7 +29,7 @@ export default function DealContent({ deal }: DealContentProps) {
 
   const { settings, loading: settLoading } = useSettings();
   const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands, activeBrands, activeBrandsLoaded } = useBrands({
+  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands, error: errorBrands, activeBrands, activeBrandsLoaded } = useBrands({
     limit: null
   });
   const { trendingDeals, loading: loadingDeals } = useDeals();
@@ -265,12 +265,12 @@ export default function DealContent({ deal }: DealContentProps) {
           </div>
         </div>
       </main>
-      <Footer 
-        categories={categories} 
+      <Footer
+        categories={categories}
         loadingCategories={loadingCategories}
-        brands={featuredBrands} 
+        brands={footerBrands}
         loadingBrands={loadingBrands}
-        settings={settings} 
+        settings={settings}
         settLoading={settLoading}
         dynamicLinks={dynamicLinks}
         loadingDynamicLinks={loadingDynamicLinks}

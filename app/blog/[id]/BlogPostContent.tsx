@@ -26,7 +26,7 @@ export default function BlogPostContent({
 
   const { settings, loading: settLoading } = useSettings();
   const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
+  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands, error: errorBrands } = useBrands({
     limit: null
   });
   const { trendingDeals, loading: loadingDeals } = useDeals();
@@ -164,12 +164,12 @@ export default function BlogPostContent({
           />
         </div>
       </main>
-      <Footer 
-        categories={categories} 
+      <Footer
+        categories={categories}
         loadingCategories={loadingCategories}
-        brands={featuredBrands} 
+        brands={footerBrands}
         loadingBrands={loadingBrands}
-        settings={settings} 
+        settings={settings}
         settLoading={settLoading}
         dynamicLinks={dynamicLinks}
         loadingDynamicLinks={loadingDynamicLinks}

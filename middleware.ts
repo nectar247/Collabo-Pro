@@ -1,6 +1,5 @@
 // middleware.ts
 import { NextResponse } from 'next/server';
-import type { NextRequest } from 'next/server';
 
 export const config = {
   matcher: [
@@ -12,16 +11,10 @@ export const config = {
   ],
 }
 
-export function middleware(request: NextRequest) {
-  // Remove /admin from protected paths since we handle it in the page
-  const PROTECTED_PATHS = ['/dashboard'];
-  
-  if (PROTECTED_PATHS.some(path => request.nextUrl.pathname.startsWith(path))) {
-    const token = request.cookies.get('authToken')?.value;
-    if (!token) {
-      return NextResponse.redirect(new URL('/sign-in', request.url));
-    }
-  }
-  
+export function middleware() {
+  // Dashboard and admin pages handle their own client-side authentication
+  // Middleware protection is disabled to avoid cookie sync issues
+  // The pages check for authenticated users and show appropriate UI/redirects
+
   return NextResponse.next();
 }

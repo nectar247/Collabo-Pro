@@ -21,21 +21,14 @@ const db =
     ? initializeFirestore(app, {
         localCache: persistentLocalCache(),
         experimentalForceLongPolling: false, // Use WebChannel for better performance
+        experimentalAutoDetectLongPolling: true, // Auto-detect network conditions
       })
     : getFirestore(app); // fallback for SSR (no IndexedDB)
 
 const storage = getStorage(app);
 
-// Lazy auth initialization - only initialize when first accessed
-// This prevents the auth iframe from loading on initial page load
-let _auth: ReturnType<typeof getAuth> | null = null;
-export const auth = new Proxy({} as ReturnType<typeof getAuth>, {
-  get(_target, prop) {
-    if (!_auth) {
-      _auth = getAuth(app);
-    }
-    return (_auth as any)[prop];
-  }
-});
+// Direct auth initialization - removed Proxy pattern that was causing issues in Next.js 15
+// The Proxy pattern broke method binding for onAuthStateChanged and other Firebase Auth methods
+const auth = typeof window !== 'undefined' ? getAuth(app) : ({} as ReturnType<typeof getAuth>);
 
-export { app, db, storage };
+export { app, db, storage, auth };

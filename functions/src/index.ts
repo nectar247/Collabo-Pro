@@ -94,7 +94,7 @@ export const syncAwinBrands = functions
 export const syncAwinPromotions = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
   .pubsub.schedule("every 5 hours")
-  .onRun(async (context) => {
+  .onRun(async () => {
     try {
       // 🧹 Auto-cleanup enabled - Deployed from local /functions - Dec 11, 2025
       const accessToken = "336a9ae4-df0b-4fab-9a83-a6f3c7736b6f";
@@ -555,6 +555,390 @@ export const refreshHomepageCache = functions
     } catch (error) {
       console.error("❌ [HomepageCache] Error refreshing cache:", error instanceof Error ? error.message : error);
       return null;
+    }
+  });
+
+/**
+ * Deals Page Cache Refresh Function
+ * Runs every 30 minutes to pre-calculate and cache deals page data
+ * This dramatically improves deals page performance by reducing client-side queries
+ */
+export const refreshDealsPageCache = functions
+  .runWith({ timeoutSeconds: 300, memory: "512MB" })
+  .pubsub.schedule("every 30 minutes")
+  .onRun(async () => {
+    console.log("🔄 [DealsPageCache] Starting deals page cache refresh...");
+    const firestore = admin.firestore();
+    const startTime = Date.now();
+
+    try {
+      const now = admin.firestore.Timestamp.now();
+
+      // 1️⃣ Fetch initial deals (first page - 24 deals)
+      console.log("📦 [DealsPageCache] Fetching initial deals...");
+      const dealsSnapshot = await firestore
+        .collection("deals_fresh")
+        .where("status", "==", "active")
+        .where("expiresAt", ">", now)
+        .orderBy("expiresAt", "asc")
+        .orderBy("createdAt", "desc")
+        .limit(48) // Fetch 2 pages worth initially
+        .get();
+
+      const initialDeals = dealsSnapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      }));
+      console.log(`✅ [DealsPageCache] Found ${initialDeals.length} initial deals`);
+
+      // 2️⃣ Get total count (approximate)
+      console.log("📦 [DealsPageCache] Getting total count...");
+      const countSnapshot = await firestore
+        .collection("deals_fresh")
+        .where("status", "==", "active")
+        .where("expiresAt", ">", now)
+        .select() // Only fetch document IDs for counting
+        .get();
+
+      const totalCount = countSnapshot.size;
+      console.log(`✅ [DealsPageCache] Total active deals: ${totalCount}`);
+
+      // 3️⃣ Fetch categories, brands, and dynamic links (for footer)
+      console.log("📦 [DealsPageCache] Fetching metadata...");
+      const [categoriesSnap, brandsSnap, dynamicLinksSnap] = await Promise.all([
+        firestore
+          .collection("categories")
+          .where("status", "==", "active")
+          .where("dealCount", ">", 0)
+          .orderBy("dealCount", "desc")
+          .limit(20)
+          .get(),
+        firestore
+          .collection("brands")
+          .where("status", "==", "active")
+          .where("activeDeals", ">", 0)
+          .orderBy("activeDeals", "desc")
+          .limit(20)
+          .get(),
+        firestore
+          .collection("content")
+          .where("status", "==", "published")
+          .where("type", "in", ["legal", "help"])
+          .orderBy("order", "asc")
+          .get()
+      ]);
+
+      const categories = categoriesSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const brands = brandsSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      const dynamicLinks = dynamicLinksSnap.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+      console.log(`✅ [DealsPageCache] Metadata: ${categories.length} cats, ${brands.length} brands, ${dynamicLinks.length} links`);
+
+      // 4️⃣ Write to cache
+      const cacheData = {
+        initialDeals,
+        totalCount,
+        categories,
+        brands,
+        dynamicLinks,
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        version: 1
+      };
+
+      await firestore.collection("dealsPageCache").doc("current").set(cacheData);
+
+      const duration = Date.now() - startTime;
+      console.log(`🎉 [DealsPageCache] Cache refreshed successfully in ${duration}ms`);
+      console.log(`📊 [DealsPageCache] Stats: ${initialDeals.length} deals, ${totalCount} total, ${categories.length} cats, ${brands.length} brands`);
+
+      return null;
+    } catch (error) {
+      console.error("❌ [DealsPageCache] Error refreshing cache:", error instanceof Error ? error.message : error);
+      return null;
+    }
+  });
+
+/**
+ * Build Search Index Function
+ * Creates an inverted index for fast text search across deals
+ * Runs every 1 hour to keep search index updated
+ */
+export const buildSearchIndex = functions
+  .runWith({ timeoutSeconds: 540, memory: "1GB" })
+  .pubsub.schedule("every 1 hours")
+  .onRun(async () => {
+    console.log("🔍 [SearchIndex] Starting search index build...");
+    const firestore = admin.firestore();
+    const startTime = Date.now();
+
+    try {
+      const now = admin.firestore.Timestamp.now();
+
+      // Fetch all active, non-expired deals
+      const dealsSnapshot = await firestore
+        .collection("deals_fresh")
+        .where("status", "==", "active")
+        .where("expiresAt", ">", now)
+        .get();
+
+      console.log(`📦 [SearchIndex] Processing ${dealsSnapshot.size} active deals`);
+
+      // Build inverted index: { term -> [dealIds] }
+      const index: Record<string, string[]> = {};
+      const dealData: Record<string, any> = {};
+
+      // Common stop words to ignore
+      const stopWords = new Set(['the', 'a', 'an', 'and', 'or', 'but', 'in', 'on', 'at', 'to', 'for', 'of', 'with', 'is', 'it', 'as', 'by']);
+
+      dealsSnapshot.docs.forEach(doc => {
+        const deal = doc.data();
+        const dealId = doc.id;
+
+        // Store deal data (filter out undefined values)
+        dealData[dealId] = {
+          id: dealId,
+          title: deal.title || '',
+          description: deal.description || '',
+          brand: deal.brand || '',
+          category: deal.category || '',
+          discount: deal.discount || '',
+          code: deal.code || '',
+          label: deal.label || '',
+          expiresAt: deal.expiresAt || null,
+          createdAt: deal.createdAt || null,
+          brandDetails: deal.brandDetails || null
+        };
+
+        // Extract searchable terms
+        const searchableText = [
+          deal.title || '',
+          deal.description || '',
+          deal.brand || '',
+          deal.category || '',
+          ...(deal.tags || [])
+        ].join(' ').toLowerCase();
+
+        // Tokenize and normalize
+        const terms = searchableText
+          .replace(/[^\w\s]/g, ' ') // Remove punctuation
+          .split(/\s+/)
+          .filter(term => term.length > 2 && !stopWords.has(term)) // Filter short terms and stop words
+          .map(term => term.substring(0, 50)); // Limit term length
+
+        // Add to inverted index
+        terms.forEach(term => {
+          if (!index[term]) {
+            index[term] = [];
+          }
+          if (!index[term].includes(dealId)) {
+            index[term].push(dealId);
+          }
+        });
+
+        // Also index brand and category as exact matches
+        if (deal.brand) {
+          const brandKey = `brand:${deal.brand.toLowerCase()}`;
+          if (!index[brandKey]) index[brandKey] = [];
+          if (!index[brandKey].includes(dealId)) index[brandKey].push(dealId);
+        }
+        if (deal.category) {
+          const categoryKey = `category:${deal.category.toLowerCase()}`;
+          if (!index[categoryKey]) index[categoryKey] = [];
+          if (!index[categoryKey].includes(dealId)) index[categoryKey].push(dealId);
+        }
+      });
+
+      // Split large index into chunks (Firestore has 1MB document limit)
+      const termsArray = Object.keys(index);
+      const chunkSize = 500; // Terms per chunk
+      const chunks: Record<string, any>[] = [];
+
+      for (let i = 0; i < termsArray.length; i += chunkSize) {
+        const chunkTerms = termsArray.slice(i, i + chunkSize);
+        const chunkIndex: Record<string, string[]> = {};
+        chunkTerms.forEach(term => {
+          chunkIndex[term] = index[term];
+        });
+        chunks.push(chunkIndex);
+      }
+
+      console.log(`📊 [SearchIndex] Built index with ${termsArray.length} terms in ${chunks.length} chunks`);
+
+      // Store in Firestore using batch writes
+      const batch = firestore.batch();
+
+      // Store metadata
+      batch.set(firestore.collection("searchIndex").doc("_metadata"), {
+        totalDeals: dealsSnapshot.size,
+        totalTerms: termsArray.length,
+        chunksCount: chunks.length,
+        lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+        version: 1
+      });
+
+      // Store chunks
+      chunks.forEach((chunk, idx) => {
+        batch.set(firestore.collection("searchIndex").doc(`chunk_${idx}`), {
+          index: chunk,
+          chunkNumber: idx
+        });
+      });
+
+      // Store deal data in separate collection for quick retrieval
+      const dealDataChunks: Record<string, any>[] = [];
+      const dealIds = Object.keys(dealData);
+      const dealChunkSize = 100;
+
+      for (let i = 0; i < dealIds.length; i += dealChunkSize) {
+        const chunkDealIds = dealIds.slice(i, i + dealChunkSize);
+        const chunkData: Record<string, any> = {};
+        chunkDealIds.forEach(id => {
+          chunkData[id] = dealData[id];
+        });
+        dealDataChunks.push(chunkData);
+      }
+
+      dealDataChunks.forEach((chunk, idx) => {
+        batch.set(firestore.collection("searchIndex").doc(`deals_${idx}`), {
+          deals: chunk,
+          chunkNumber: idx
+        });
+      });
+
+      await batch.commit();
+
+      const duration = Date.now() - startTime;
+      console.log(`🎉 [SearchIndex] Index built successfully in ${duration}ms`);
+      console.log(`📊 [SearchIndex] Stats: ${dealsSnapshot.size} deals, ${termsArray.length} terms, ${chunks.length} index chunks, ${dealDataChunks.length} deal chunks`);
+
+      return null;
+    } catch (error) {
+      console.error("❌ [SearchIndex] Error building index:", error instanceof Error ? error.message : error);
+      return null;
+    }
+  });
+
+/**
+ * Server-side Search API
+ * Fast search using pre-built inverted index
+ */
+export const searchDeals = functions
+  .runWith({ timeoutSeconds: 30, memory: "512MB" })
+  .https.onCall(async (data) => {
+    const { query: searchQuery, limit: resultLimit = 50 } = data;
+
+    if (!searchQuery || typeof searchQuery !== 'string') {
+      throw new functions.https.HttpsError('invalid-argument', 'Search query is required');
+    }
+
+    console.log(`🔍 [Search] Searching for: "${searchQuery}"`);
+    const firestore = admin.firestore();
+
+    try {
+      // Normalize search query
+      const terms = searchQuery
+        .toLowerCase()
+        .replace(/[^\w\s]/g, ' ')
+        .split(/\s+/)
+        .filter(term => term.length > 2)
+        .map(term => term.substring(0, 50));
+
+      if (terms.length === 0) {
+        return { results: [], total: 0 };
+      }
+
+      console.log(`📝 [Search] Normalized terms: ${terms.join(', ')}`);
+
+      // Fetch all index chunks
+      const indexSnapshot = await firestore
+        .collection("searchIndex")
+        .where("chunkNumber", ">=", 0)
+        .get();
+
+      // Merge all index chunks
+      const fullIndex: Record<string, string[]> = {};
+      indexSnapshot.docs
+        .filter(doc => doc.id.startsWith('chunk_'))
+        .forEach(doc => {
+          const chunkData = doc.data();
+          Object.assign(fullIndex, chunkData.index);
+        });
+
+      // Find matching deal IDs with scoring
+      const dealScores: Record<string, number> = {};
+
+      terms.forEach(term => {
+        // Check exact term
+        if (fullIndex[term]) {
+          fullIndex[term].forEach(dealId => {
+            dealScores[dealId] = (dealScores[dealId] || 0) + 2; // Exact match gets higher score
+          });
+        }
+
+        // Check brand/category exact matches
+        const brandKey = `brand:${term}`;
+        const categoryKey = `category:${term}`;
+
+        if (fullIndex[brandKey]) {
+          fullIndex[brandKey].forEach(dealId => {
+            dealScores[dealId] = (dealScores[dealId] || 0) + 5; // Brand match gets highest score
+          });
+        }
+
+        if (fullIndex[categoryKey]) {
+          fullIndex[categoryKey].forEach(dealId => {
+            dealScores[dealId] = (dealScores[dealId] || 0) + 3; // Category match gets high score
+          });
+        }
+
+        // Fuzzy match (prefix search)
+        Object.keys(fullIndex).forEach(indexTerm => {
+          if (indexTerm.startsWith(term) && indexTerm !== term) {
+            fullIndex[indexTerm].forEach(dealId => {
+              dealScores[dealId] = (dealScores[dealId] || 0) + 1; // Prefix match gets lower score
+            });
+          }
+        });
+      });
+
+      // Sort by score and get top results
+      const sortedDealIds = Object.entries(dealScores)
+        .sort(([, a], [, b]) => b - a)
+        .slice(0, resultLimit)
+        .map(([dealId]) => dealId);
+
+      console.log(`✅ [Search] Found ${sortedDealIds.length} matching deals`);
+
+      // Fetch deal data
+      const dealsDataSnapshot = await firestore
+        .collection("searchIndex")
+        .where("chunkNumber", ">=", 0)
+        .get();
+
+      const allDealsData: Record<string, any> = {};
+      dealsDataSnapshot.docs
+        .filter(doc => doc.id.startsWith('deals_'))
+        .forEach(doc => {
+          const chunkData = doc.data();
+          Object.assign(allDealsData, chunkData.deals);
+        });
+
+      // Return matched deals in order
+      const results = sortedDealIds
+        .map(dealId => allDealsData[dealId])
+        .filter(Boolean);
+
+      console.log(`🎉 [Search] Returning ${results.length} results`);
+
+      return {
+        results,
+        total: results.length,
+        query: searchQuery
+      };
+
+    } catch (error: any) {
+      console.error("❌ [Search] Error:", error.message);
+      throw new functions.https.HttpsError('internal', 'Search failed');
     }
   });
 

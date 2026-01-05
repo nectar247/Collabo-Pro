@@ -8,6 +8,12 @@ service cloud.firestore {
       allow write: if false; // Only Cloud Functions can write
     }
 
+    // Deals Page Cache - Public read access for performance
+    match /dealsPageCache/{document=**} {
+      allow read: if true;
+      allow write: if false; // Only Cloud Functions can write
+    }
+
     // Deals - Public read, admin write
     match /deals_fresh/{dealId} {
       allow read: if true;

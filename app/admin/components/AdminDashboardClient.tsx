@@ -61,7 +61,7 @@ export default function AdminDashboardClient() {
   const { user, isAdmin, loading: userLoading } = useAuth();
   const { settings: settings__, loading: settLoading } = useSettings();
   const { categories, loading: loadingCategories } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands } = useBrands({ limit: 20 });
+  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands } = useBrands({ limit: 20 });
   const { trendingDeals, loading: loadingDeals } = useDeals();
   const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
@@ -163,7 +163,7 @@ export default function AdminDashboardClient() {
       <Footer
         categories={categories}
         loadingCategories={loadingCategories}
-        brands={featuredBrands}
+        brands={footerBrands}
         loadingBrands={loadingBrands}
         settings={settings__}
         settLoading={settLoading}

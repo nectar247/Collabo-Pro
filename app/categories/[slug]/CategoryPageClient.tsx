@@ -36,7 +36,7 @@ export default function CategoryPageClient({
   // Hooks for footer/navigation only
   const { settings, loading: settLoading } = useSettings();
   const { categories, loading: loadingCategories } = useCategories();
-  const { featuredBrands, loading: loadingBrands } = useBrands({ limit: null });
+  const { featuredBrands, footerBrands, loading: loadingBrands } = useBrands({ limit: null });
   const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   // Format category name for display - replace dashes with spaces and capitalize properly
@@ -159,12 +159,12 @@ export default function CategoryPageClient({
           )}
         </div>
       </main>
-      <Footer 
-        categories={categories} 
+      <Footer
+        categories={categories}
         loadingCategories={loadingCategories}
-        brands={featuredBrands} 
+        brands={footerBrands}
         loadingBrands={loadingBrands}
-        settings={settings} 
+        settings={settings}
         settLoading={settLoading}
         dynamicLinks={dynamicLinks}
         loadingDynamicLinks={loadingDynamicLinks}

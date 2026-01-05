@@ -28,7 +28,7 @@ export default function AboutPageClient() {
 
   const { settings: settings__, loading: settLoading } = useSettings();
   const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, loading: loadingBrands, error: errorBrands } = useBrands({
+  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands, error: errorBrands } = useBrands({
     limit: null
   });
   const { trendingDeals, loading: loadingDeals } = useDeals();
@@ -170,12 +170,12 @@ export default function AboutPageClient() {
 
         </div>
       </main>
-      <Footer 
-        categories={categories} 
+      <Footer
+        categories={categories}
         loadingCategories={loadingCategories}
-        brands={featuredBrands} 
+        brands={footerBrands}
         loadingBrands={loadingBrands}
-        settings={settings__} 
+        settings={settings__}
         settLoading={settLoading}
         dynamicLinks={dynamicLinks}
         loadingDynamicLinks={loadingDynamicLinks}
