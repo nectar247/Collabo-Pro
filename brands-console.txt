@@ -1,0 +1,105 @@
+react-dom-client.development.js:25631 Download the React DevTools for a better development experience: https://react.dev/link/react-devtools
+index.tsx:30 📦 Category: Home & Garden | Icon: Trees
+index.tsx:30 📦 Category: Health & Beauty | Icon: Clipboard
+index.tsx:30 📦 Category: Sports Equipment | Icon: Dumbbell
+index.tsx:30 📦 Category: Jewellery | Icon: Gem
+index.tsx:30 📦 Category: Clothing | Icon: Lightbulb
+index.tsx:30 📦 Category: Womenswear | Icon: Shirt
+index.tsx:30 📦 Category: Gifts & Flowers | Icon: Gift
+index.tsx:30 📦 Category: Automotive | Icon: Globe
+index.tsx:30 📦 Category: Home & Garden | Icon: Trees
+index.tsx:30 📦 Category: Health & Beauty | Icon: Clipboard
+index.tsx:30 📦 Category: Sports Equipment | Icon: Dumbbell
+index.tsx:30 📦 Category: Jewellery | Icon: Gem
+index.tsx:30 📦 Category: Clothing | Icon: Lightbulb
+index.tsx:30 📦 Category: Womenswear | Icon: Shirt
+index.tsx:30 📦 Category: Gifts & Flowers | Icon: Gift
+index.tsx:30 📦 Category: Automotive | Icon: Globe
+index.tsx:30 📦 Category: Home & Garden | Icon: Trees
+index.tsx:30 📦 Category: Health & Beauty | Icon: Clipboard
+index.tsx:30 📦 Category: Sports Equipment | Icon: Dumbbell
+index.tsx:30 📦 Category: Jewellery | Icon: Gem
+index.tsx:30 📦 Category: Clothing | Icon: Lightbulb
+index.tsx:30 📦 Category: Womenswear | Icon: Shirt
+index.tsx:30 📦 Category: Gifts & Flowers | Icon: Gift
+index.tsx:30 📦 Category: Automotive | Icon: Globe
+index.tsx:30 📦 Category: Home & Garden | Icon: Trees
+index.tsx:30 📦 Category: Health & Beauty | Icon: Clipboard
+index.tsx:30 📦 Category: Sports Equipment | Icon: Dumbbell
+index.tsx:30 📦 Category: Jewellery | Icon: Gem
+index.tsx:30 📦 Category: Clothing | Icon: Lightbulb
+index.tsx:30 📦 Category: Womenswear | Icon: Shirt
+index.tsx:30 📦 Category: Gifts & Flowers | Icon: Gift
+index.tsx:30 📦 Category: Automotive | Icon: Globe
+AuthProvider.tsx:25 🔐 AuthProvider: Setting up single auth listener
+index.tsx:30 📦 Category: Home & Garden | Icon: Trees
+index.tsx:30 📦 Category: Health & Beauty | Icon: Clipboard
+index.tsx:30 📦 Category: Sports Equipment | Icon: Dumbbell
+index.tsx:30 📦 Category: Jewellery | Icon: Gem
+index.tsx:30 📦 Category: Clothing | Icon: Lightbulb
+index.tsx:30 📦 Category: Womenswear | Icon: Shirt
+index.tsx:30 📦 Category: Gifts & Flowers | Icon: Gift
+index.tsx:30 📦 Category: Automotive | Icon: Globe
+index.tsx:30 📦 Category: Home & Garden | Icon: Trees
+index.tsx:30 📦 Category: Health & Beauty | Icon: Clipboard
+index.tsx:30 📦 Category: Sports Equipment | Icon: Dumbbell
+index.tsx:30 📦 Category: Jewellery | Icon: Gem
+index.tsx:30 📦 Category: Clothing | Icon: Lightbulb
+index.tsx:30 📦 Category: Womenswear | Icon: Shirt
+index.tsx:30 📦 Category: Gifts & Flowers | Icon: Gift
+index.tsx:30 📦 Category: Automotive | Icon: Globe
+AuthProvider.tsx:90 🔐 AuthProvider: Cleaning up listeners
+AuthProvider.tsx:25 🔐 AuthProvider: Setting up single auth listener
+AuthProvider.tsx:90 🔐 AuthProvider: Cleaning up listeners
+AuthProvider.tsx:25 🔐 AuthProvider: Setting up single auth listener
+script.debug.js:1 [Vercel Web Analytics] Debug mode is enabled by default in development. No requests will be sent to the server.
+script.debug.js:1 [Vercel Web Analytics] Running queued event pageview Object
+script.debug.js:1 [Vercel Web Analytics] Running queued event pageview Object
+script.debug.js:1 [Vercel Web Analytics] [pageview] http://localhost:3000/ Object
+script.debug.js:1 [Vercel Web Analytics] [pageview] http://localhost:3000/ Object
+AuthProvider.tsx:29 🔐 AuthProvider: Auth state changed User: cKEIAe0CvReYO01KlNuIV8zLgS33
+AuthProvider.tsx:38 🔐 AuthProvider: Setting up profile listener for cKEIAe0CvReYO01KlNuIV8zLgS33
+script.debug.js:1 [Vercel Speed Insights] Debug mode is enabled by default in development. No requests will be sent to the server.
+hot-reloader-app.js:197 [Fast Refresh] rebuilding
+report-hmr-latency.js:14 [Fast Refresh] done in 1514ms
+script.debug.js:1 [Vercel Speed Insights] [vitals] Object
+hooks.ts:1452 🔍 fetchAdminBrands called with: Object
+hooks.ts:1480 📊 Executing query...
+hooks.ts:1452 🔍 fetchAdminBrands called with: Object
+hooks.ts:1480 📊 Executing query...
+script.debug.js:1 [Vercel Web Analytics] [pageview] http://localhost:3000/brands Object
+AuthProvider.tsx:43 🔐 AuthProvider: Profile snapshot received exists
+AuthProvider.tsx:46 🔐 AuthProvider: Profile data: Object
+AuthProvider.tsx:59 🔐 AuthProvider: User is active, setting state
+AuthProvider.tsx:70 🔐 AuthProvider: Setting loading to false
+hooks.ts:427 🏷️ Active brands loaded: 21885
+hooks.ts:427 🏷️ Active brands loaded: 21885
+hooks.ts:427 🏷️ Active brands loaded: 21885
+hooks.ts:1392 🛠️ fetchAllBrands — raw docs: (21885) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, …]
+hooks.ts:427 🏷️ Active brands loaded: 21885
+hooks.ts:1392 🛠️ fetchAllBrands — raw docs: (21885) [{…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, {…}, …]
+hooks.ts:427 🏷️ Active brands loaded: 21885
+hooks.ts:1483 📊 Raw results: 21893
+hooks.ts:1491 📊 Before filtering: 21893
+hooks.ts:1536 📊 Final results: {total: 21893, page: 1, pageSize: 10, startIdx: 0, endIdx: 10, …}
+hooks.ts:1483 📊 Raw results: 21893
+hooks.ts:1491 📊 Before filtering: 21893
+hooks.ts:1536 📊 Final results: {total: 21893, page: 1, pageSize: 10, startIdx: 0, endIdx: 10, …}
+hooks.ts:564 🔍 fetchAdminDeals called with: {}
+hooks.ts:590 📊 Executing deals query...
+hooks.ts:427 🏷️ Active brands loaded: 21885
+hooks.ts:427 🏷️ Active brands loaded: 21885
+hooks.ts:564 🔍 fetchAdminDeals called with: {}
+hooks.ts:590 📊 Executing deals query...
+hooks.ts:593 📊 Raw deals results: 998
+hooks.ts:601 📊 Before filtering deals: 998
+hooks.ts:642 📊 Final deals results: {total: 998, page: 1, pageSize: 10, startIdx: 0, endIdx: 10, …}
+hooks.ts:593 📊 Raw deals results: 998
+hooks.ts:601 📊 Before filtering deals: 998
+hooks.ts:642 📊 Final deals results: {total: 998, page: 1, pageSize: 10, startIdx: 0, endIdx: 10, …}
+hooks.ts:502 🔍 DEBUG - Total brands with deals: 40
+hooks.ts:515 🔍 DEBUG - Selected from 12 brands
+hooks.ts:516 🔍 DEBUG - Final trending deals: 12
+hooks.ts:502 🔍 DEBUG - Total brands with deals: 40
+hooks.ts:515 🔍 DEBUG - Selected from 12 brands
+hooks.ts:516 🔍 DEBUG - Final trending deals: 12

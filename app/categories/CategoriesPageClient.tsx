@@ -8,15 +8,43 @@ import Footer from '@/components/footer';
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 import { DynamicIcon, getCategoryColor } from "@/helper";
 
-export default function CategoriesPageClient() {
+interface CategoriesPageClientProps {
+  categories?: any[];
+  featuredBrands?: any[];
+  footerBrands?: any[];
+  trendingDeals?: any[];
+  dynamicLinks?: any[];
+  settings?: any;
+}
 
-  const { settings, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { featuredBrands, footerBrands, loading: loadingBrands } = useBrands();
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
+export default function CategoriesPageClient({
+  categories: serverCategories,
+  featuredBrands: serverFeaturedBrands,
+  footerBrands: serverFooterBrands,
+  trendingDeals: serverTrendingDeals,
+  dynamicLinks: serverDynamicLinks,
+  settings: serverSettings,
+}: CategoriesPageClientProps = {}) {
 
-  if (loadingCategories) {
+  // Only fetch client-side if server data not provided
+  const { settings: clientSettings, loading: settLoading } = useSettings();
+  const { categories: clientCategories, loading: loadingCategories, error: CategoriesError } = useCategories();
+  const { featuredBrands: clientFeaturedBrands, footerBrands: clientFooterBrands, loading: loadingBrands } = useBrands();
+  const { trendingDeals: clientTrendingDeals, loading: loadingDeals } = useDeals();
+  const { links: clientDynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
+
+  // Use server data if available, otherwise use client data
+  const categories = serverCategories && serverCategories.length > 0 ? serverCategories : clientCategories;
+  const featuredBrands = serverFeaturedBrands && serverFeaturedBrands.length > 0 ? serverFeaturedBrands : clientFeaturedBrands;
+  const footerBrands = serverFooterBrands && serverFooterBrands.length > 0 ? serverFooterBrands : clientFooterBrands;
+  const trendingDeals = serverTrendingDeals && serverTrendingDeals.length > 0 ? serverTrendingDeals : clientTrendingDeals;
+  const dynamicLinks = serverDynamicLinks && serverDynamicLinks.length > 0 ? serverDynamicLinks : clientDynamicLinks;
+  const settings = serverSettings || clientSettings;
+
+  // Loading is false if we have server data, otherwise use client loading state
+  const loading = serverCategories ? false : loadingCategories;
+
+  if (loading) {
     return <Preloader text="Loading categories..." />;
   }
 
@@ -49,13 +77,13 @@ export default function CategoriesPageClient() {
       </main>
       <Footer
         categories={categories}
-        loadingCategories={loadingCategories}
+        loadingCategories={serverCategories ? false : loadingCategories}
         brands={footerBrands}
-        loadingBrands={loadingBrands}
+        loadingBrands={serverFooterBrands ? false : loadingBrands}
         settings={settings}
-        settLoading={settLoading}
+        settLoading={serverSettings ? false : settLoading}
         dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
+        loadingDynamicLinks={serverDynamicLinks ? false : loadingDynamicLinks}
       />
     </>
   );

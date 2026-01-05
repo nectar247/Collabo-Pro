@@ -26,16 +26,17 @@ const CategoriesSection = ({
                 </div>
                 
                 <div className="grid grid-cols-1 md:grid-cols-4 gap-8">
-                    {categories.slice(0,8).map((data)=>{
-                        console.log(`📦 Category: ${data.name} | Icon: ${data.icon}`);
-                        return {
-                            ...data,
-                            icon: <DynamicIcon name={data.icon} /> as any,
-                            color: getCategoryColor(data.name),
-                            count: data.dealCount || 0,
-                        };
-                    }).map((category, index) => (
-                        <CategoryCard1 category={category} index={index} key={category.name} />
+                    {categories.slice(0,8).map((data, index)=>(
+                        <CategoryCard1
+                            category={{
+                                ...data,
+                                icon: <DynamicIcon name={data.icon} /> as any,
+                                color: getCategoryColor(data.name),
+                                count: data.dealCount || 0,
+                            }}
+                            index={index}
+                            key={data.name}
+                        />
                     ))}
                 </div>
                 <div className="mt-5 flex justify-end">

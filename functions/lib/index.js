@@ -534,6 +534,192 @@ export const refreshDealsPageCache = functions
     }
 });
 /**
+ * Refresh Brands Page Cache Function
+ * Pre-computes and caches all data needed for the brands directory page
+ * Runs every 60 minutes to keep data fresh
+ */
+export const refreshBrandsPageCache = functions
+    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .pubsub.schedule("every 60 minutes")
+    .onRun(async () => {
+    console.log("🔄 [BrandsPageCache] Starting brands page cache refresh...");
+    const firestore = admin.firestore();
+    const startTime = Date.now();
+    try {
+        // 1️⃣ Fetch ALL active brands (for directory listing)
+        console.log("📦 [BrandsPageCache] Fetching all brands...");
+        const brandsSnapshot = await firestore
+            .collection("brands")
+            .where("status", "==", "active")
+            .orderBy("name", "asc")
+            .get();
+        const allBrands = brandsSnapshot.docs
+            .map(doc => (Object.assign({ id: doc.id }, doc.data())))
+            .filter((brand) => brand.activeDeals > 0); // Only brands with deals
+        console.log(`✅ [BrandsPageCache] Found ${allBrands.length} active brands with deals`);
+        // 2️⃣ Fetch footer brands (top 15 by activeDeals)
+        console.log("📦 [BrandsPageCache] Fetching footer brands...");
+        const footerBrandsSnapshot = await firestore
+            .collection("brands")
+            .where("status", "==", "active")
+            .where("activeDeals", ">", 0)
+            .orderBy("activeDeals", "desc")
+            .limit(15)
+            .get();
+        const footerBrands = footerBrandsSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        // 3️⃣ Fetch categories and dynamic links (for footer)
+        console.log("📦 [BrandsPageCache] Fetching metadata...");
+        const [categoriesSnap, dynamicLinksSnap, settingsSnap] = await Promise.all([
+            firestore
+                .collection("categories")
+                .where("status", "==", "active")
+                .where("dealCount", ">", 0)
+                .orderBy("dealCount", "desc")
+                .limit(20)
+                .get(),
+            firestore
+                .collection("content")
+                .where("status", "==", "published")
+                .where("type", "in", ["legal", "help"])
+                .orderBy("order", "asc")
+                .get(),
+            firestore
+                .collection("settings")
+                .doc("general")
+                .get()
+        ]);
+        const categories = categoriesSnap.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        const dynamicLinks = dynamicLinksSnap.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        const settings = settingsSnap.exists ? Object.assign({ id: settingsSnap.id }, settingsSnap.data()) : null;
+        console.log(`✅ [BrandsPageCache] Metadata: ${categories.length} cats, ${dynamicLinks.length} links`);
+        // 4️⃣ Write to cache
+        const cacheData = {
+            allBrands,
+            footerBrands,
+            categories,
+            dynamicLinks,
+            settings,
+            lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+            version: 1
+        };
+        await firestore.collection("brandsPageCache").doc("current").set(cacheData);
+        const duration = Date.now() - startTime;
+        console.log(`🎉 [BrandsPageCache] Cache refreshed successfully in ${duration}ms`);
+        console.log(`📊 [BrandsPageCache] Stats: ${allBrands.length} brands, ${footerBrands.length} footer brands`);
+        return null;
+    }
+    catch (error) {
+        console.error("❌ [BrandsPageCache] Error refreshing cache:", error instanceof Error ? error.message : error);
+        return null;
+    }
+});
+/**
+ * Refresh Categories Page Cache Function
+ * Pre-computes and caches all data needed for the categories page
+ * Runs every 60 minutes to keep data fresh
+ */
+export const refreshCategoriesPageCache = functions
+    .runWith({ timeoutSeconds: 300, memory: "512MB" })
+    .pubsub.schedule("every 60 minutes")
+    .onRun(async () => {
+    console.log("🔄 [CategoriesPageCache] Starting categories page cache refresh...");
+    const firestore = admin.firestore();
+    const startTime = Date.now();
+    try {
+        // 1️⃣ Fetch active categories with deals
+        console.log("📦 [CategoriesPageCache] Fetching categories...");
+        const categoriesSnapshot = await firestore
+            .collection("categories")
+            .where("status", "==", "active")
+            .where("dealCount", ">", 0)
+            .orderBy("dealCount", "desc")
+            .get();
+        const categories = categoriesSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        console.log(`✅ [CategoriesPageCache] Found ${categories.length} active categories`);
+        // 2️⃣ Fetch featured brands (with images)
+        console.log("📦 [CategoriesPageCache] Fetching featured brands...");
+        const featuredBrandsSnapshot = await firestore
+            .collection("brands")
+            .where("status", "==", "active")
+            .where("brandimg", "!=", "")
+            .where("activeDeals", ">", 0)
+            .orderBy("brandimg", "asc")
+            .orderBy("activeDeals", "desc")
+            .limit(50)
+            .get();
+        const featuredBrands = featuredBrandsSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        // 3️⃣ Fetch footer brands
+        console.log("📦 [CategoriesPageCache] Fetching footer brands...");
+        const footerBrandsSnapshot = await firestore
+            .collection("brands")
+            .where("status", "==", "active")
+            .where("activeDeals", ">", 0)
+            .orderBy("activeDeals", "desc")
+            .limit(15)
+            .get();
+        const footerBrands = footerBrandsSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        // 4️⃣ Fetch trending deals (12 deals from different brands)
+        console.log("📦 [CategoriesPageCache] Fetching trending deals...");
+        const now = admin.firestore.Timestamp.now();
+        const dealsSnapshot = await firestore
+            .collection("deals_fresh")
+            .where("status", "==", "active")
+            .where("expiresAt", ">", now)
+            .orderBy("expiresAt", "asc")
+            .orderBy("createdAt", "desc")
+            .limit(200) // Fetch extra to filter for diversity
+            .get();
+        // Select deals from different brands
+        const brandSet = new Set();
+        const trendingDeals = [];
+        for (const doc of dealsSnapshot.docs) {
+            const deal = Object.assign({ id: doc.id }, doc.data());
+            const brand = deal.brand;
+            if (!brandSet.has(brand) && trendingDeals.length < 12) {
+                brandSet.add(brand);
+                trendingDeals.push(deal);
+            }
+        }
+        console.log(`✅ [CategoriesPageCache] Selected ${trendingDeals.length} trending deals from ${brandSet.size} brands`);
+        // 5️⃣ Fetch dynamic links and settings
+        console.log("📦 [CategoriesPageCache] Fetching metadata...");
+        const [dynamicLinksSnap, settingsSnap] = await Promise.all([
+            firestore
+                .collection("content")
+                .where("status", "==", "published")
+                .where("type", "in", ["legal", "help"])
+                .orderBy("order", "asc")
+                .get(),
+            firestore
+                .collection("settings")
+                .doc("general")
+                .get()
+        ]);
+        const dynamicLinks = dynamicLinksSnap.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
+        const settings = settingsSnap.exists ? Object.assign({ id: settingsSnap.id }, settingsSnap.data()) : null;
+        // 6️⃣ Write to cache
+        const cacheData = {
+            categories,
+            featuredBrands,
+            footerBrands,
+            trendingDeals,
+            dynamicLinks,
+            settings,
+            lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+            version: 1
+        };
+        await firestore.collection("categoriesPageCache").doc("current").set(cacheData);
+        const duration = Date.now() - startTime;
+        console.log(`🎉 [CategoriesPageCache] Cache refreshed successfully in ${duration}ms`);
+        console.log(`📊 [CategoriesPageCache] Stats: ${categories.length} cats, ${featuredBrands.length} featured brands, ${trendingDeals.length} deals`);
+        return null;
+    }
+    catch (error) {
+        console.error("❌ [CategoriesPageCache] Error refreshing cache:", error instanceof Error ? error.message : error);
+        return null;
+    }
+});
+/**
  * Build Search Index Function
  * Creates an inverted index for fast text search across deals
  * Runs every 1 hour to keep search index updated

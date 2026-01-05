@@ -1,5 +1,5 @@
 /* eslint-disable react-hooks/exhaustive-deps */
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { User } from 'firebase/auth';
 import { collection, query, where, orderBy, limit, getDocs, onSnapshot, doc, getDoc, updateDoc, deleteDoc, addDoc, serverTimestamp, Timestamp, setDoc, startAfter, QueryDocumentSnapshot, Query, getCountFromServer } from 'firebase/firestore';
 import { auth, db, storage } from '@/lib/firebase';
@@ -402,9 +402,9 @@ export function useDeals(options: UseDealsOptions = {}) {
   const [lastVisibleDoc, setLastVisibleDoc] = useState<any>(null);
   const [hasMore, setHasMore] = useState(true);
   const limit__ = 10; // Number of deals to load per request
-  
+
   const [totalDealsCount, setTotalDealsCount] = useState(0);
-  
+
   const [trendingDeals, setTrendingDeals] = useState<Deal[]>([]);
   const [allDeals, setAllDeals] = useState<Deal[]>([]);
   const [loading, setLoading] = useState(true);
@@ -414,8 +414,19 @@ export function useDeals(options: UseDealsOptions = {}) {
   const [activeBrands, setActiveBrands] = useState<string[]>([]);
   const [activeBrandsLoaded, setActiveBrandsLoaded] = useState(false);
 
+  // Track if fetchActiveBrands has already been called - use ref to persist across renders
+  const fetchedActiveBrandsRef = useRef(false);
+
   // Fetch active brands once and cache them
   const fetchActiveBrands = useCallback(async () => {
+    // Prevent duplicate fetches
+    if (fetchedActiveBrandsRef.current) {
+      console.log('⏭️ Skipping fetchActiveBrands - already fetched');
+      return;
+    }
+    // Mark as fetched
+    fetchedActiveBrandsRef.current = true;
+
     try {
       const brandsSnapshot = await getDocs(query(
         collection(db, 'brands'),
@@ -428,6 +439,8 @@ export function useDeals(options: UseDealsOptions = {}) {
     } catch (err) {
       console.error("Error fetching active brands:", err);
       setError(err as Error);
+      // Reset on error
+      fetchedActiveBrandsRef.current = false;
     }
   }, []);
 
@@ -1276,6 +1289,9 @@ export function useBrands(options: UseBrandsOptions = {}) {
   const [allAdminBrands, setAllAdminBrands] = useState<Brand[]>([]);
   const [totalBrandsCount, setTotalBrandsCount] = useState<number>(0);
 
+  // Track what's already been fetched to prevent duplicates - use ref to persist
+  const fetchedRef = useRef({ allBrands: false, featured: false, footer: false });
+
   const fetchFeaturedBrandss = useCallback(async () => {
     try {
       setLoading(true);
@@ -1352,6 +1368,13 @@ export function useBrands(options: UseBrandsOptions = {}) {
 
   // Fetch brands for footer - returns 15 brands with active deals
   const fetchFooterBrands = useCallback(async () => {
+    // Prevent duplicate fetches
+    if (fetchedRef.current.footer) {
+      console.log('⏭️ Skipping fetchFooterBrands - already fetched');
+      return;
+    }
+    fetchedRef.current.footer = true;
+
     try {
       const snapshot = await getDocs(query(
         collection(db, 'brands'),
@@ -1369,10 +1392,18 @@ export function useBrands(options: UseBrandsOptions = {}) {
     } catch (err) {
       console.error('Error fetching footer brands:', err);
       setError(err as Error);
+      fetchedRef.current.footer = false; // Reset on error
     }
   }, []);
 
   const fetchAllBrands = useCallback(async () => {
+    // Prevent duplicate fetches
+    if (fetchedRef.current.allBrands) {
+      console.log('⏭️ Skipping fetchAllBrands - already fetched');
+      return;
+    }
+    fetchedRef.current.allBrands = true;
+
     try {
       setLoading(true);
 
@@ -1383,14 +1414,13 @@ export function useBrands(options: UseBrandsOptions = {}) {
 
       const all = snapshot.docs.map(doc => {
         const data = doc.data();
-        return { 
-          id: doc.id, ...data, 
+        return {
+          id: doc.id, ...data,
         };
       });
 
-      // DEBUG:
-      console.log("🛠️ fetchAllBrands — raw docs:", all);  
-      
+      console.log("🛠️ fetchAllBrands — fetched:", all.length, "brands");
+
       // Only filter by activeDeals since status is already filtered in query
       const activeFiltered = all
         .filter((b: any) => b.activeDeals > 0)
@@ -1399,6 +1429,7 @@ export function useBrands(options: UseBrandsOptions = {}) {
       setAllBrands(activeFiltered as any);
     } catch (err) {
       setError(err as Error);
+      fetchedRef.current.allBrands = false; // Reset on error so it can retry
     } finally {
       setLoading(false);
     }
@@ -1583,33 +1614,30 @@ export function useBrands(options: UseBrandsOptions = {}) {
     }
   }, []);
 
+  // OPTIMIZED: Only fetch what's requested based on options
+  // This prevents fetching ALL brands unnecessarily
   useEffect(() => {
-    fetchFeaturedBrands();
-  }, [fetchFeaturedBrands]);
+    const { limit } = options;
 
-  useEffect(() => {
-    fetchFeaturedBrandss();
-  }, [fetchFeaturedBrandss]);
+    // If limit is null, caller wants all brands (e.g., brands directory page)
+    if (limit === null) {
+      fetchAllBrands();
+      fetchFooterBrands(); // Footer is always needed
+    }
+    // If limit is specified, caller wants featured brands (e.g., homepage)
+    else if (limit) {
+      fetchFeaturedBrandss();
+      fetchFooterBrands();
+    }
+    // Default: fetch featured brands for general use
+    else {
+      fetchFeaturedBrands();
+      fetchFooterBrands();
+    }
+  }, [options.limit, fetchAllBrands, fetchFeaturedBrands, fetchFeaturedBrandss, fetchFooterBrands]);
 
-  useEffect(() => {
-    fetchFooterBrands();
-  }, [fetchFooterBrands]);
-
-  useEffect(() => {
-    fetchAllBrands();
-  }, [fetchAllBrands]);
-
-  useEffect(() => {
-    fetchAdminBrands();
-  }, [fetchAdminBrands]);
-
-  useEffect(() => {
-    fetchAllAdminBrands();
-  }, [fetchAllAdminBrands]);
-
-  useEffect(() => {
-    fetchActiveBrands();
-  }, [fetchActiveBrands]);
+  // Note: Admin-specific fetches (fetchAdminBrands, fetchAllAdminBrands, fetchActiveBrands)
+  // should be called explicitly from admin components, not automatically on every mount
 
   // Function to get a single brand
   const getBrand = async (id: string): Promise<Brand | null> => {

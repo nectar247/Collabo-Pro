@@ -114,3 +114,5 @@
 -
 
 rm -rf .next && npm run dev 
+
+Footer - Shared footer brands across all pages
