@@ -1,6 +1,7 @@
 "use client";
 
 import AuthCookieSync from './AuthCookieSync';
+import { AuthProvider } from './AuthProvider';
 
 /**
  * ClientProviders - Wraps all client-side components
@@ -8,9 +9,9 @@ import AuthCookieSync from './AuthCookieSync';
  */
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
-    <>
+    <AuthProvider>
       <AuthCookieSync />
       {children}
-    </>
+    </AuthProvider>
   );
 }

@@ -9,93 +9,14 @@ import { signOut } from '../auth';
 import { deleteObject, getDownloadURL, ref, uploadBytesResumable } from 'firebase/storage';
 import { getRegionFromHost } from '../utils/getRegionFromHost';
 
-// Update the useAuth hook to include status checking
-export function useAuth() {
-  const [user, setUser] = useState<User | null>(null);
-  const [isAdmin, setIsAdmin] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<Error | null>(null);
-
-  useEffect(() => {
-    console.log('🔐 useAuth: Setting up auth listener');
-    let profileUnsubscribe: (() => void) | null = null;
-
-    const authUnsubscribe = auth.onAuthStateChanged(async (user) => {
-      console.log('🔐 useAuth: Auth state changed', user ? `User: ${user.uid}` : 'No user');
-
-      // Clean up previous profile listener
-      if (profileUnsubscribe) {
-        profileUnsubscribe();
-        profileUnsubscribe = null;
-      }
-
-      if (user) {
-        console.log('🔐 useAuth: Setting up profile listener for', user.uid);
-        // Set up real-time listener for profile changes
-        profileUnsubscribe = onSnapshot(
-          doc(db, 'profiles', user.uid),
-          async (doc) => {
-            console.log('🔐 useAuth: Profile snapshot received', doc.exists() ? 'exists' : 'not exists');
-            if (doc.exists()) {
-              const data = doc.data();
-              console.log('🔐 useAuth: Profile data:', { status: data.status, isAdmin: data.isAdmin });
-              // Check if user is inactive
-              if (data.status === 'inactive') {
-                console.log('🔐 useAuth: User is inactive, signing out');
-                try {
-                  await signOut();
-                  setUser(null);
-                  setIsAdmin(false);
-                  setError(new Error('Your account has been deactivated. Please contact support.'));
-                } catch (err) {
-                  console.error('Error signing out inactive user:', err);
-                }
-              } else {
-                console.log('🔐 useAuth: User is active, setting state');
-                setUser(user);
-                setIsAdmin(data.isAdmin || false);
-                setError(null);
-              }
-            } else {
-              console.log('🔐 useAuth: Profile does not exist');
-              setUser(user);
-              setIsAdmin(false);
-              setError(null);
-            }
-            console.log('🔐 useAuth: Setting loading to false');
-            setLoading(false);
-          },
-          (error) => {
-            console.error('❌ useAuth: Error fetching profile:', error);
-            setIsAdmin(false);
-            setLoading(false);
-            setError(error as Error);
-          }
-        );
-      } else {
-        console.log('🔐 useAuth: No user, setting loading to false');
-        setUser(null);
-        setIsAdmin(false);
-        setLoading(false);
-        setError(null);
-      }
-    });
-
-    return () => {
-      console.log('🔐 useAuth: Cleaning up listeners');
-      authUnsubscribe();
-      if (profileUnsubscribe) {
-        profileUnsubscribe();
-      }
-    };
-  }, []);
-
-  return { user, isAdmin, loading, error };
-}
+// Re-export the context hook as useAuth for backward compatibility
+// This now uses the shared AuthContext instead of creating individual listeners
+import { useAuthContext } from '@/components/AuthProvider';
+export { useAuthContext as useAuth } from '@/components/AuthProvider';
 
 // Profile hook
 export function useProfile() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const [profile, setProfile] = useState<Profile | null>(null);
   const [savedDeals, setSavedDeals] = useState<[]>([]);
   const [loading, setLoading] = useState(true);
@@ -1026,7 +947,7 @@ export function useDeal(dealId: string) {
 
 // Reviews hook
 export function useReviews(itemId: string) {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const [reviews, setReviews] = useState<Review[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
@@ -1143,7 +1064,7 @@ interface CartItem {
 }
 
 export function useCart() {
-  const { user } = useAuth();
+  const { user } = useAuthContext();
   const [cartItems, setCartItems] = useState<CartItem[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
