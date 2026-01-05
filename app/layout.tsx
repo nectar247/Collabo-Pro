@@ -1,11 +1,11 @@
 import './globals.css';
 import { Inter } from 'next/font/google';
 import { ThemeProvider } from '@/components/theme/theme-provider';
-import Script from 'next/script';
 import { Metadata, Viewport } from 'next';
 import { Toaster } from 'sonner';
 import { Analytics } from '@vercel/analytics/next';
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import ClientProviders from '@/components/ClientProviders';
 
 const inter = Inter({ subsets: ['latin'], display: 'swap' });
 
@@ -66,15 +66,17 @@ export default function RootLayout({
       </head>
       <body>
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem>
-          <main className="flex-grow">
-            {children}
-            <Toaster
-              position="top-right"
-              richColors
-              expand={true}
-              closeButton
-            />
-          </main>
+          <ClientProviders>
+            <main className="flex-grow">
+              {children}
+              <Toaster
+                position="top-right"
+                richColors
+                expand={true}
+                closeButton
+              />
+            </main>
+          </ClientProviders>
           <Analytics />
           <SpeedInsights />
         </ThemeProvider>
