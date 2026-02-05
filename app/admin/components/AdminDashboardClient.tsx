@@ -1,20 +1,15 @@
 "use client";
 
-import { useState, Suspense, useEffect } from "react";
+import { useState, Suspense } from "react";
 import dynamic from "next/dynamic";
 import { Shield, BarChart3, Users, ShoppingBag, Tag, Settings, FileText, File, Grid2X2, ChevronRight } from "lucide-react";
 import NavigationLite from "@/components/NavigationLite";
-import Footer from "@/components/footer";
+import FooterCached from "@/components/footer-cached";
 import Preloader from "@/components/loaders/preloader";
 import Link from "next/link";
 
 import {
   useAuth,
-  useBrands,
-  useCategories,
-  useDeals,
-  useDynamicLinks,
-  useSettings,
 } from "@/lib/firebase/hooks";
 
 // Lazy load the heavy admin tab components with loading states
@@ -59,11 +54,6 @@ export default function AdminDashboardClient() {
   const [activeTab, setActiveTab] = useState("analytics");
 
   const { user, isAdmin, loading: userLoading } = useAuth();
-  const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories } = useCategories();
-  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands } = useBrands({ limit: 20 });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   const tabs = [
     { id: "analytics", label: "Analytics", icon: BarChart3 },
@@ -81,7 +71,9 @@ export default function AdminDashboardClient() {
     setActiveTab(tabId);
   };
 
-  if (userLoading) return <Preloader text="Loading profile..." />;
+  if (userLoading) {
+    return <Preloader text="Loading profile..." />;
+  }
 
   if (!user || !isAdmin) {
     return (
@@ -99,10 +91,6 @@ export default function AdminDashboardClient() {
         </div>
       </div>
     );
-  }
-
-  if (loadingCategories || loadingBrands || loadingDeals || settLoading || loadingDynamicLinks) {
-    return <Preloader text="Loading..." />;
   }
 
   return (
@@ -159,17 +147,8 @@ export default function AdminDashboardClient() {
         </div>
       </main>
 
-      {/* ✅ Fixed Footer props */}
-      <Footer
-        categories={categories}
-        loadingCategories={loadingCategories}
-        brands={footerBrands}
-        loadingBrands={loadingBrands}
-        settings={settings__}
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
+      {/* ✅ Using cached footer - no redundant Firestore reads */}
+      <FooterCached />
     </>
   );
 }

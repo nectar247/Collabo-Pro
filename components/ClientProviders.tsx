@@ -2,6 +2,7 @@
 
 import AuthCookieSync from './AuthCookieSync';
 import { AuthProvider } from './AuthProvider';
+import { CacheProvider } from './CacheProvider';
 
 /**
  * ClientProviders - Wraps all client-side components
@@ -10,8 +11,10 @@ import { AuthProvider } from './AuthProvider';
 export default function ClientProviders({ children }: { children: React.ReactNode }) {
   return (
     <AuthProvider>
-      <AuthCookieSync />
-      {children}
+      <CacheProvider>
+        <AuthCookieSync />
+        {children}
+      </CacheProvider>
     </AuthProvider>
   );
 }

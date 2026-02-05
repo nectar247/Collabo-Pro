@@ -14,7 +14,7 @@ import DiscountModal from '@/components/modal/DiscountModal';
 import { DealButton } from '@/components/deals/card';
 
 import NavigationLite from "@/components/NavigationLite";
-import Footer from '@/components/footer';
+import FooterCached from "@/components/footer-cached";
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 interface DealContentProps {
@@ -265,16 +265,7 @@ export default function DealContent({ deal }: DealContentProps) {
           </div>
         </div>
       </main>
-      <Footer
-        categories={categories}
-        loadingCategories={loadingCategories}
-        brands={footerBrands}
-        loadingBrands={loadingBrands}
-        settings={settings}
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
+      <FooterCached />
     </>
   );
 }

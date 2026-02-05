@@ -5,6 +5,7 @@ import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit2, Trash2, Search, Filter, Eye, ChevronDown, Ban, CheckCircle } from 'lucide-react';
 import { useCategories } from '@/lib/firebase/hooks';
+import { invalidateCache } from '@/lib/firebase/cache';
 import Preloader from '../loaders/preloader';
 import ErrorLoader from '../loaders/ErrorLoader';
 import { DynamicIcon, renderIconSelect } from '@/helper';

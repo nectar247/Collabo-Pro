@@ -11,7 +11,7 @@ import Preloader from "@/components/loaders/preloader";
 import { DynamicIcon } from "@/helper";
 
 import NavigationLite from "@/components/NavigationLite";
-import Footer from '@/components/footer';
+import FooterCached from "@/components/footer-cached";
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function DynamicPageContent({
@@ -140,16 +140,7 @@ export default function DynamicPageContent({
           </motion.div>
         </div>
       </main>
-      <Footer
-        categories={categories}
-        loadingCategories={loadingCategories}
-        brands={footerBrands}
-        loadingBrands={loadingBrands}
-        settings={settings__}
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
+      <FooterCached />
     </>
   );
 }

@@ -7,7 +7,7 @@ import { Search, X } from "lucide-react";
 import Preloader from "@/components/loaders/preloader";
 import ErrorLoader from "@/components/loaders/ErrorLoader";
 import NavigationLite from "@/components/NavigationLite";
-import Footer from '@/components/footer';
+import FooterCached from "@/components/footer-cached";
 import { useBrands, useCategories, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 import { toast } from "sonner";
 
@@ -208,16 +208,7 @@ export default function BrandsDirectoryClient({
           )}
         </div>
       </main>
-      <Footer
-        categories={categories}
-        loadingCategories={serverCategories ? false : loadingCategories}
-        brands={footerBrands}
-        loadingBrands={serverFooterBrands ? false : loadingBrands}
-        settings={settings}
-        settLoading={serverSettings ? false : settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={serverDynamicLinks ? false : loadingDynamicLinks}
-      />
+      <FooterCached />
     </>
   );
 }

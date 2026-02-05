@@ -14,7 +14,7 @@ import { db } from '@/lib/firebase';
 import { Deal } from '@/lib/firebase/collections';
 
 import NavigationLite from "@/components/NavigationLite";
-import Footer from '@/components/footer';
+import FooterCached from "@/components/footer-cached";
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function BrandPageClient() {
@@ -190,16 +190,7 @@ export default function BrandPageClient() {
           )}
         </div>
       </main>
-      <Footer
-        categories={categories}
-        loadingCategories={loadingCategories}
-        brands={footerBrands}
-        loadingBrands={loadingBrands}
-        settings={settings}
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
+      <FooterCached />
     </>
   );
 }

@@ -3,7 +3,7 @@
 
 import HeroMinimalist from '@/components/landing/hero/HeroMinimalist';
 import NavigationLite from '@/components/NavigationLite';
-import Footer from '@/components/footer';
+import FooterCached from '@/components/footer-cached';
 import FilteredBrands from '@/components/landing/filteredBrands';
 import CategoriesSection from '@/components/landing/categories';
 import TrendingDeals from '@/components/landing/trendingDeals';
@@ -75,16 +75,7 @@ export default function HomePageClient({
 
       </div>
 
-      <Footer
-        categories={categories}
-        loadingCategories={false}
-        brands={footerBrands}
-        loadingBrands={false}
-        settings={null}
-        settLoading={false}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={false}
-      />
+      <FooterCached />
 
       {/* Add the SearchDialog component here */}
       <SearchDialog

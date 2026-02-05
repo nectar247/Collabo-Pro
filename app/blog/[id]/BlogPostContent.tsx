@@ -12,7 +12,7 @@ import ShareButtons from '@/components/social/ShareButtons';
 import Preloader from '@/components/loaders/preloader';
 
 import NavigationLite from "@/components/NavigationLite";
-import Footer from '@/components/footer';
+import FooterCached from "@/components/footer-cached";
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function BlogPostContent({
@@ -164,16 +164,7 @@ export default function BlogPostContent({
           />
         </div>
       </main>
-      <Footer
-        categories={categories}
-        loadingCategories={loadingCategories}
-        brands={footerBrands}
-        loadingBrands={loadingBrands}
-        settings={settings}
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
+      <FooterCached />
     </>
   );
 }

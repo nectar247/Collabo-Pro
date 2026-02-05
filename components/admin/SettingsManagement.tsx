@@ -4,6 +4,7 @@ import { useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Save, Mail, Bell, Key, Globe, Shield, CheckCircle, AlertCircle } from 'lucide-react';
 import { useSettings } from '@/lib/firebase/hooks';
+import { invalidateCache } from '@/lib/firebase/cache';
 import ContentPreloader from '../loaders/ContentPreloader';
 import ContentErrorLoader from '../loaders/ContentErrorLoader';
 
@@ -82,6 +83,8 @@ export default function SettingsManagement() {
                 return false;
             }
             await updateSettings(localSettings);
+            // Invalidate settings cache
+            invalidateCache("settings:system");
             setSaveStatus('success');
             setTimeout(() => setSaveStatus('idle'), 2000);
         } catch (error) {

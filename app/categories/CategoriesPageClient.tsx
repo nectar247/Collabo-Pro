@@ -4,7 +4,7 @@ import { CategoryCard1 } from "@/components/deals/categories";
 import ErrorLoader from "@/components/loaders/ErrorLoader";
 import Preloader from "@/components/loaders/preloader";
 import NavigationLite from "@/components/NavigationLite";
-import Footer from '@/components/footer';
+import FooterCached from "@/components/footer-cached";
 import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 import { DynamicIcon, getCategoryColor } from "@/helper";
 
@@ -75,16 +75,7 @@ export default function CategoriesPageClient({
           </div>
         </div>
       </main>
-      <Footer
-        categories={categories}
-        loadingCategories={serverCategories ? false : loadingCategories}
-        brands={footerBrands}
-        loadingBrands={serverFooterBrands ? false : loadingBrands}
-        settings={settings}
-        settLoading={serverSettings ? false : settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={serverDynamicLinks ? false : loadingDynamicLinks}
-      />
+      <FooterCached />
     </>
   );
 }

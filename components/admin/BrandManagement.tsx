@@ -5,6 +5,7 @@ import { useEffect, useState, useCallback, useRef } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Plus, Edit2, Trash2, Search, Filter, Eye, ChevronDown, Power, Ban, CheckCircle, X } from 'lucide-react';
 import { useBrands } from '@/lib/firebase/hooks';
+import { invalidateCache } from '@/lib/firebase/cache';
 import ContentPreloader from '../loaders/ContentPreloader';
 import ContentErrorLoader from '../loaders/ContentErrorLoader';
 
@@ -198,6 +199,12 @@ export default function BrandManagement() {
       };
 
       await addBrand(brandData as any);
+
+      // Invalidate brand caches
+      invalidateCache('brands:all');
+      invalidateCache('brands:footer');
+      invalidateCache('brands:featured:50');
+
       addToast('Brand added successfully!', 'success');
 
       setIsAddingBrand(false);
@@ -231,6 +238,12 @@ export default function BrandManagement() {
       };
 
       await updateBrand(updatedBrand.id, updatedBrand);
+
+      // Invalidate brand caches
+      invalidateCache('brands:all');
+      invalidateCache('brands:footer');
+      invalidateCache('brands:featured:50');
+
       addToast('Brand updated successfully!', 'success');
       setEditBrand(null);
     } catch (error) {
@@ -265,7 +278,12 @@ export default function BrandManagement() {
           console.log('🔄 Toggling brand status...');
           await toggleBrandStatus(brandId, currentStatus);
           console.log('✅ Brand status toggled successfully');
-          
+
+          // Invalidate brand caches
+          invalidateCache('brands:all');
+          invalidateCache('brands:footer');
+          invalidateCache('brands:featured:50');
+
           // Force refresh the brands list to prevent disappearing
           console.log('🔄 Refreshing brands list...');
           await fetchAdminBrands({
@@ -291,7 +309,12 @@ export default function BrandManagement() {
         
         try {
           await toggleBrandStatus(brandId, currentStatus);
-          
+
+          // Invalidate brand caches
+          invalidateCache('brands:all');
+          invalidateCache('brands:footer');
+          invalidateCache('brands:featured:50');
+
           // Force refresh after activation too
           await fetchAdminBrands({
             searchTerm: debouncedSearchQuery,
@@ -318,6 +341,12 @@ export default function BrandManagement() {
     if (window.confirm('Are you sure you want to delete this brand?')) {
       try {
         await deleteBrand(id);
+
+        // Invalidate brand caches
+        invalidateCache('brands:all');
+        invalidateCache('brands:footer');
+        invalidateCache('brands:featured:50');
+
         addToast('Brand deleted successfully!', 'success');
       } catch (error) {
         console.error('Error deleting brand:', error);

@@ -19,7 +19,7 @@ import { sortByRelevance, ScoredDeal } from '@/lib/utils/search-ranking';
 import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import NavigationLite from "@/components/NavigationLite";
-import Footer from '@/components/footer';
+import FooterCached from "@/components/footer-cached";
 import { useBrands, useCategories, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 import { Brand, Category, ContentSection } from '@/lib/firebase/collections';
 
@@ -723,16 +723,7 @@ export default function SearchPage({
           )}
         </div>
       </main>
-      <Footer
-        categories={categories}
-        loadingCategories={actualLoadingCategories}
-        brands={footerBrands}
-        loadingBrands={actualLoadingBrands}
-        settings={settings__}
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={actualLoadingDynamicLinks}
-      />
+      <FooterCached />
     </>
   );
 }

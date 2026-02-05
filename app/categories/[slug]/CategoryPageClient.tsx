@@ -5,7 +5,7 @@ import { Tag, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { DealCard1 } from '@/components/deals/card';
 import NavigationLite from "@/components/NavigationLite";
-import Footer from '@/components/footer';
+import FooterCached from "@/components/footer-cached";
 import { useBrands, useCategories, useSettings, useDynamicLinks } from '@/lib/firebase/hooks';
 
 // Type for serialized deals from server
@@ -159,16 +159,7 @@ export default function CategoryPageClient({
           )}
         </div>
       </main>
-      <Footer
-        categories={categories}
-        loadingCategories={loadingCategories}
-        brands={footerBrands}
-        loadingBrands={loadingBrands}
-        settings={settings}
-        settLoading={settLoading}
-        dynamicLinks={dynamicLinks}
-        loadingDynamicLinks={loadingDynamicLinks}
-      />
+      <FooterCached />
     </>
   );
 }
