@@ -80,7 +80,7 @@ export const syncAwinPromotions = functions
     .runWith({ timeoutSeconds: 540, memory: "1GB" })
     .pubsub.schedule("every 5 hours")
     .onRun(async () => {
-    var _a;
+    var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k;
     try {
         // 🧹 Auto-cleanup enabled - Deployed from local /functions - Dec 11, 2025
         const accessToken = "336a9ae4-df0b-4fab-9a83-a6f3c7736b6f";
@@ -112,90 +112,94 @@ export const syncAwinPromotions = functions
                 break;
             page++;
         }
-        // 3️⃣ Process in transaction
-        await firestore.runTransaction(async (transaction) => {
-            var _a, _b, _c, _d, _e, _f, _g, _h, _j, _k, _l;
-            const batch = firestore.batch();
-            let skippedCount = 0;
-            let updatedCount = 0;
-            let addedCount = 0;
-            for (const promo of promotions) {
-                const promotionId = (_a = promo.promotionId) === null || _a === void 0 ? void 0 : _a.toString();
-                if (!promotionId)
-                    continue;
-                const brandName = (_b = promo.advertiser) === null || _b === void 0 ? void 0 : _b.name;
-                if (!brandName) {
-                    console.warn(`Skipping promotion ${promotionId} - missing brand name`);
-                    continue;
-                }
-                // 1️⃣ Skip if document exists and hasn't changed
-                if (existingDocs.has(promotionId)) {
-                    console.log(`⏩ Skipping unchanged promotion: ${promotionId}`);
-                    skippedCount++;
-                    continue;
-                }
-                // 2️⃣ Get brand details with primary sector
-                let brandDetails = {};
-                const brandQuery = await transaction.get(firestore.collection("brands")
-                    .where("name", "==", brandName)
-                    .limit(1));
-                // FIX: Check if brand exists BEFORE using brandDetails
-                if (!brandQuery.empty) {
-                    brandDetails = brandQuery.docs[0].data();
-                }
-                else {
-                    // FIX: Create new brand without self-referencing bugs
-                    const cate = "General"; // Default category for new brands
-                    brandDetails = {
-                        name: brandName,
-                        programmeId: ((_d = (_c = promo.advertiser) === null || _c === void 0 ? void 0 : _c.id) === null || _d === void 0 ? void 0 : _d.toString()) || "",
-                        primarySector: cate,
-                        createdAt: now,
-                        updatedAt: now,
-                        id: ((_f = (_e = promo.advertiser) === null || _e === void 0 ? void 0 : _e.id) === null || _f === void 0 ? void 0 : _f.toString()) || "",
-                        logo: ((_h = (_g = promo.advertiser) === null || _g === void 0 ? void 0 : _g.logoUrl) === null || _h === void 0 ? void 0 : _h.toString()) || "", // FIX: Safe optional chaining
-                        status: "active", // FIX: Don't reference brandDetails.status
-                        activeDeals: 0,
-                    };
-                }
-                const docRef = firestore.collection("deals_fresh").doc(promotionId);
-                // FIX: Use brandDetails.rawData safely after checking if brand exists
-                const category = ((_k = (_j = brandDetails.rawData) === null || _j === void 0 ? void 0 : _j.primarySector) === null || _k === void 0 ? void 0 : _k.toString()) || "General";
-                const payload = Object.assign({ promotionId, title: promo.title || "", description: promo.description || "", brand: brandName, brandDetails,
-                    category, discount: extractDiscount(promo.title || "", promo.description || ""), code: extractCode(promo), label: determineLabel(promo), link: promo.urlTracking || "", terms: promo.terms || "See website for details", status: /(active|expiringsoon)/i.test(promo.status || "") ? "active" : "inactive", startsAt: promo.startDate
-                        ? admin.firestore.Timestamp.fromDate(new Date(promo.startDate))
-                        : admin.firestore.Timestamp.now(), expiresAt: promo.endDate
-                        ? admin.firestore.Timestamp.fromDate(new Date(promo.endDate))
-                        : admin.firestore.Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), source: "awin-api-promotions", joined: ((_l = promo.advertiser) === null || _l === void 0 ? void 0 : _l.joined) === true, rawData: promo, updatedAt: now, manuallyAdded: false }, (!existingDocs.has(promotionId) && { createdAt: now }) // Only set for new docs
-                );
-                batch.set(docRef, payload);
-                existingDocs.has(promotionId) ? updatedCount++ : addedCount++;
-                console.log(`⏩ written promotion: ${promotionId}`);
+        // 3️⃣ OPTIMIZATION: Load all brands ONCE before processing promotions
+        console.log("📦 Loading all brands into memory...");
+        const allBrandsSnapshot = await firestore.collection("brands").get();
+        const brandsMap = new Map();
+        allBrandsSnapshot.forEach(doc => {
+            const data = doc.data();
+            if (data.name) {
+                brandsMap.set(data.name, Object.assign({ id: doc.id }, data));
             }
-            // Delete stale promotions (not in new fetch) - BUT PRESERVE MANUALLY ADDED DEALS
-            const fetchedIds = new Set(promotions.map(p => { var _a; return (_a = p.promotionId) === null || _a === void 0 ? void 0 : _a.toString(); }).filter(Boolean));
-            let deletedCount = 0;
-            existingDocs.forEach((docData, id) => {
-                // Skip deletion if this is a manually added deal
-                if (docData.manuallyAdded === true) {
-                    console.log(`⏩ Preserving manually added deal: ${id}`);
-                    return;
-                }
-                // Delete only non-manually-added deals that weren't fetched from API
-                if (!fetchedIds.has(id)) {
-                    batch.delete(firestore.collection("deals_fresh").doc(id));
-                    deletedCount++;
-                }
-            });
-            await batch.commit();
-            console.log(`
-          📊 Sync Report:
-          Added: ${addedCount}
-          Updated: ${updatedCount}
-          Skipped: ${skippedCount}
-          Deleted: ${deletedCount}
-        `);
         });
+        console.log(`✅ Loaded ${brandsMap.size} brands into memory`);
+        // 4️⃣ Process in batch (no transaction needed for better performance)
+        const batch = firestore.batch();
+        let skippedCount = 0;
+        let updatedCount = 0;
+        let addedCount = 0;
+        for (const promo of promotions) {
+            const promotionId = (_b = promo.promotionId) === null || _b === void 0 ? void 0 : _b.toString();
+            if (!promotionId)
+                continue;
+            const brandName = (_c = promo.advertiser) === null || _c === void 0 ? void 0 : _c.name;
+            if (!brandName) {
+                console.warn(`Skipping promotion ${promotionId} - missing brand name`);
+                continue;
+            }
+            // 1️⃣ Skip if document exists and hasn't changed
+            if (existingDocs.has(promotionId)) {
+                console.log(`⏩ Skipping unchanged promotion: ${promotionId}`);
+                skippedCount++;
+                continue;
+            }
+            // 2️⃣ OPTIMIZATION: Get brand from memory instead of querying
+            let brandDetails = brandsMap.get(brandName);
+            if (!brandDetails) {
+                // Brand doesn't exist - create minimal placeholder
+                const cate = "General";
+                brandDetails = {
+                    name: brandName,
+                    programmeId: ((_e = (_d = promo.advertiser) === null || _d === void 0 ? void 0 : _d.id) === null || _e === void 0 ? void 0 : _e.toString()) || "",
+                    primarySector: cate,
+                    logo: ((_g = (_f = promo.advertiser) === null || _f === void 0 ? void 0 : _f.logoUrl) === null || _g === void 0 ? void 0 : _g.toString()) || "",
+                    status: "active",
+                    activeDeals: 0,
+                };
+                // Add to our in-memory map so we don't recreate it for other deals
+                brandsMap.set(brandName, brandDetails);
+                // Create the brand document (will be properly synced by syncAwinBrands later)
+                const newBrandRef = firestore.collection("brands").doc();
+                batch.set(newBrandRef, Object.assign(Object.assign({}, brandDetails), { id: newBrandRef.id, createdAt: now, updatedAt: now }));
+            }
+            const docRef = firestore.collection("deals_fresh").doc(promotionId);
+            const category = ((_j = (_h = brandDetails.rawData) === null || _h === void 0 ? void 0 : _h.primarySector) === null || _j === void 0 ? void 0 : _j.toString()) || "General";
+            const payload = Object.assign({ promotionId, title: promo.title || "", description: promo.description || "", brand: brandName, brandDetails, // EMBEDDED: Brand data is stored in the deal
+                category, discount: extractDiscount(promo.title || "", promo.description || ""), code: extractCode(promo), label: determineLabel(promo), link: promo.urlTracking || "", terms: promo.terms || "See website for details", status: /(active|expiringsoon)/i.test(promo.status || "") ? "active" : "inactive", startsAt: promo.startDate
+                    ? admin.firestore.Timestamp.fromDate(new Date(promo.startDate))
+                    : admin.firestore.Timestamp.now(), expiresAt: promo.endDate
+                    ? admin.firestore.Timestamp.fromDate(new Date(promo.endDate))
+                    : admin.firestore.Timestamp.fromDate(new Date(Date.now() + 30 * 24 * 60 * 60 * 1000)), source: "awin-api-promotions", joined: ((_k = promo.advertiser) === null || _k === void 0 ? void 0 : _k.joined) === true, rawData: promo, updatedAt: now, manuallyAdded: false }, (!existingDocs.has(promotionId) && { createdAt: now }) // Only set for new docs
+            );
+            batch.set(docRef, payload);
+            existingDocs.has(promotionId) ? updatedCount++ : addedCount++;
+            if (addedCount % 100 === 0) {
+                console.log(`⏩ Processed ${addedCount} promotions so far...`);
+            }
+        }
+        // Delete stale promotions (not in new fetch) - BUT PRESERVE MANUALLY ADDED DEALS
+        const fetchedIds = new Set(promotions.map(p => { var _a; return (_a = p.promotionId) === null || _a === void 0 ? void 0 : _a.toString(); }).filter(Boolean));
+        let deletedCount = 0;
+        existingDocs.forEach((docData, id) => {
+            // Skip deletion if this is a manually added deal
+            if (docData.manuallyAdded === true) {
+                console.log(`⏩ Preserving manually added deal: ${id}`);
+                return;
+            }
+            // Delete only non-manually-added deals that weren't fetched from API
+            if (!fetchedIds.has(id)) {
+                batch.delete(firestore.collection("deals_fresh").doc(id));
+                deletedCount++;
+            }
+        });
+        await batch.commit();
+        console.log(`
+        📊 Sync Report:
+        Added: ${addedCount}
+        Updated: ${updatedCount}
+        Skipped: ${skippedCount}
+        Deleted: ${deletedCount}
+      `);
         // 🆕 CLEANUP EXPIRED DEALS - Auto cleanup after sync
         console.log("🧹 Starting expired deals cleanup...");
         await cleanupExpiredDeals(firestore);
@@ -311,37 +315,8 @@ export const scheduledCategoriesDealCountUpdate = functions
     console.log("✔️ BulkWriter: All categories updated.");
     return null;
 });
-/**
- * Shuffle deals to avoid consecutive deals from the same brand
- * Uses a greedy algorithm to maximize brand diversity
- */
-function shuffleDealsAvoidConsecutiveBrands(deals) {
-    if (deals.length <= 1)
-        return deals;
-    const result = [];
-    const remaining = [...deals];
-    // Pick first deal randomly
-    const firstIndex = Math.floor(Math.random() * remaining.length);
-    result.push(remaining.splice(firstIndex, 1)[0]);
-    // For each subsequent position, try to pick a deal from a different brand
-    while (remaining.length > 0) {
-        const lastBrand = result[result.length - 1].brand;
-        // Find deals from different brands
-        const differentBrandDeals = remaining.filter(deal => deal.brand !== lastBrand);
-        if (differentBrandDeals.length > 0) {
-            // Pick randomly from deals with different brands
-            const randomIndex = Math.floor(Math.random() * differentBrandDeals.length);
-            const selectedDeal = differentBrandDeals[randomIndex];
-            const indexInRemaining = remaining.indexOf(selectedDeal);
-            result.push(remaining.splice(indexInRemaining, 1)[0]);
-        }
-        else {
-            // All remaining deals are from the same brand, just pick the first one
-            result.push(remaining.splice(0, 1)[0]);
-        }
-    }
-    return result;
-}
+// Note: shuffleDealsAvoidConsecutiveBrands removed - now using brand-grouped selection
+// which ensures exactly 1 deal per brand for better diversity
 /**
  * Homepage Cache Refresh Function
  * Runs every 6 hours to pre-calculate and cache homepage data
@@ -379,7 +354,7 @@ export const refreshHomepageCache = functions
             .get();
         const featuredBrands = featuredBrandsSnapshot.docs.map(doc => (Object.assign({ id: doc.id }, doc.data())));
         console.log(`✅ [HomepageCache] Found ${featuredBrands.length} featured brands`);
-        // 3️⃣ Fetch Trending Deals (top 20, excluding expired)
+        // 3️⃣ Fetch Trending Deals - 20 deals from 20 different brands
         console.log("📦 [HomepageCache] Fetching trending deals...");
         const now = admin.firestore.Timestamp.now();
         const trendingDealsSnapshot = await firestore
@@ -388,14 +363,31 @@ export const refreshHomepageCache = functions
             .where("expiresAt", ">", now)
             .orderBy("expiresAt", "asc")
             .orderBy("createdAt", "desc")
-            .limit(30)
+            .limit(200) // Fetch more to ensure we have 20 different brands
             .get();
-        const trendingDealsRaw = trendingDealsSnapshot.docs
-            .map(doc => (Object.assign({ id: doc.id }, doc.data())))
+        // Group deals by brand to ensure diversity
+        const dealsByBrand = new Map();
+        trendingDealsSnapshot.docs.forEach(doc => {
+            const deal = Object.assign({ id: doc.id }, doc.data());
+            const brand = deal.brand;
+            if (!dealsByBrand.has(brand)) {
+                dealsByBrand.set(brand, []);
+            }
+            dealsByBrand.get(brand).push(deal);
+        });
+        // Get 1 deal from each brand (up to 20 different brands)
+        const brandsWithDeals = Array.from(dealsByBrand.keys());
+        const shuffledBrands = brandsWithDeals
+            .sort(() => Math.random() - 0.5)
             .slice(0, 20);
-        // Shuffle deals to avoid consecutive deals from the same brand
-        const trendingDeals = shuffleDealsAvoidConsecutiveBrands(trendingDealsRaw);
-        console.log(`✅ [HomepageCache] Found ${trendingDeals.length} trending deals (shuffled, non-expired)`);
+        const trendingDeals = [];
+        shuffledBrands.forEach(brandName => {
+            const brandDeals = dealsByBrand.get(brandName);
+            // Pick a random deal from this brand for variety
+            const randomDeal = brandDeals[Math.floor(Math.random() * brandDeals.length)];
+            trendingDeals.push(randomDeal);
+        });
+        console.log(`✅ [HomepageCache] Found ${trendingDeals.length} trending deals from ${shuffledBrands.length} different brands`);
         // 4️⃣ Fetch Popular Searches (top 10 from search history)
         console.log("📦 [HomepageCache] Fetching popular searches...");
         const searchesSnapshot = await firestore

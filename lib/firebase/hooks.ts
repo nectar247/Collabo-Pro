@@ -491,19 +491,17 @@ export function useDeals(options: UseDealsOptions = {}) {
       dealsQuery,
       async (snapshot) => {
         try {
-          const dealsData = await Promise.all(
-            snapshot.docs.map(async (doc) => ({
-              id: doc.id,
-              ...doc.data(),
-              brandDetails: await getBrandDetails(doc.data().brand),
-            } as unknown as Deal))
-          );
-    
-          await fetchDeals();
+          // OPTIMIZATION: Don't fetch brandDetails here - use what's already in the deal document
+          // brandDetails should be embedded in the deal when synced from Awin
+          const dealsData = snapshot.docs.map((doc) => ({
+            id: doc.id,
+            ...doc.data(),
+            // brandDetails is already embedded in the deal document from sync
+          } as unknown as Deal));
 
-          // Group deals by brand to ensure diversity (1 deal per brand)
+          // 🔥 HOT TRENDING DEALS: 20 deals from 20 different brands
           const dealsByBrand = new Map<string, any[]>();
-          
+
           // Group all deals by brand first
           dealsData.forEach((deal: any) => {
             if (!dealsByBrand.has(deal.brand)) {
@@ -511,34 +509,40 @@ export function useDeals(options: UseDealsOptions = {}) {
             }
             dealsByBrand.get(deal.brand)!.push(deal);
           });
-          
+
           console.log('🔍 DEBUG - Total brands with deals:', dealsByBrand.size);
-          
-          // Get 1 random deal from each brand (up to 12 brands)
+
+          // Get 1 deal from each brand (up to 20 different brands)
           const brandsWithDeals = Array.from(dealsByBrand.keys());
-          const shuffledBrands = brandsWithDeals.sort(() => Math.random() - 0.5).slice(0, 12);
-          
+
+          // Shuffle brands randomly to get variety each time
+          const shuffledBrands = brandsWithDeals
+            .sort(() => Math.random() - 0.5)
+            .slice(0, 20); // Take up to 20 different brands
+
           const trendingDealsSelection: any[] = [];
           shuffledBrands.forEach(brandName => {
             const brandDeals = dealsByBrand.get(brandName)!;
+
+            // Pick the best deal from this brand (first one, since they're already sorted by expiresAt)
+            // Or pick a random one for more variety
             const randomDeal = brandDeals[Math.floor(Math.random() * brandDeals.length)];
             trendingDealsSelection.push(randomDeal);
           });
-          
-          console.log('🔍 DEBUG - Selected from', shuffledBrands.length, 'brands');
-          console.log('🔍 DEBUG - Final trending deals:', trendingDealsSelection.length);
+
+          console.log(`🔥 HOT TRENDING: Selected ${trendingDealsSelection.length} deals from ${shuffledBrands.length} different brands`);
 
           setTrendingDeals(trendingDealsSelection);
 
           setAllDeals(dealsData);
 
-          const countryFiltered = dealsData.filter((item: any) => 
+          const countryFiltered = dealsData.filter((item: any) =>
             item.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
           );
 
           const publicDeals = countryFiltered
-            .filter((e: any) => 
-              e.expiresAt?.seconds && new Date(e.expiresAt.seconds * 1000) > new Date() 
+            .filter((e: any) =>
+              e.expiresAt?.seconds && new Date(e.expiresAt.seconds * 1000) > new Date()
               && e.status === 'active'
             );
 
@@ -702,27 +706,26 @@ export function useDeals(options: UseDealsOptions = {}) {
       }
 
       const snapshot = await getDocs(dealsQuery);
-      
+
       if (snapshot.empty) {
         setHasMore(false);
         setLoading(false);
         return;
       }
 
-      const newDeals = await Promise.all(
-        snapshot.docs.map(async (doc) => ({
-          id: doc.id,
-          ...doc.data(),
-          brandDetails: await getBrandDetails(doc.data().brand),
-        })) as unknown as Deal[]
-      );
+      // OPTIMIZATION: Don't fetch brandDetails separately - use embedded data
+      const newDeals = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+        // brandDetails is already embedded in the deal document from sync
+      })) as unknown as Deal[];
 
       const activeDeals = newDeals
-        .filter((e: any) => 
-          e.expiresAt?.seconds && new Date(e.expiresAt.seconds * 1000) > new Date() 
+        .filter((e: any) =>
+          e.expiresAt?.seconds && new Date(e.expiresAt.seconds * 1000) > new Date()
           && e.status === 'active'
         )
-        .filter((item: any) => 
+        .filter((item: any) =>
           item.rawData?.regions?.all === true ||
           item.rawData?.regions?.list?.some((region: any) => region.countryCode === countryCode)
         );
@@ -730,9 +733,9 @@ export function useDeals(options: UseDealsOptions = {}) {
       // Filter by active brands using cached data
       const activeBrandDeals = filterDealsByActiveBrands(activeDeals);
 
-      setDeals((prevDeals) => 
+      setDeals((prevDeals) =>
         ([
-          ...prevDeals, 
+          ...prevDeals,
           ...activeBrandDeals.sort(() => Math.random() - 0.5) // Shuffle array randomly
         ])
       ); // Append new deals
