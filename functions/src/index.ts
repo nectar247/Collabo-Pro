@@ -560,6 +560,156 @@ export const refreshHomepageCache = functions
   });
 
 /**
+ * Manual HTTP trigger for refreshing homepage cache
+ * Call this to immediately refresh the cache without waiting for the schedule
+ */
+export const triggerHomepageCacheRefresh = functions
+  .runWith({ timeoutSeconds: 300, memory: "512MB" })
+  .https.onRequest(async (req, res) => {
+    try {
+      console.log("🔄 [Manual Trigger] Starting homepage cache refresh...");
+      await refreshHomepageCacheLogic();
+      res.status(200).send({ success: true, message: "Homepage cache refreshed successfully!" });
+    } catch (error) {
+      console.error("❌ [Manual Trigger] Error:", error);
+      res.status(500).send({ success: false, error: String(error) });
+    }
+  });
+
+/**
+ * Shared logic for homepage cache refresh
+ */
+async function refreshHomepageCacheLogic() {
+  const firestore = admin.firestore();
+  const startTime = Date.now();
+
+  // Copy the entire logic from refreshHomepageCache
+  // (We'll extract this to avoid duplication)
+  console.log("📦 [HomepageCache] Fetching categories...");
+  const categoriesSnapshot = await firestore
+    .collection("categories")
+    .where("status", "==", "active")
+    .where("dealCount", ">", 0)
+    .orderBy("dealCount", "desc")
+    .limit(8)
+    .get();
+
+  const categories = categoriesSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+  console.log(`✅ [HomepageCache] Found ${categories.length} categories`);
+
+  console.log("📦 [HomepageCache] Fetching featured brands...");
+  const featuredBrandsSnapshot = await firestore
+    .collection("brands")
+    .where("status", "==", "active")
+    .where("brandimg", "!=", "")
+    .where("activeDeals", ">", 0)
+    .orderBy("brandimg", "asc")
+    .orderBy("activeDeals", "desc")
+    .limit(50)
+    .get();
+
+  const featuredBrands = featuredBrandsSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+  console.log(`✅ [HomepageCache] Found ${featuredBrands.length} featured brands`);
+
+  console.log("📦 [HomepageCache] Fetching trending deals...");
+  const now = admin.firestore.Timestamp.now();
+  const trendingDealsSnapshot = await firestore
+    .collection("deals_fresh")
+    .where("status", "==", "active")
+    .where("expiresAt", ">", now)
+    .orderBy("expiresAt", "asc")
+    .orderBy("createdAt", "desc")
+    .limit(200)
+    .get();
+
+  const dealsByBrand = new Map<string, any[]>();
+  trendingDealsSnapshot.docs.forEach(doc => {
+    const deal = { id: doc.id, ...doc.data() };
+    const brand = (deal as any).brand;
+    if (!dealsByBrand.has(brand)) {
+      dealsByBrand.set(brand, []);
+    }
+    dealsByBrand.get(brand)!.push(deal);
+  });
+
+  const brandsWithDeals = Array.from(dealsByBrand.keys());
+  const shuffledBrands = brandsWithDeals
+    .sort(() => Math.random() - 0.5)
+    .slice(0, 20);
+
+  const trendingDeals: any[] = [];
+  shuffledBrands.forEach(brandName => {
+    const brandDeals = dealsByBrand.get(brandName)!;
+    const randomDeal = brandDeals[Math.floor(Math.random() * brandDeals.length)];
+    trendingDeals.push(randomDeal);
+  });
+
+  console.log(`✅ [HomepageCache] Found ${trendingDeals.length} trending deals from ${shuffledBrands.length} different brands`);
+
+  console.log("📦 [HomepageCache] Fetching popular searches...");
+  const searchesSnapshot = await firestore
+    .collection("search_history")
+    .orderBy("count", "desc")
+    .limit(10)
+    .get();
+
+  const popularSearches = searchesSnapshot.docs.map(doc => doc.data().term as string);
+  console.log(`✅ [HomepageCache] Found ${popularSearches.length} popular searches`);
+
+  console.log("📦 [HomepageCache] Fetching footer brands...");
+  const footerBrandsSnapshot = await firestore
+    .collection("brands")
+    .where("status", "==", "active")
+    .where("activeDeals", ">", 0)
+    .orderBy("activeDeals", "desc")
+    .limit(15)
+    .get();
+
+  const footerBrands = footerBrandsSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+  console.log(`✅ [HomepageCache] Found ${footerBrands.length} footer brands`);
+
+  console.log("📦 [HomepageCache] Fetching dynamic links...");
+  const dynamicLinksSnapshot = await firestore
+    .collection("content")
+    .where("status", "==", "published")
+    .where("type", "in", ["legal", "help"])
+    .orderBy("order", "asc")
+    .get();
+
+  const dynamicLinks = dynamicLinksSnapshot.docs.map(doc => ({
+    id: doc.id,
+    ...doc.data()
+  }));
+  console.log(`✅ [HomepageCache] Found ${dynamicLinks.length} dynamic links`);
+
+  const cacheData = {
+    categories,
+    featuredBrands,
+    trendingDeals,
+    popularSearches,
+    footerBrands,
+    dynamicLinks,
+    lastUpdated: admin.firestore.FieldValue.serverTimestamp(),
+    version: 1
+  };
+
+  await firestore.collection("homepageCache").doc("current").set(cacheData);
+
+  const duration = Date.now() - startTime;
+  console.log(`🎉 [HomepageCache] Cache refreshed successfully in ${duration}ms`);
+  console.log(`📊 [HomepageCache] Stats: ${categories.length} cats, ${featuredBrands.length} brands, ${trendingDeals.length} deals, ${dynamicLinks.length} links`);
+}
+
+/**
  * Deals Page Cache Refresh Function
  * Runs every 30 minutes to pre-calculate and cache deals page data
  * This dramatically improves deals page performance by reducing client-side queries
