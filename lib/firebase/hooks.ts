@@ -192,64 +192,55 @@ export function useCategories(options: UseCategoriesOptions = {}) {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const {
-      name,
-      limit: queryLimit = 50,
-      orderByField = 'createdAt',
-      orderDirection = 'desc'
-    } = options;
+  const fetchCategories = useCallback(async () => {
+    try {
+      setLoading(true);
+      const {
+        name,
+        limit: queryLimit = 50,
+        orderByField = 'createdAt',
+        orderDirection = 'desc'
+      } = options;
 
-    // Build query
-    let categoriesQuery = query(collection(db, 'categories'));
+      // Build query
+      let categoriesQuery = query(collection(db, 'categories'));
 
-    // Add filters
-    if (name) {
-      categoriesQuery = query(categoriesQuery, where('name', '==', name));
-    }
-
-    // Add ordering and limit
-    categoriesQuery = query(
-      categoriesQuery,
-      orderBy(orderByField, orderDirection),
-      limit(queryLimit)
-    );
-
-    const unsubscribe = onSnapshot(
-      categoriesQuery,
-      async (snapshot) => {
-        try {
-          // Map snapshot.docs and resolve promises
-          const categoriesData = await Promise.all(
-            snapshot.docs.map(async (doc) => ({
-              id: doc.id,
-              ...doc.data(),
-            }))
-          );
-          setCategories(
-            (categoriesData as any)
-            .filter((e: any)=>
-              e.status == 'active' && e.dealCount > 0
-            )
-            .sort((a: any, b: any)=>b.dealCount - a.dealCount)
-          );
-          setAllCategories(categoriesData as any);
-          setLoading(false);
-        } catch (error) {
-          console.error('Error processing categories:', error);
-          setError(error as Error);
-          setLoading(false);
-        }
-      },
-      (err) => {
-        console.error('Error fetching categories:', err);
-        setError(err as Error);
-        setLoading(false);
+      // Add filters
+      if (name) {
+        categoriesQuery = query(categoriesQuery, where('name', '==', name));
       }
-    );
 
-    return unsubscribe;
+      // Add ordering and limit
+      categoriesQuery = query(
+        categoriesQuery,
+        orderBy(orderByField, orderDirection),
+        limit(queryLimit)
+      );
+
+      const snapshot = await getDocs(categoriesQuery);
+      const categoriesData = snapshot.docs.map((doc) => ({
+        id: doc.id,
+        ...doc.data(),
+      }));
+      setCategories(
+        (categoriesData as any)
+        .filter((e: any)=>
+          e.status == 'active' && e.dealCount > 0
+        )
+        .sort((a: any, b: any)=>b.dealCount - a.dealCount)
+      );
+      setAllCategories(categoriesData as any);
+    } catch (err) {
+      console.error('Error fetching categories:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, [options.name, options.limit, options.orderByField, options.orderDirection]);
+
+  useEffect(() => {
+    fetchCategories();
+  }, [fetchCategories]);
 
   // Function to get a single category
   const getCategory = async (id: string): Promise<Category | null> => {
@@ -286,6 +277,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      await fetchCategories();
       return docRef.id;
     } catch (error) {
       console.error('Error adding category:', error);
@@ -326,11 +318,12 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         );
         await Promise.all(updatePromises);
       }
-      
+
       await updateDoc(doc(db, 'categories', categoryId), {
         ...data,
         updatedAt: serverTimestamp()
       });
+      await fetchCategories();
     } catch (error) {
       console.error('Error updating category:', error);
       throw error;
@@ -343,6 +336,7 @@ export function useCategories(options: UseCategoriesOptions = {}) {
         status: currentStatus === 'active' ? 'inactive' : 'active',
         updatedAt: serverTimestamp()
       });
+      await fetchCategories();
     } catch (error) {
       console.error('Error toggling category status:', error);
       throw error;
@@ -353,9 +347,10 @@ export function useCategories(options: UseCategoriesOptions = {}) {
     try {
 
       let categoryDealsExist = await getCategory(categoryId);
-      // console.log(categoryDealsExist?.dealCount);
-      if(!categoryDealsExist?.dealCount)
+      if(!categoryDealsExist?.dealCount) {
         await deleteDoc(doc(db, 'categories', categoryId));
+        await fetchCategories();
+      }
       else {
         throw ('Category cannot be deleted as deals exist for category!');
       }
@@ -374,7 +369,8 @@ export function useCategories(options: UseCategoriesOptions = {}) {
     addCategory,
     updateCategory,
     toggleCategoryStatus,
-    deleteCategory
+    deleteCategory,
+    refresh: fetchCategories
   };
 }
 
@@ -1786,32 +1782,34 @@ export function useBlogPosts() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      query(collection(db, 'blog_posts'), orderBy('createdAt', 'desc')),
-      (snapshot) => {
-        const postsData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            ...data,
-            date: data.date?.toDate() || new Date(),
-            createdAt: data.createdAt?.toDate() || new Date(),
-            updatedAt: data.updatedAt?.toDate() || new Date()
-          } as BlogPost;
-        });
-        setPosts(postsData);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching blog posts:', err);
-        setError(err as Error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+  const fetchPosts = useCallback(async () => {
+    try {
+      setLoading(true);
+      const snapshot = await getDocs(
+        query(collection(db, 'blog_posts'), orderBy('createdAt', 'desc'))
+      );
+      const postsData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          ...data,
+          date: data.date?.toDate() || new Date(),
+          createdAt: data.createdAt?.toDate() || new Date(),
+          updatedAt: data.updatedAt?.toDate() || new Date()
+        } as BlogPost;
+      });
+      setPosts(postsData);
+    } catch (err) {
+      console.error('Error fetching blog posts:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchPosts();
+  }, [fetchPosts]);
 
   const addPost = async (post: Omit<BlogPost, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -1821,6 +1819,7 @@ export function useBlogPosts() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      await fetchPosts();
       return docRef.id;
     } catch (error) {
       console.error('Error adding post:', error);
@@ -1835,6 +1834,7 @@ export function useBlogPosts() {
         ...data,
         updatedAt: serverTimestamp()
       });
+      await fetchPosts();
     } catch (error) {
       console.error('Error updating post:', error);
       throw error;
@@ -1845,6 +1845,7 @@ export function useBlogPosts() {
     try {
       const docRef = doc(db, 'blog_posts', id);
       await deleteDoc(docRef);
+      await fetchPosts();
     } catch (error) {
       console.error('Error deleting post:', error);
       throw error;
@@ -1857,7 +1858,8 @@ export function useBlogPosts() {
     error,
     addPost,
     updatePost,
-    deletePost
+    deletePost,
+    refresh: fetchPosts
   };
 }
 export interface UserInterface {
@@ -1876,35 +1878,37 @@ export function useUsers() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      query(collection(db, 'profiles'), orderBy('createdAt', 'desc')),
-      (snapshot) => {
-        const usersData = snapshot.docs.map(doc => {
-          const data = doc.data();
-          return {
-            id: doc.id,
-            name: data.name || 'Anonymous',
-            email: data.email,
-            status: data.status || 'active',
-            joinDate: data.createdAt?.toDate() || new Date(),
-            lastLogin: data.lastLogin?.toDate() || new Date(),
-            dealsRedeemed: data.dealsRedeemed || 0,
-            isAdmin: data.isAdmin || false
-          } as UserInterface;
-        });
-        setUsers(usersData);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching users:', err);
-        setError(err as Error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+  const fetchUsers = useCallback(async () => {
+    try {
+      setLoading(true);
+      const snapshot = await getDocs(
+        query(collection(db, 'profiles'), orderBy('createdAt', 'desc'))
+      );
+      const usersData = snapshot.docs.map(doc => {
+        const data = doc.data();
+        return {
+          id: doc.id,
+          name: data.name || 'Anonymous',
+          email: data.email,
+          status: data.status || 'active',
+          joinDate: data.createdAt?.toDate() || new Date(),
+          lastLogin: data.lastLogin?.toDate() || new Date(),
+          dealsRedeemed: data.dealsRedeemed || 0,
+          isAdmin: data.isAdmin || false
+        } as UserInterface;
+      });
+      setUsers(usersData);
+    } catch (err) {
+      console.error('Error fetching users:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchUsers();
+  }, [fetchUsers]);
 
   const updateUserStatus = async (userId: string, status: 'active' | 'inactive') => {
     try {
@@ -1913,6 +1917,7 @@ export function useUsers() {
         status,
         updatedAt: serverTimestamp()
       });
+      await fetchUsers();
     } catch (error) {
       console.error('Error updating user status:', error);
       throw error;
@@ -1940,6 +1945,7 @@ export function useUsers() {
         ...data,
         updatedAt: serverTimestamp()
       });
+      await fetchUsers();
     } catch (error) {
       console.error('Error updating user:', error);
       throw error;
@@ -1953,6 +1959,7 @@ export function useUsers() {
         isAdmin,
         updatedAt: serverTimestamp()
       });
+      await fetchUsers();
     } catch (error) {
       console.error('Error updating user role:', error);
       throw error;
@@ -1967,6 +1974,7 @@ export function useUsers() {
     sendEmailToUser,
     updateUser,
     updateUserRole,
+    refresh: fetchUsers
   };
 }
 
@@ -1975,24 +1983,24 @@ export function useSettings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      doc(db, 'settings', 'system'),
-      (doc) => {
-        if (doc.exists()) {
-          setSettings(doc.data() as SystemSettings);
-        }
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching settings:', error);
-        setError(error as Error);
-        setLoading(false);
+  const fetchSettings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const docSnap = await getDoc(doc(db, 'settings', 'system'));
+      if (docSnap.exists()) {
+        setSettings(docSnap.data() as SystemSettings);
       }
-    );
-
-    return () => unsubscribe();
+    } catch (err) {
+      console.error('Error fetching settings:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSettings();
+  }, [fetchSettings]);
 
   const updateSettings = async (newSettings: Partial<SystemSettings>) => {
     try {
@@ -2004,6 +2012,7 @@ export function useSettings() {
         },
         { merge: true }
       );
+      await fetchSettings();
     } catch (error) {
       console.error('Error updating settings:', error);
       throw error;
@@ -2014,7 +2023,8 @@ export function useSettings() {
     settings,
     loading,
     error,
-    updateSettings
+    updateSettings,
+    refresh: fetchSettings
   };
 }
 
@@ -2029,31 +2039,31 @@ export function useSiteSettings() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      doc(db, 'settings', 'system'),
-      (doc) => {
-        if (doc.exists()) {
-          const data = doc.data();
-          setSettings({
-            siteName: data.general?.siteName || '',
-            siteUrl: data.general?.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || '',
-            supportEmail: data.general?.supportEmail || '',
-            supportPhone: data.general?.supportPhone || '',
-            supportAddress: data.general?.supportAddress || ''
-          });
-        }
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching site settings:', error);
-        setError(error as Error);
-        setLoading(false);
+  const fetchSiteSettings = useCallback(async () => {
+    try {
+      setLoading(true);
+      const docSnap = await getDoc(doc(db, 'settings', 'system'));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setSettings({
+          siteName: data.general?.siteName || '',
+          siteUrl: data.general?.siteUrl || process.env.NEXT_PUBLIC_SITE_URL || '',
+          supportEmail: data.general?.supportEmail || '',
+          supportPhone: data.general?.supportPhone || '',
+          supportAddress: data.general?.supportAddress || ''
+        });
       }
-    );
-
-    return () => unsubscribe();
+    } catch (err) {
+      console.error('Error fetching site settings:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchSiteSettings();
+  }, [fetchSiteSettings]);
 
   return { settings, loading, error };
 }
@@ -2063,26 +2073,26 @@ export function useContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const unsubscribe = onSnapshot(
-      collection(db, 'content'),
-      (snapshot) => {
-        const contentData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as ContentSection[];
-        setContent(contentData.sort((a, b) => a.order - b.order));
-        setLoading(false);
-      },
-      (error) => {
-        console.error('Error fetching content:', error);
-        setError(error as Error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+  const fetchContent = useCallback(async () => {
+    try {
+      setLoading(true);
+      const snapshot = await getDocs(collection(db, 'content'));
+      const contentData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ContentSection[];
+      setContent(contentData.sort((a, b) => a.order - b.order));
+    } catch (err) {
+      console.error('Error fetching content:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchContent();
+  }, [fetchContent]);
 
   const addContent = async (newContent: Omit<ContentSection, 'id'>) => {
     try {
@@ -2091,6 +2101,7 @@ export function useContent() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      await fetchContent();
     } catch (error) {
       console.error('Error adding content:', error);
       throw error;
@@ -2104,6 +2115,7 @@ export function useContent() {
         ...updates,
         updatedAt: serverTimestamp()
       });
+      await fetchContent();
     } catch (error) {
       console.error('Error updating content:', error);
       throw error;
@@ -2112,9 +2124,9 @@ export function useContent() {
 
   const deleteContent = async (id: string) => {
     try {
-      // console.log(id);
       const docRef = doc(db, 'content', id);
       await deleteDoc(docRef);
+      await fetchContent();
     } catch (error) {
       console.error('Error deleting content:', error);
       throw error;
@@ -2127,7 +2139,8 @@ export function useContent() {
     error,
     addContent,
     updateContent,
-    deleteContent
+    deleteContent,
+    refresh: fetchContent
   };
 }
 
@@ -2136,32 +2149,31 @@ export function useDynamicLinks() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const linksQuery = query(
-      collection(db, 'content'),
-      where('status', '==', 'published'),
-      orderBy('order', 'asc')
-    );
-    
-    const unsubscribe = onSnapshot(
-      linksQuery,
-      (snapshot) => {
-        const linksData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as ContentSection[];
-        setLinks(linksData);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching dynamic links:', err);
-        setError(err as Error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+  const fetchLinks = useCallback(async () => {
+    try {
+      setLoading(true);
+      const linksQuery = query(
+        collection(db, 'content'),
+        where('status', '==', 'published'),
+        orderBy('order', 'asc')
+      );
+      const snapshot = await getDocs(linksQuery);
+      const linksData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as ContentSection[];
+      setLinks(linksData);
+    } catch (err) {
+      console.error('Error fetching dynamic links:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchLinks();
+  }, [fetchLinks]);
 
   return { links, loading, error };
 }
@@ -2171,34 +2183,33 @@ export function useFAQs() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const faqQuery = query(
-      collection(db, 'faqs'),
-      orderBy('category'),
-      orderBy('order')
-    );
-
-    const unsubscribe = onSnapshot(
-      faqQuery,
-      (snapshot) => {
-        const faqData = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data(),
-          createdAt: doc.data().createdAt?.toDate(),
-          updatedAt: doc.data().updatedAt?.toDate()
-        })) as FAQ[];
-        setFaqs(faqData);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching FAQs:', err);
-        setError(err as Error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+  const fetchFAQs = useCallback(async () => {
+    try {
+      setLoading(true);
+      const faqQuery = query(
+        collection(db, 'faqs'),
+        orderBy('category'),
+        orderBy('order')
+      );
+      const snapshot = await getDocs(faqQuery);
+      const faqData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data(),
+        createdAt: doc.data().createdAt?.toDate(),
+        updatedAt: doc.data().updatedAt?.toDate()
+      })) as FAQ[];
+      setFaqs(faqData);
+    } catch (err) {
+      console.error('Error fetching FAQs:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchFAQs();
+  }, [fetchFAQs]);
 
   const addFAQ = async (faq: Omit<FAQ, 'id' | 'createdAt' | 'updatedAt'>) => {
     try {
@@ -2207,6 +2218,7 @@ export function useFAQs() {
         createdAt: serverTimestamp(),
         updatedAt: serverTimestamp()
       });
+      await fetchFAQs();
     } catch (error) {
       console.error('Error adding FAQ:', error);
       throw error;
@@ -2220,6 +2232,7 @@ export function useFAQs() {
         ...updates,
         updatedAt: serverTimestamp()
       });
+      await fetchFAQs();
     } catch (error) {
       console.error('Error updating FAQ:', error);
       throw error;
@@ -2229,6 +2242,7 @@ export function useFAQs() {
   const deleteFAQ = async (id: string) => {
     try {
       await deleteDoc(doc(db, 'faqs', id));
+      await fetchFAQs();
     } catch (error) {
       console.error('Error deleting FAQ:', error);
       throw error;
@@ -2241,7 +2255,8 @@ export function useFAQs() {
     error,
     addFAQ,
     updateFAQ,
-    deleteFAQ
+    deleteFAQ,
+    refresh: fetchFAQs
   };
 }
 
@@ -2250,30 +2265,28 @@ export function useAboutContent() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const aboutDoc = doc(db, 'about', 'main');
-    
-    const unsubscribe = onSnapshot(
-      aboutDoc,
-      (doc) => {
-        if (doc.exists()) {
-          const data = doc.data();
-          setContent({
-            ...data,
-            updatedAt: data.updatedAt?.toDate()
-          } as AboutContent | any);
-        }
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching about content:', err);
-        setError(err as Error);
-        setLoading(false);
+  const fetchAboutContent = useCallback(async () => {
+    try {
+      setLoading(true);
+      const docSnap = await getDoc(doc(db, 'about', 'main'));
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        setContent({
+          ...data,
+          updatedAt: data.updatedAt?.toDate()
+        } as AboutContent | any);
       }
-    );
-
-    return () => unsubscribe();
+    } catch (err) {
+      console.error('Error fetching about content:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchAboutContent();
+  }, [fetchAboutContent]);
 
   const updateAboutContent = async (updates: Partial<AboutContent>) => {
     try {
@@ -2282,6 +2295,7 @@ export function useAboutContent() {
         ...updates,
         updatedAt: serverTimestamp()
       }, { merge: true });
+      await fetchAboutContent();
     } catch (error) {
       console.error('Error updating about content:', error);
       throw error;
@@ -2292,7 +2306,8 @@ export function useAboutContent() {
     content,
     loading,
     error,
-    updateAboutContent
+    updateAboutContent,
+    refresh: fetchAboutContent
   };
 }
 
@@ -2301,29 +2316,28 @@ export function useMediaFiles() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
 
-  useEffect(() => {
-    const filesRef = collection(db, 'media_files');
-    const q = query(filesRef, orderBy('createdAt', 'desc'));
-    
-    const unsubscribe = onSnapshot(
-      q,
-      (snapshot) => {
-        const mediaFiles = snapshot.docs.map(doc => ({
-          id: doc.id,
-          ...doc.data()
-        })) as MediaFile[];
-        setFiles(mediaFiles);
-        setLoading(false);
-      },
-      (err) => {
-        console.error('Error fetching media files:', err);
-        setError(err as Error);
-        setLoading(false);
-      }
-    );
-
-    return () => unsubscribe();
+  const fetchMediaFiles = useCallback(async () => {
+    try {
+      setLoading(true);
+      const filesRef = collection(db, 'media_files');
+      const q = query(filesRef, orderBy('createdAt', 'desc'));
+      const snapshot = await getDocs(q);
+      const mediaFiles = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as MediaFile[];
+      setFiles(mediaFiles);
+    } catch (err) {
+      console.error('Error fetching media files:', err);
+      setError(err as Error);
+    } finally {
+      setLoading(false);
+    }
   }, []);
+
+  useEffect(() => {
+    fetchMediaFiles();
+  }, [fetchMediaFiles]);
 
   const uploadFile = async (file: File, onProgress?: (progress: number) => void) => {
     try {
@@ -2359,6 +2373,7 @@ export function useMediaFiles() {
         updatedAt: serverTimestamp()
       });
 
+      await fetchMediaFiles();
     } catch (error) {
       console.error('Error uploading file:', error);
       throw error;
@@ -2372,13 +2387,14 @@ export function useMediaFiles() {
       if (!fileDoc.exists()) throw new Error('File not found');
 
       const fileData = fileDoc.data();
-      
+
       // Delete from storage
       const storageRef = ref(storage, fileData.url);
       await deleteObject(storageRef);
 
       // Delete from Firestore
       await deleteDoc(doc(db, 'media_files', fileId));
+      await fetchMediaFiles();
     } catch (error) {
       console.error('Error deleting file:', error);
       throw error;
@@ -2390,7 +2406,8 @@ export function useMediaFiles() {
     loading,
     error,
     uploadFile,
-    deleteFile
+    deleteFile,
+    refresh: fetchMediaFiles
   };
 }
 
