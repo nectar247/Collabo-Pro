@@ -3,61 +3,28 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import { notFound } from 'next/navigation';
 import CategoryPageClient from './CategoryPageClient';
-import { slugToCategory } from '@/helper';
-
-// Enhanced category matching for server-side
-function doesCategoryMatch(dealCategory: any, searchCategory: string) {
-  if (!dealCategory) return false;
-  
-  // Convert to string and handle various data types
-  let dealCat = '';
-  if (typeof dealCategory === 'string') {
-    dealCat = dealCategory;
-  } else if (typeof dealCategory === 'object' && dealCategory.toString) {
-    dealCat = dealCategory.toString();
-  } else {
-    dealCat = String(dealCategory);
-  }
-  
-  const searchCat = String(searchCategory);
-  
-  // Clean and normalize strings
-  const cleanString = (str: string) => {
-    return str
-      .toString()
-      .trim()
-      .replace(/[\u200B-\u200D\uFEFF]/g, '') // Remove zero-width characters
-      .replace(/[^\w\s]/g, ' ') // Replace special chars with spaces
-      .replace(/\s+/g, ' ') // Normalize multiple spaces
-      .toLowerCase();
-  };
-  
-  const cleanDealCat = cleanString(dealCat);
-  const cleanSearchCat = cleanString(searchCat);
-  
-  // Multiple matching strategies
-  return (
-    cleanDealCat === cleanSearchCat ||
-    cleanDealCat.startsWith(cleanSearchCat) ||
-    cleanDealCat.endsWith(cleanSearchCat) ||
-    cleanDealCat.includes(cleanSearchCat) ||
-    cleanSearchCat.includes(cleanDealCat) ||
-    cleanDealCat.replace(/\s/g, '') === cleanSearchCat.replace(/\s/g, '') ||
-    cleanDealCat.split(' ').some(word => 
-      cleanSearchCat.split(' ').some(searchWord => 
-        word === searchWord && word.length > 2
-      )
-    )
-  );
-}
+import { slugToCategory, categoryToSlug } from '@/helper';
 
 export default async function DynamicPage({ params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
-    // Convert slug back to category name (e.g., "home-and-garden" -> "home & garden")
-    const categoryName = slugToCategory(slug);
-    
-    // Option 1: Try exact category match first (most efficient)
+
+    // Step 1: Find the actual category name from the categories collection
+    // slugToCategory returns lowercase, but Firestore is case-sensitive
+    // So we fetch categories and match by regenerating slugs
+    const categoriesSnapshot = await getDocs(collection(db, 'categories'));
+    const matchedCategory = categoriesSnapshot.docs.find(doc => {
+      const name = doc.data().name;
+      return name && categoryToSlug(name) === slug;
+    });
+
+    if (!matchedCategory) {
+      notFound();
+    }
+
+    const categoryName = matchedCategory.data().name;
+
+    // Step 2: Fetch deals for this category using the exact name from Firestore
     let categoryDeals: any[] = [];
 
     try {
@@ -71,21 +38,7 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
         ...doc.data()
       }));
     } catch (exactError) {
-      // Silently continue to flexible matching
-    }
-
-    // If no exact matches, check if category exists (without fetching ALL deals)
-    if (categoryDeals.length === 0) {
-      const categoriesQuery = query(
-        collection(db, 'categories'),
-        where('name', '==', categoryName)
-      );
-      const categoriesSnapshot = await getDocs(categoriesQuery);
-
-      if (categoriesSnapshot.empty) {
-        notFound();
-      }
-      // Category exists but has no deals - render empty state
+      // Category exists but query failed - render empty state
     }
 
     // Convert Firestore timestamps to serializable format

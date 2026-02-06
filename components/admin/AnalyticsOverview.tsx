@@ -57,8 +57,8 @@ export default function AnalyticsOverview() {
             collection(db, 'deals_fresh'),
             where('status', '==', 'active')
           );
-          const dealsCount = await getCountFromServer(dealsQuery);
-          activeDeals = dealsCount.data().count;
+          const dealsSnapshot = await getDocs(dealsQuery);
+          activeDeals = dealsSnapshot.size;
         } catch (error) {
           console.error('Error fetching deal count:', error);
         }
