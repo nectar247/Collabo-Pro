@@ -13,7 +13,6 @@ import Preloader from '@/components/loaders/preloader';
 
 import NavigationLite from "@/components/NavigationLite";
 import FooterCached from "@/components/footer-cached";
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function BlogPostContent({
   id
@@ -23,14 +22,6 @@ export default function BlogPostContent({
   const [post, setPost] = useState<BlogPost | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-
-  const { settings, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   useEffect(() => {
     async function fetchPost() {

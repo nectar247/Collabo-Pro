@@ -6,7 +6,6 @@ import Link from 'next/link';
 import { DealCard1 } from '@/components/deals/card';
 import NavigationLite from "@/components/NavigationLite";
 import FooterCached from "@/components/footer-cached";
-import { useBrands, useCategories, useSettings, useDynamicLinks } from '@/lib/firebase/hooks';
 
 // Type for serialized deals from server
 interface SerializedDeal {
@@ -33,12 +32,6 @@ export default function CategoryPageClient({
   categoryName 
 }: CategoryPageClientProps) {
   
-  // Hooks for footer/navigation only
-  const { settings, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories } = useCategories();
-  const { featuredBrands, footerBrands, loading: loadingBrands } = useBrands({ limit: null });
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
-
   // Format category name for display - replace dashes with spaces and capitalize properly
   const formatCategoryName = (name: string) => {
     return name

@@ -10,19 +10,10 @@ import ErrorLoader from "@/components/loaders/ErrorLoader";
 
 import NavigationLite from "@/components/NavigationLite";
 import FooterCached from "@/components/footer-cached";
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function BlogPageClient() {
   const { posts, loading, error } = useBlogPosts();
 
-  const { settings, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
-  
   if (loading) {
     return <Preloader text="Loading posts..." />;
   }

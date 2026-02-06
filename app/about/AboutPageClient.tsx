@@ -9,7 +9,6 @@ import ErrorLoader from "@/components/loaders/ErrorLoader";
 
 import NavigationLite from "@/components/NavigationLite";
 import FooterCached from "@/components/footer-cached";
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 // Helper function to get icon component
 function DynamicIcon({ name }: { name: string }) {
@@ -25,14 +24,6 @@ export default function AboutPageClient() {
 
   const { settings } = useSiteSettings();
   const { content, loading, error } = useAboutContent();
-
-  const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
 
   if (loading) {
     return <Preloader text="Loading..." />;

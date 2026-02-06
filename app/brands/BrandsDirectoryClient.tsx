@@ -4,11 +4,8 @@
 import { useMemo, useState, useEffect } from "react";
 import Link from "next/link";
 import { Search, X } from "lucide-react";
-import Preloader from "@/components/loaders/preloader";
-import ErrorLoader from "@/components/loaders/ErrorLoader";
 import NavigationLite from "@/components/NavigationLite";
 import FooterCached from "@/components/footer-cached";
-import { useBrands, useCategories, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 import { toast } from "sonner";
 
 interface BrandsDirectoryClientProps {
@@ -21,34 +18,11 @@ interface BrandsDirectoryClientProps {
 
 export default function BrandsDirectoryClient({
   allBrands: serverAllBrands,
-  footerBrands: serverFooterBrands,
-  categories: serverCategories,
-  dynamicLinks: serverDynamicLinks,
-  settings: serverSettings,
 }: BrandsDirectoryClientProps = {}) {
 
-  // Only fetch client-side if server data not provided
-  const shouldFetchBrands = !serverAllBrands || serverAllBrands.length === 0;
-  const shouldFetchCategories = !serverCategories || serverCategories.length === 0;
-  const shouldFetchDynamicLinks = !serverDynamicLinks || serverDynamicLinks.length === 0;
-  const shouldFetchSettings = !serverSettings;
-
-  const { settings: clientSettings, loading: settLoading } = useSettings();
-  const { categories: clientCategories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands: clientAllBrands, footerBrands: clientFooterBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { links: clientDynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
-
-  // Use server data if available, otherwise use client data
-  const allBrands = serverAllBrands && serverAllBrands.length > 0 ? serverAllBrands : clientAllBrands;
-  const footerBrands = serverFooterBrands && serverFooterBrands.length > 0 ? serverFooterBrands : clientFooterBrands;
-  const categories = serverCategories && serverCategories.length > 0 ? serverCategories : clientCategories;
-  const dynamicLinks = serverDynamicLinks && serverDynamicLinks.length > 0 ? serverDynamicLinks : clientDynamicLinks;
-  const settings = serverSettings || clientSettings;
-
-  // Loading is false if we have server data, otherwise use client loading state
-  const loading = serverAllBrands ? false : loadingBrands;
+  // Use server data directly - provided by ISR server component
+  const allBrands = serverAllBrands || [];
+  const loading = false;
 
   const [activeFilter, setActiveFilter] = useState("all");
   const [searchQuery, setSearchQuery] = useState("");
@@ -109,8 +83,8 @@ export default function BrandsDirectoryClient({
     });
   };
 
-  if (loading) return <Preloader text="Loading brands..." />;
-  if (errorBrands) return <ErrorLoader text="Error Loading Brands" message={errorBrands.message} />;
+  if (loading) return <></>;
+
 
   return (
     <>

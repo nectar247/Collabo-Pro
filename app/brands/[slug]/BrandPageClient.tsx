@@ -15,24 +15,14 @@ import { Deal } from '@/lib/firebase/collections';
 
 import NavigationLite from "@/components/NavigationLite";
 import FooterCached from "@/components/footer-cached";
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 export default function BrandPageClient() {
   const params = useParams();
   const slug = params.slug as string;
-  const { getBrandDetails } = useDeals();
   const [deals, setDeals] = useState([]);
   const [brandName, setBrandName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const { settings, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
   
 
   useEffect(() => {
@@ -92,7 +82,6 @@ export default function BrandPageClient() {
           .map(async (doc) => ({
             id: doc.id,
             ...doc.data(),
-            brandDetails: await getBrandDetails(doc.data().brand),
           }));
   
         const brandDeals = await Promise.all(brandDealsPromises) as unknown as Deal[];
@@ -111,7 +100,7 @@ export default function BrandPageClient() {
     };
     
     fetchBrandDeals();
-  }, [slug, getBrandDetails]);
+  }, [slug]);
 
   if (loading) {
     return <Preloader text="Loading deals..." />;

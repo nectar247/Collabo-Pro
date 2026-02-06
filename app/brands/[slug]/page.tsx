@@ -15,35 +15,14 @@ import { Deal } from '@/lib/firebase/collections';
 
 import NavigationLite from "@/components/NavigationLite";
 import FooterCached from "@/components/footer-cached";
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
-
-// Helper function to generate slug from brand name (same as Firebase function)
-function generateSlug(name: string): string {
-  return name
-    .toLowerCase()
-    .trim()
-    .replace(/[^\w\s-]/g, '') // Remove special characters except spaces and hyphens
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Replace multiple hyphens with single hyphen
-    .replace(/^-|-$/g, ''); // Remove leading/trailing hyphens
-}
 
 export default function BrandPageClient() {
   const params = useParams();
   const slug = params.slug as string;
-  const { getBrandDetails } = useDeals();
   const [deals, setDeals] = useState([]);
   const [brandName, setBrandName] = useState<string>("");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
-
-  const { settings, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands, error: errorBrands } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
   
 
   useEffect(() => {
@@ -78,51 +57,6 @@ export default function BrandPageClient() {
             brand = brandData.name;
             setBrandName(brand);
             brandFound = true;
-            console.log(`✅ Found brand by slug: "${brand}"`);
-          } else {
-            console.log('❌ No brand found with slug field, trying fallback...');
-            
-            // Step 2: Fallback - get all brands and check generated slugs
-            const allBrandsSnapshot = await getDocs(collection(db, 'brands'));
-            console.log(`📊 Checking ${allBrandsSnapshot.docs.length} brands for slug match...`);
-            
-            const matchingBrand = allBrandsSnapshot.docs.find(doc => {
-              const data = doc.data();
-              const generatedSlug = generateSlug(data.name);
-              const matches = generatedSlug === slug.toLowerCase(); // Compare with lowercase
-              
-              if (matches) {
-                console.log(`🎯 Found match: "${data.name}" -> "${generatedSlug}"`);
-              }
-              
-              return matches;
-            });
-
-            if (matchingBrand) {
-              const brandData = matchingBrand.data();
-              brand = brandData.name;
-              setBrandName(brand);
-              brandFound = true;
-              console.log(`✅ Found brand by generated slug: "${brand}"`);
-            } else {
-              // Debug: Log some sample brand names and their generated slugs
-              console.log('🔬 Debug: Sample brands and their generated slugs:');
-              allBrandsSnapshot.docs.slice(0, 10).forEach(doc => {
-                const data = doc.data();
-                const generatedSlug = generateSlug(data.name);
-                console.log(`  "${data.name}" -> "${generatedSlug}"`);
-              });
-              
-              console.log(`❌ No brand found for slug: "${slug}"`);
-              console.log(`🔍 Looking for brands containing "vinyl" or "castle":`);
-              allBrandsSnapshot.docs.forEach(doc => {
-                const data = doc.data();
-                const name = data.name.toLowerCase();
-                if (name.includes('vinyl') || name.includes('castle')) {
-                  console.log(`  Found: "${data.name}" -> "${generateSlug(data.name)}"`);
-                }
-              });
-            }
           }
         }
 
@@ -165,7 +99,6 @@ export default function BrandPageClient() {
           .map(async (doc) => ({
             id: doc.id,
             ...doc.data(),
-            brandDetails: await getBrandDetails(doc.data().brand),
           }));
   
         const brandDeals = await Promise.all(brandDealsPromises) as unknown as Deal[];
@@ -186,7 +119,7 @@ export default function BrandPageClient() {
     };
     
     fetchBrandDeals();
-  }, [slug, getBrandDetails]);
+  }, [slug]);
 
   if (loading) {
     return <Preloader text="Loading deals..." />;

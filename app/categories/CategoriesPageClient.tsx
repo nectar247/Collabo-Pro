@@ -1,11 +1,8 @@
 "use client";
 
 import { CategoryCard1 } from "@/components/deals/categories";
-import ErrorLoader from "@/components/loaders/ErrorLoader";
-import Preloader from "@/components/loaders/preloader";
 import NavigationLite from "@/components/NavigationLite";
 import FooterCached from "@/components/footer-cached";
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 import { DynamicIcon, getCategoryColor } from "@/helper";
 
 interface CategoriesPageClientProps {
@@ -19,38 +16,10 @@ interface CategoriesPageClientProps {
 
 export default function CategoriesPageClient({
   categories: serverCategories,
-  featuredBrands: serverFeaturedBrands,
-  footerBrands: serverFooterBrands,
-  trendingDeals: serverTrendingDeals,
-  dynamicLinks: serverDynamicLinks,
-  settings: serverSettings,
 }: CategoriesPageClientProps = {}) {
 
-  // Only fetch client-side if server data not provided
-  const { settings: clientSettings, loading: settLoading } = useSettings();
-  const { categories: clientCategories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { featuredBrands: clientFeaturedBrands, footerBrands: clientFooterBrands, loading: loadingBrands } = useBrands();
-  const { trendingDeals: clientTrendingDeals, loading: loadingDeals } = useDeals();
-  const { links: clientDynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
-
-  // Use server data if available, otherwise use client data
-  const categories = serverCategories && serverCategories.length > 0 ? serverCategories : clientCategories;
-  const featuredBrands = serverFeaturedBrands && serverFeaturedBrands.length > 0 ? serverFeaturedBrands : clientFeaturedBrands;
-  const footerBrands = serverFooterBrands && serverFooterBrands.length > 0 ? serverFooterBrands : clientFooterBrands;
-  const trendingDeals = serverTrendingDeals && serverTrendingDeals.length > 0 ? serverTrendingDeals : clientTrendingDeals;
-  const dynamicLinks = serverDynamicLinks && serverDynamicLinks.length > 0 ? serverDynamicLinks : clientDynamicLinks;
-  const settings = serverSettings || clientSettings;
-
-  // Loading is false if we have server data, otherwise use client loading state
-  const loading = serverCategories ? false : loadingCategories;
-
-  if (loading) {
-    return <Preloader text="Loading categories..." />;
-  }
-
-  if (CategoriesError) {
-    return <ErrorLoader text="Error Loading Categories" message={CategoriesError.message} />;
-  }
+  // Use server data directly - provided by ISR server component
+  const categories = serverCategories || [];
 
   return (
     <>

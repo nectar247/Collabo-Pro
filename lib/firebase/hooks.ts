@@ -895,32 +895,11 @@ export function useDeals(options: UseDealsOptions = {}) {
   };
 }
 
-// Individual Deal hook
+// Individual Deal hook - uses targeted brand check instead of fetching all brands
 export function useDeal(dealId: string) {
   const [deal, setDeal] = useState<Deal | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<Error | null>(null);
-  const [activeBrands, setActiveBrands] = useState<string[]>([]);
-  const [activeBrandsLoaded, setActiveBrandsLoaded] = useState(false);
-
-  // Load active brands for this hook too
-  useEffect(() => {
-    const fetchActiveBrands = async () => {
-      try {
-        const brandsSnapshot = await getDocs(query(
-          collection(db, 'brands'),
-          where('status', '==', 'active')
-        ));
-        const brandNames = brandsSnapshot.docs.map(doc => doc.data().name);
-        setActiveBrands(brandNames);
-        setActiveBrandsLoaded(true);
-      } catch (err) {
-        console.error("Error fetching active brands:", err);
-      }
-    };
-
-    fetchActiveBrands();
-  }, []);
 
   useEffect(() => {
     if (!dealId) {
@@ -928,20 +907,30 @@ export function useDeal(dealId: string) {
       return;
     }
 
-    // Wait for active brands to load
-    if (!activeBrandsLoaded) return;
-
     const unsubscribe = onSnapshot(
       doc(db, 'deals_fresh', dealId),
-      async (doc) => {
-        if (doc.exists()) {
-          const dealData = doc.data();
-          
-          // Check if brand is active using cached data
-          if (activeBrands.includes(dealData.brand)) {
-            setDeal({ id: doc.id, ...dealData } as Deal);
-          } else {
-            setDeal(null); // Brand is not active
+      async (docSnap) => {
+        if (docSnap.exists()) {
+          const dealData = docSnap.data();
+
+          // Check if brand is active with a single targeted query (1 read)
+          // instead of fetching ALL active brands
+          try {
+            const brandQuery = query(
+              collection(db, 'brands'),
+              where('name', '==', dealData.brand),
+              where('status', '==', 'active')
+            );
+            const brandSnap = await getDocs(brandQuery);
+
+            if (!brandSnap.empty) {
+              setDeal({ id: docSnap.id, ...dealData } as Deal);
+            } else {
+              setDeal(null); // Brand is not active
+            }
+          } catch (err) {
+            // On error, still show the deal
+            setDeal({ id: docSnap.id, ...dealData } as Deal);
           }
         } else {
           setDeal(null);
@@ -956,7 +945,7 @@ export function useDeal(dealId: string) {
     );
 
     return unsubscribe;
-  }, [dealId, activeBrands, activeBrandsLoaded]);
+  }, [dealId]);
 
   return { deal, loading, error };
 }
@@ -1618,26 +1607,23 @@ export function useBrands(options: UseBrandsOptions = {}) {
   }, []);
 
   // OPTIMIZED: Only fetch what's requested based on options
-  // This prevents fetching ALL brands unnecessarily
+  // Footer brands are NOT fetched here - FooterCached uses CacheProvider instead
   useEffect(() => {
     const { limit } = options;
 
     // If limit is null, caller wants all brands (e.g., brands directory page)
     if (limit === null) {
       fetchAllBrands();
-      fetchFooterBrands(); // Footer is always needed
     }
     // If limit is specified, caller wants featured brands (e.g., homepage)
     else if (limit) {
       fetchFeaturedBrandss();
-      fetchFooterBrands();
     }
     // Default: fetch featured brands for general use
     else {
       fetchFeaturedBrands();
-      fetchFooterBrands();
     }
-  }, [options.limit, fetchAllBrands, fetchFeaturedBrands, fetchFeaturedBrandss, fetchFooterBrands]);
+  }, [options.limit, fetchAllBrands, fetchFeaturedBrands, fetchFeaturedBrandss]);
 
   // Note: Admin-specific fetches (fetchAdminBrands, fetchAllAdminBrands, fetchActiveBrands)
   // should be called explicitly from admin components, not automatically on every mount

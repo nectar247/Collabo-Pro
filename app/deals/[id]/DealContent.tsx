@@ -12,10 +12,11 @@ import { DealsLabel, reformatDate } from '@/helper';
 import { useAuth, useProfile } from '@/lib/firebase/hooks';
 import DiscountModal from '@/components/modal/DiscountModal';
 import { DealButton } from '@/components/deals/card';
+import { collection, query, where, getDocs } from 'firebase/firestore';
+import { db } from '@/lib/firebase';
 
 import NavigationLite from "@/components/NavigationLite";
 import FooterCached from "@/components/footer-cached";
-import { useBrands, useCategories, useDeals, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
 
 interface DealContentProps {
   deal: Deal | null;
@@ -27,31 +28,31 @@ export default function DealContent({ deal }: DealContentProps) {
   const {savedDeals, savedUnsaveDeals} = useProfile();
   const [isSaved, setIsSaved] = useState(false);
 
-  const { settings, loading: settLoading } = useSettings();
-  const { categories, loading: loadingCategories, error: CategoriesError } = useCategories();
-  const { allBrands, featuredBrands, footerBrands, loading: loadingBrands, error: errorBrands, activeBrands, activeBrandsLoaded } = useBrands({
-    limit: null
-  });
-  const { trendingDeals, loading: loadingDeals } = useDeals();
-  const { links: dynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
-
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isBrandActive, setIsBrandActive] = useState<boolean | null>(null);
+  const [activeBrandsLoaded, setActiveBrandsLoaded] = useState(false);
 
-  // Check if the deal's brand is active
+  // Check if the deal's brand is active with a single targeted query
   useEffect(() => {
-    if (deal && activeBrandsLoaded && activeBrands) {
-      const brandIsActive = activeBrands.some(brand => brand.name === deal.brand);
-      setIsBrandActive(brandIsActive);
-      
-      // Log for debugging
-      console.log('🔍 Brand check:', {
-        dealBrand: deal.brand,
-        activeBrands: activeBrands.length,
-        isActive: brandIsActive
-      });
-    }
-  }, [deal, activeBrands, activeBrandsLoaded]);
+    if (!deal) return;
+    const checkBrandActive = async () => {
+      try {
+        const brandQuery = query(
+          collection(db, 'brands'),
+          where('name', '==', deal.brand),
+          where('status', '==', 'active')
+        );
+        const snapshot = await getDocs(brandQuery);
+        setIsBrandActive(!snapshot.empty);
+      } catch (err) {
+        console.error('Error checking brand status:', err);
+        setIsBrandActive(true); // Default to showing deal on error
+      } finally {
+        setActiveBrandsLoaded(true);
+      }
+    };
+    checkBrandActive();
+  }, [deal]);
 
   useEffect(()=>{
     if(user && savedDeals && savedDeals.length && deal){

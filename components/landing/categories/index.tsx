@@ -1,7 +1,6 @@
 import { CategoryCard1 } from '@/components/deals/categories';
 import { DynamicIcon, getCategoryColor } from '@/helper';
 import { Category } from '@/lib/firebase/collections';
-import { useCategories } from '@/lib/firebase/hooks';
 import { ArrowRight } from 'lucide-react';
 import Link from 'next/link';
 import { Tag } from 'lucide-react';

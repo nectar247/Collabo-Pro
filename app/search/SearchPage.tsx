@@ -20,23 +20,18 @@ import { getFunctions, httpsCallable } from 'firebase/functions';
 
 import NavigationLite from "@/components/NavigationLite";
 import FooterCached from "@/components/footer-cached";
-import { useBrands, useCategories, useDynamicLinks, useSettings } from '@/lib/firebase/hooks';
-import { Brand, Category, ContentSection } from '@/lib/firebase/collections';
 
 interface SearchPageProps {
   serverInitialDeals?: Deal[];
   serverTotalCount?: number;
-  serverCategories?: Category[];
-  serverBrands?: Brand[];
-  serverDynamicLinks?: ContentSection[];
+  serverCategories?: any[];
+  serverBrands?: any[];
+  serverDynamicLinks?: any[];
 }
 
 export default function SearchPage({
   serverInitialDeals,
   serverTotalCount,
-  serverCategories,
-  serverBrands,
-  serverDynamicLinks
 }: SearchPageProps = {}) {
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -65,35 +60,6 @@ export default function SearchPage({
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const [selectedBrand, setSelectedBrand] = useState<string>('all');
   const [sortBy, setSortBy] = useState<'newest' | 'expiring' | 'popular'>('newest');
-
-  // Hooks - only fetch if server data not provided
-  const { settings: settings__, loading: settLoading } = useSettings();
-  const { categories: clientCategories, loading: loadingCategories } = useCategories();
-  const { allBrands, featuredBrands: clientFeaturedBrands, footerBrands: clientFooterBrands, loading: loadingBrands } = useBrands();
-  const { links: clientDynamicLinks, loading: loadingDynamicLinks } = useDynamicLinks();
-
-  // Use server data if available AND not empty, otherwise use client hooks
-  const categories = (serverCategories && serverCategories.length > 0) ? serverCategories : clientCategories;
-  const featuredBrands = (serverBrands && serverBrands.length > 0) ? serverBrands : clientFeaturedBrands;
-  const footerBrands = (serverBrands && serverBrands.length > 0) ? serverBrands : clientFooterBrands;
-  const dynamicLinks = (serverDynamicLinks && serverDynamicLinks.length > 0) ? serverDynamicLinks : clientDynamicLinks;
-
-  // Debug: Log data sources
-  console.log('[SearchPage] Data sources:', {
-    serverCategories: serverCategories?.length || 0,
-    clientCategories: clientCategories?.length || 0,
-    categories: categories?.length || 0,
-    serverBrands: serverBrands?.length || 0,
-    clientFooterBrands: clientFooterBrands?.length || 0,
-    footerBrands: footerBrands?.length || 0,
-    serverDynamicLinks: serverDynamicLinks?.length || 0,
-    dynamicLinks: dynamicLinks?.length || 0
-  });
-
-  // Override loading states when server data is provided AND not empty
-  const actualLoadingBrands = (serverBrands && serverBrands.length > 0) ? false : loadingBrands;
-  const actualLoadingCategories = (serverCategories && serverCategories.length > 0) ? false : loadingCategories;
-  const actualLoadingDynamicLinks = (serverDynamicLinks && serverDynamicLinks.length > 0) ? false : loadingDynamicLinks;
 
   // Update search term when URL changes
   useEffect(() => {
