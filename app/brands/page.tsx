@@ -1,5 +1,5 @@
 // app/brands/page.tsx
-export const revalidate = 300; // ← Enables ISR: rebuilds page every 5 minutes
+export const revalidate = 3600; // ← Enables ISR: rebuilds page every 1 hour
 
 import { generateMetadata as createMetadata } from '@/lib/metadata';
 import BrandsDirectoryClient from './BrandsDirectoryClient';

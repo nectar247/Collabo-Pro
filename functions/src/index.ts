@@ -321,84 +321,99 @@ async function cleanupExpiredDeals(firestore: admin.firestore.Firestore) {
 
 export const scheduledBrandsDealCountUpdate = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .pubsub.schedule("every 5 hours")
+  .pubsub.schedule("every 12 hours")
   .timeZone("UTC")
   .onRun(async () => {
-    // 📊 Brand count updater - Deployed from local /functions - Dec 11, 2025
+    // 📊 Brand count updater - Optimized: fetch all deals ONCE, then count per brand
     const db = admin.firestore();
     const bulkWriter = db.bulkWriter();
+    const now = new Date();
 
-    // Optional: Error handler
     bulkWriter.onWriteError((error) => {
       console.error("BulkWriter Error:", error.message);
-      // Retry on internal errors or UNAVAILABLE
       return error.code === 13 || error.code === 14;
     });
 
-    const brandsSnapshot = await db.collection("brands").get();
+    // Fetch ALL active deals in one query instead of per-brand queries
+    const [brandsSnapshot, dealsSnapshot] = await Promise.all([
+      db.collection("brands").get(),
+      db.collection("deals_fresh")
+        .where("status", "==", "active")
+        .get()
+    ]);
 
+    // Count deals per brand in memory
+    const brandDealCounts = new Map<string, number>();
+    dealsSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.expiresAt?.toDate() > now) {
+        const brand = data.brand;
+        brandDealCounts.set(brand, (brandDealCounts.get(brand) || 0) + 1);
+      }
+    });
+
+    // Update each brand with its count
     for (const brandDoc of brandsSnapshot.docs) {
       const brandName = brandDoc.data().name;
-
-      const dealsSnapshot = await db.collection("deals_fresh") // FIX: Changed from "deals" to "deals_fresh"
-        .where("brand", "==", brandName)
-        .where("status", "==", "active")
-        .get();
-
-      const validDeals = dealsSnapshot.docs.filter(doc => {
-        const data = doc.data();
-        return data.expiresAt?.toDate() > new Date();
-      });
+      const count = brandDealCounts.get(brandName) || 0;
 
       bulkWriter.update(brandDoc.ref, {
-        activeDeals: validDeals.length,
+        activeDeals: count,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
     }
 
-    await bulkWriter.close(); // Finish and flush all writes
-    console.log("✔️ BulkWriter: All brands updated.");
+    await bulkWriter.close();
+    console.log(`✔️ BulkWriter: All ${brandsSnapshot.size} brands updated. Reads: ${brandsSnapshot.size + dealsSnapshot.size} (was ${brandsSnapshot.size * 2}+)`);
     return null;
   });
 
 export const scheduledCategoriesDealCountUpdate = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .pubsub.schedule("every 5 hours")
+  .pubsub.schedule("every 12 hours")
   .timeZone("UTC")
   .onRun(async () => {
-    // 🏷️ Category count updater - Deployed from local /functions - Dec 11, 2025
+    // 🏷️ Category count updater - Optimized: fetch all deals ONCE, then count per category
     const db = admin.firestore();
     const bulkWriter = db.bulkWriter();
+    const now = new Date();
 
     bulkWriter.onWriteError((error) => {
       console.error("BulkWriter Error:", error.message);
-      // Retry on internal errors or UNAVAILABLE
       return error.code === 13 || error.code === 14;
     });
 
-    const categoriesSnapshot = await db.collection("categories").get();
+    // Fetch ALL active deals in one query instead of per-category queries
+    const [categoriesSnapshot, dealsSnapshot] = await Promise.all([
+      db.collection("categories").get(),
+      db.collection("deals_fresh")
+        .where("status", "==", "active")
+        .get()
+    ]);
 
+    // Count deals per category in memory
+    const categoryDealCounts = new Map<string, number>();
+    dealsSnapshot.docs.forEach(doc => {
+      const data = doc.data();
+      if (data.expiresAt?.toDate() > now) {
+        const category = data.category;
+        categoryDealCounts.set(category, (categoryDealCounts.get(category) || 0) + 1);
+      }
+    });
+
+    // Update each category with its count
     for (const categoryDoc of categoriesSnapshot.docs) {
       const categoryName = categoryDoc.data().name;
-
-      const dealsSnapshot = await db.collection("deals_fresh") // FIX: Changed from "deals" to "deals_fresh"
-        .where("category", "==", categoryName)
-        .where("status", "==", "active")
-        .get();
-
-      const validDeals = dealsSnapshot.docs.filter(doc => {
-        const data = doc.data();
-        return data.expiresAt?.toDate() > new Date();
-      });
+      const count = categoryDealCounts.get(categoryName) || 0;
 
       bulkWriter.update(categoryDoc.ref, {
-        dealCount: validDeals.length,
+        dealCount: count,
         updatedAt: admin.firestore.FieldValue.serverTimestamp()
       });
     }
 
-    await bulkWriter.close(); // Finish and flush all writes
-    console.log("✔️ BulkWriter: All categories updated.");
+    await bulkWriter.close();
+    console.log(`✔️ BulkWriter: All ${categoriesSnapshot.size} categories updated. Reads: ${categoriesSnapshot.size + dealsSnapshot.size} (was ${categoriesSnapshot.size * 2}+)`);
     return null;
   });
 
@@ -711,12 +726,12 @@ async function refreshHomepageCacheLogic() {
 
 /**
  * Deals Page Cache Refresh Function
- * Runs every 30 minutes to pre-calculate and cache deals page data
+ * Runs every 6 hours to pre-calculate and cache deals page data
  * This dramatically improves deals page performance by reducing client-side queries
  */
 export const refreshDealsPageCache = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
-  .pubsub.schedule("every 30 minutes")
+  .pubsub.schedule("every 6 hours")
   .onRun(async () => {
     console.log("🔄 [DealsPageCache] Starting deals page cache refresh...");
     const firestore = admin.firestore();
@@ -816,7 +831,7 @@ export const refreshDealsPageCache = functions
  */
 export const refreshBrandsPageCache = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
-  .pubsub.schedule("every 60 minutes")
+  .pubsub.schedule("every 6 hours")
   .onRun(async () => {
     console.log("🔄 [BrandsPageCache] Starting brands page cache refresh...");
     const firestore = admin.firestore();
@@ -914,7 +929,7 @@ export const refreshBrandsPageCache = functions
  */
 export const refreshCategoriesPageCache = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
-  .pubsub.schedule("every 60 minutes")
+  .pubsub.schedule("every 6 hours")
   .onRun(async () => {
     console.log("🔄 [CategoriesPageCache] Starting categories page cache refresh...");
     const firestore = admin.firestore();
@@ -1041,11 +1056,11 @@ export const refreshCategoriesPageCache = functions
 /**
  * Build Search Index Function
  * Creates an inverted index for fast text search across deals
- * Runs every 1 hour to keep search index updated
+ * Runs every 6 hours to keep search index updated
  */
 export const buildSearchIndex = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .pubsub.schedule("every 1 hours")
+  .pubsub.schedule("every 6 hours")
   .onRun(async () => {
     console.log("🔍 [SearchIndex] Starting search index build...");
     const firestore = admin.firestore();

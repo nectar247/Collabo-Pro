@@ -74,36 +74,18 @@ export default async function DynamicPage({ params }: { params: Promise<{ slug: 
       // Silently continue to flexible matching
     }
 
-    // Option 2: If no exact matches, fall back to flexible matching
-    // Only do this if exact match returned no results
+    // If no exact matches, check if category exists (without fetching ALL deals)
     if (categoryDeals.length === 0) {
-      // Get all deals and filter (only as fallback)
-      const allDealsSnapshot = await getDocs(collection(db, 'deals_fresh'));
-      const allDeals = allDealsSnapshot.docs.map(doc => {
-        const data = doc.data();
-        return {
-          id: doc.id,
-          ...data
-        } as any; // Type assertion for Firestore data
-      });
-
-      // Filter with flexible matching
-      categoryDeals = allDeals.filter(deal =>
-        doesCategoryMatch(deal.category, categoryName)
+      const categoriesQuery = query(
+        collection(db, 'categories'),
+        where('name', '==', categoryName)
       );
-    }
+      const categoriesSnapshot = await getDocs(categoriesQuery);
 
-    // If still no deals found, check if category exists in categories collection
-    if (categoryDeals.length === 0) {
-      const categoriesSnapshot = await getDocs(collection(db, 'categories'));
-      const categoryExists = categoriesSnapshot.docs.some(doc => {
-        const catName = doc.data().name;
-        return doesCategoryMatch(catName, categoryName);
-      });
-
-      if (!categoryExists) {
+      if (categoriesSnapshot.empty) {
         notFound();
       }
+      // Category exists but has no deals - render empty state
     }
 
     // Convert Firestore timestamps to serializable format

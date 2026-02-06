@@ -11,8 +11,8 @@ export const metadata: Metadata = {
   keywords: ['deals', 'vouchers', 'discount codes', 'savings', 'coupons', 'promotional codes', 'exclusive offers', 'best deals'],
 };
 
-// Enable ISR with 5-minute revalidation
-export const revalidate = 300; // 5 minutes
+// Enable ISR with 1-hour revalidation (caches refresh every 6 hours)
+export const revalidate = 3600; // 1 hour
 
 export default async function HomePage() {
   try {

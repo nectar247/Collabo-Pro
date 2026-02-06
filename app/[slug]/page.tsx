@@ -1,4 +1,4 @@
-import { collection, getDocs } from 'firebase/firestore';
+import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '@/lib/firebase';
 import DynamicPageContent from './DynamicPageContent';
 import { notFound } from 'next/navigation';
@@ -6,9 +6,12 @@ import { notFound } from 'next/navigation';
 export default async function DynamicPage({ params }: { params: Promise<{ slug: string }> }) {
   try {
     const { slug } = await params;
-    const contentSnapshot = await getDocs(collection(db, 'content'));
-    const content = contentSnapshot.docs
-      .find(doc => doc.data().slug === slug)?.data() || null;
+    // Query only the specific document by slug instead of fetching ALL content
+    const contentQuery = query(collection(db, 'content'), where('slug', '==', slug));
+    const contentSnapshot = await getDocs(contentQuery);
+    const content = !contentSnapshot.empty
+      ? contentSnapshot.docs[0].data()
+      : null;
 
     if (!content) {
       notFound(); // Show 404 page if content is missing
