@@ -7,7 +7,8 @@ admin.initializeApp();
 
 export const syncAwinBrands = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .pubsub.schedule("every 1 hours")
+  .pubsub.schedule("0 2 * * *")
+  .timeZone("UTC")
   .onRun(async () => {
     // 🔄 Deployed from local /functions - Dec 11, 2025
     const accessToken = "336a9ae4-df0b-4fab-9a83-a6f3c7736b6f";
@@ -93,7 +94,8 @@ export const syncAwinBrands = functions
 
 export const syncAwinPromotions = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .pubsub.schedule("every 5 hours")
+  .pubsub.schedule("0 3 * * *")
+  .timeZone("UTC")
   .onRun(async () => {
     try {
       // 🧹 Auto-cleanup enabled - Deployed from local /functions - Dec 11, 2025
@@ -321,7 +323,7 @@ async function cleanupExpiredDeals(firestore: admin.firestore.Firestore) {
 
 export const scheduledBrandsDealCountUpdate = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .pubsub.schedule("every 12 hours")
+  .pubsub.schedule("0 4 * * *")
   .timeZone("UTC")
   .onRun(async () => {
     // 📊 Brand count updater - Optimized: fetch all deals ONCE, then count per brand
@@ -370,7 +372,7 @@ export const scheduledBrandsDealCountUpdate = functions
 
 export const scheduledCategoriesDealCountUpdate = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .pubsub.schedule("every 12 hours")
+  .pubsub.schedule("30 4 * * *")
   .timeZone("UTC")
   .onRun(async () => {
     // 🏷️ Category count updater - Optimized: fetch all deals ONCE, then count per category
@@ -427,7 +429,8 @@ export const scheduledCategoriesDealCountUpdate = functions
  */
 export const refreshHomepageCache = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
-  .pubsub.schedule("every 6 hours")
+  .pubsub.schedule("0 5 * * *")
+  .timeZone("UTC")
   .onRun(async () => {
     console.log("🔄 [HomepageCache] Starting homepage cache refresh...");
     const firestore = admin.firestore();
@@ -731,7 +734,8 @@ async function refreshHomepageCacheLogic() {
  */
 export const refreshDealsPageCache = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
-  .pubsub.schedule("every 6 hours")
+  .pubsub.schedule("0 5 * * *")
+  .timeZone("UTC")
   .onRun(async () => {
     console.log("🔄 [DealsPageCache] Starting deals page cache refresh...");
     const firestore = admin.firestore();
@@ -757,16 +761,16 @@ export const refreshDealsPageCache = functions
       }));
       console.log(`✅ [DealsPageCache] Found ${initialDeals.length} initial deals`);
 
-      // 2️⃣ Get total count (approximate)
+      // 2️⃣ Get total count using count() aggregation (1 read instead of N)
       console.log("📦 [DealsPageCache] Getting total count...");
-      const countSnapshot = await firestore
+      const countResult = await firestore
         .collection("deals_fresh")
         .where("status", "==", "active")
         .where("expiresAt", ">", now)
-        .select() // Only fetch document IDs for counting
+        .count()
         .get();
 
-      const totalCount = countSnapshot.size;
+      const totalCount = countResult.data().count;
       console.log(`✅ [DealsPageCache] Total active deals: ${totalCount}`);
 
       // 3️⃣ Fetch categories, brands, and dynamic links (for footer)
@@ -831,7 +835,8 @@ export const refreshDealsPageCache = functions
  */
 export const refreshBrandsPageCache = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
-  .pubsub.schedule("every 6 hours")
+  .pubsub.schedule("0 5 * * *")
+  .timeZone("UTC")
   .onRun(async () => {
     console.log("🔄 [BrandsPageCache] Starting brands page cache refresh...");
     const firestore = admin.firestore();
@@ -929,7 +934,8 @@ export const refreshBrandsPageCache = functions
  */
 export const refreshCategoriesPageCache = functions
   .runWith({ timeoutSeconds: 300, memory: "512MB" })
-  .pubsub.schedule("every 6 hours")
+  .pubsub.schedule("0 5 * * *")
+  .timeZone("UTC")
   .onRun(async () => {
     console.log("🔄 [CategoriesPageCache] Starting categories page cache refresh...");
     const firestore = admin.firestore();
@@ -1060,7 +1066,8 @@ export const refreshCategoriesPageCache = functions
  */
 export const buildSearchIndex = functions
   .runWith({ timeoutSeconds: 540, memory: "1GB" })
-  .pubsub.schedule("every 6 hours")
+  .pubsub.schedule("0 6 * * *")
+  .timeZone("UTC")
   .onRun(async () => {
     console.log("🔍 [SearchIndex] Starting search index build...");
     const firestore = admin.firestore();
