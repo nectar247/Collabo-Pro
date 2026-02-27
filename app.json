@@ -32,7 +32,16 @@
     },
     "plugins": [
       "expo-router",
-      "expo-font"
+      "expo-font",
+      ["expo-av", { "microphonePermission": "Allow Collabo-Pro to access your microphone for voice dictation." }],
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/icon.png",
+          "color": "#2563EB"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true
