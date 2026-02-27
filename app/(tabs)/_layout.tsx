@@ -1,5 +1,12 @@
+import { Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Colors } from '@/constants/theme';
+
+function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
+  return (
+    <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{icon}</Text>
+  );
+}
 
 export default function TabsLayout() {
   return (
@@ -9,30 +16,48 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: Colors.surface,
           borderTopColor: Colors.border,
+          paddingBottom: 4,
+          height: 56,
         },
         tabBarActiveTintColor: Colors.primary,
         tabBarInactiveTintColor: Colors.textMuted,
+        tabBarLabelStyle: { fontSize: 10, fontWeight: '600' },
       }}
     >
       <Tabs.Screen
         name="index"
-        options={{ title: 'Home' }}
+        options={{
+          title: 'Home',
+          tabBarIcon: ({ focused }) => <TabIcon icon="🏠" focused={focused} />,
+        }}
       />
       <Tabs.Screen
         name="chat"
-        options={{ title: 'Chat' }}
+        options={{
+          title: 'Chat',
+          tabBarIcon: ({ focused }) => <TabIcon icon="💬" focused={focused} />,
+        }}
       />
       <Tabs.Screen
         name="documents"
-        options={{ title: 'Docs' }}
+        options={{
+          title: 'Docs',
+          tabBarIcon: ({ focused }) => <TabIcon icon="📄" focused={focused} />,
+        }}
       />
       <Tabs.Screen
         name="social"
-        options={{ title: 'Social' }}
+        options={{
+          title: 'Social',
+          tabBarIcon: ({ focused }) => <TabIcon icon="👥" focused={focused} />,
+        }}
       />
       <Tabs.Screen
         name="profile"
-        options={{ title: 'Profile' }}
+        options={{
+          title: 'Profile',
+          tabBarIcon: ({ focused }) => <TabIcon icon="⚙️" focused={focused} />,
+        }}
       />
     </Tabs>
   );
