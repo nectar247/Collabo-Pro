@@ -24,18 +24,34 @@ export function useWorkspaces() {
     queryKey: ['workspaces', user?.id],
     queryFn: async () => {
       if (!user?.id) return [];
-      const q = query(
-        collection(db, COLLECTIONS.WORKSPACES),
-        where('members', 'array-contains', { userId: user.id, role: 'member' })
-      );
-      // Alternative: query by ownerId or members array
-      // Since members is an array of objects, query by ownerId instead for v1
+
+      // Fetch workspaces owned by user
       const ownedQ = query(
         collection(db, COLLECTIONS.WORKSPACES),
         where('ownerId', '==', user.id)
       );
-      const snap = await getDocs(ownedQ);
-      return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Workspace));
+      // Fetch workspaces where user is a member (stored as flat memberIds array)
+      const memberQ = query(
+        collection(db, COLLECTIONS.WORKSPACES),
+        where('memberIds', 'array-contains', user.id)
+      );
+
+      const [ownedSnap, memberSnap] = await Promise.all([
+        getDocs(ownedQ),
+        getDocs(memberQ),
+      ]);
+
+      const seen = new Set<string>();
+      const workspaces: Workspace[] = [];
+
+      for (const d of [...ownedSnap.docs, ...memberSnap.docs]) {
+        if (!seen.has(d.id)) {
+          seen.add(d.id);
+          workspaces.push({ id: d.id, ...d.data() } as Workspace);
+        }
+      }
+
+      return workspaces;
     },
     enabled: !!user?.id,
   });
@@ -79,6 +95,7 @@ export function useCreateWorkspace() {
         description: description ?? '',
         ownerId: user.id,
         members: [member],
+        memberIds: [user.id],  // flat array for Firestore array-contains queries
         createdAt: serverTimestamp(),
       };
 

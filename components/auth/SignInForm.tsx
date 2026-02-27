@@ -1,6 +1,7 @@
 import { useState } from 'react';
-import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
-import { router } from 'expo-router';
+import { Alert, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { sendPasswordResetEmail } from 'firebase/auth';
+import { auth } from '@/lib/firebase/config';
 import { Button } from '@/components/ui/Button';
 import { Input } from '@/components/ui/Input';
 import { useAuthStore } from '@/store/authStore';
@@ -26,6 +27,23 @@ export function SignInForm() {
     }
     setFieldErrors(errors);
     return Object.keys(errors).length === 0;
+  }
+
+  async function handleForgotPassword() {
+    if (!email.trim()) {
+      Alert.alert('Reset Password', 'Enter your email address above, then tap "Forgot password?" again.');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      Alert.alert('Reset Password', 'Please enter a valid email address.');
+      return;
+    }
+    try {
+      await sendPasswordResetEmail(auth, email.trim());
+      Alert.alert('Email Sent', 'Check your inbox for a password reset link.');
+    } catch {
+      Alert.alert('Error', 'Could not send reset email. Check the address and try again.');
+    }
   }
 
   async function handleSubmit() {
@@ -71,7 +89,7 @@ export function SignInForm() {
       />
 
       <TouchableOpacity
-        onPress={() => router.push('/(auth)/forgot-password' as never)}
+        onPress={handleForgotPassword}
         style={styles.forgotPassword}
       >
         <Text style={styles.forgotPasswordText}>Forgot password?</Text>

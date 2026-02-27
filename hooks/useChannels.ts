@@ -104,23 +104,34 @@ export function useMessages(channelId: string | null): UseMessagesReturn {
       limit(100)
     );
 
-    const unsubscribe = onSnapshot(q, async (snap) => {
-      const decryptedMessages = await Promise.all(
-        snap.docs.map(async (d) => {
-          const msg = { id: d.id, ...d.data() } as Message;
-          let decryptedContent = msg.content;
+    const unsubscribe = onSnapshot(
+      q,
+      async (snap) => {
+        const decryptedMessages = await Promise.all(
+          snap.docs.map(async (d) => {
+            const msg = { id: d.id, ...d.data() } as Message;
+            let decryptedContent = msg.content;
 
-          if (workspaceId) {
-            decryptedContent = await decryptForWorkspace(msg.content, workspaceId);
-          }
+            if (workspaceId) {
+              try {
+                decryptedContent = await decryptForWorkspace(msg.content, workspaceId);
+              } catch {
+                decryptedContent = '(Unable to decrypt)';
+              }
+            }
 
-          return { ...msg, decryptedContent };
-        })
-      );
+            return { ...msg, decryptedContent };
+          })
+        );
 
-      setMessages(decryptedMessages);
-      setIsLoading(false);
-    });
+        setMessages(decryptedMessages);
+        setIsLoading(false);
+      },
+      (err) => {
+        console.warn('useMessages: Firestore snapshot error', err);
+        setIsLoading(false);
+      }
+    );
 
     return unsubscribe;
   }, [channelId, workspaceId]);
@@ -139,6 +150,7 @@ export function useMessages(channelId: string | null): UseMessagesReturn {
         {
           channelId,
           senderId: user.id,
+          senderName: user.displayName,
           content: encryptedContent,
           createdAt: serverTimestamp(),
         }

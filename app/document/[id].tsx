@@ -37,6 +37,7 @@ export default function DocumentEditorScreen() {
   const [aiModalVisible, setAiModalVisible] = useState(false);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [titleValue, setTitleValue] = useState('');
+  const [selectedText, setSelectedText] = useState<string | undefined>(undefined);
 
   // Parse content once document loads
   useEffect(() => {
@@ -82,6 +83,7 @@ export default function DocumentEditorScreen() {
     setEditorMode('edit');
     if (!content || document?.type !== 'text' || !transcript.trim()) return;
     const textContent = content as TextDocumentContent;
+    if (textContent.blocks.length === 0) return;
     const lastBlock = textContent.blocks[textContent.blocks.length - 1];
     const updatedContent: TextDocumentContent = {
       blocks: textContent.blocks.map((b) =>
@@ -220,10 +222,26 @@ export default function DocumentEditorScreen() {
       {/* AI Assist modal */}
       <AIAssistModal
         visible={aiModalVisible}
-        onClose={() => setAiModalVisible(false)}
+        onClose={() => { setAiModalVisible(false); setSelectedText(undefined); }}
         documentType={document.type}
+        selectedText={selectedText}
         onInsert={handleAIInsert}
-        onReplace={(text) => handleAIInsert(text)}
+        onReplace={(text) => {
+          if (selectedText && content && document.type === 'text') {
+            const textContent = content as TextDocumentContent;
+            const updatedContent: TextDocumentContent = {
+              blocks: textContent.blocks.map((b) =>
+                b.text.includes(selectedText)
+                  ? { ...b, text: b.text.replace(selectedText, text) }
+                  : b
+              ),
+            };
+            handleContentChange(updatedContent);
+          } else {
+            handleAIInsert(text);
+          }
+          setSelectedText(undefined);
+        }}
       />
     </SafeAreaView>
   );

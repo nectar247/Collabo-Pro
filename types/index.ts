@@ -45,6 +45,7 @@ export interface Message {
   id: string;
   channelId: string;
   senderId: string;
+  senderName?: string;      // Stored at send time for display
   content: string;          // Encrypted ciphertext
   attachments?: Attachment[];
   reactions?: Record<string, string[]>;  // emoji -> userIds

@@ -40,9 +40,14 @@ export function VoiceDictationBar({ onStop, onCancel }: VoiceDictationBarProps) 
         console.warn('Dictation error:', error);
         onCancel();
       }
-    ).then((cleanup) => {
-      cleanupRef.current = cleanup;
-    });
+    )
+      .then((cleanup) => {
+        cleanupRef.current = cleanup;
+      })
+      .catch((err) => {
+        console.warn('Failed to start dictation:', err);
+        onCancel();
+      });
 
     return () => {
       cleanupRef.current?.();

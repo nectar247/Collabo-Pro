@@ -65,16 +65,18 @@ export default function ChatTab() {
         </TouchableOpacity>
       </View>
 
-      {sections.length === 0 ? (
+      {!activeWorkspaceId ? (
+        <EmptyState
+          icon={<Text style={{ fontSize: 48 }}>🏢</Text>}
+          title="No workspace selected"
+          description="Go to the Home tab to create or select a workspace first."
+        />
+      ) : sections.length === 0 ? (
         <EmptyState
           icon={<Text style={{ fontSize: 48 }}>💬</Text>}
           title="No channels yet"
           description="Create a channel to start encrypted conversations with your team."
-          action={
-            activeWorkspaceId
-              ? { label: 'Create Channel', onPress: () => setNewChannelModalVisible(true) }
-              : undefined
-          }
+          action={{ label: 'Create Channel', onPress: () => setNewChannelModalVisible(true) }}
         />
       ) : (
         <SectionList

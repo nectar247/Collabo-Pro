@@ -47,7 +47,7 @@ export function ChatScreen({ channelId }: ChatScreenProps) {
               isOwn={isOwn}
               sender={
                 !isOwn
-                  ? { displayName: item.senderId, photoURL: undefined }
+                  ? { displayName: item.senderName ?? item.senderId.slice(0, 8), photoURL: undefined }
                   : undefined
               }
               showSender={showSender && !isOwn}

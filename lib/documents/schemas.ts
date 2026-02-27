@@ -151,7 +151,8 @@ export function parseCellKey(key: string): { row: number; col: number } {
   return { row, col };
 }
 
-// Basic formula evaluation: handles =A1+B1, =A1*2, etc.
+// Basic formula evaluation: handles =A1+B1, =A1*2, =A1/B1, etc.
+// Uses a safe recursive-descent arithmetic parser — no eval() or Function().
 export function evaluateFormula(
   formula: string,
   cells: Record<string, CellValue>
@@ -159,17 +160,80 @@ export function evaluateFormula(
   if (!formula.startsWith('=')) return formula;
 
   try {
-    // Replace cell references with their computed/raw values
-    const expression = formula.slice(1).replace(/[A-Z]\d+/g, (ref) => {
+    // Replace cell references with their numeric values
+    const expression = formula.slice(1).replace(/[A-Z]+\d+/g, (ref) => {
       const cell = cells[ref];
       const val = cell?.computed ?? cell?.raw ?? '0';
-      return isNaN(Number(val)) ? '0' : val;
+      const num = Number(val);
+      return isNaN(num) ? '0' : String(num);
     });
 
-    // Evaluate safe arithmetic only
-    const result = Function(`"use strict"; return (${expression})`)();
-    return String(result);
+    const result = safeArithmetic(expression);
+    if (!isFinite(result)) return '#ERR';
+    // Round to avoid floating-point display noise
+    return String(Math.round(result * 1e10) / 1e10);
   } catch {
     return '#ERR';
   }
+}
+
+// Safe recursive-descent arithmetic parser: +, -, *, /, (, ), numbers
+function safeArithmetic(expr: string): number {
+  let pos = 0;
+
+  function skipSpaces() {
+    while (pos < expr.length && expr[pos] === ' ') pos++;
+  }
+
+  function parseNumber(): number {
+    skipSpaces();
+    const start = pos;
+    if (pos < expr.length && expr[pos] === '-') pos++;
+    while (pos < expr.length && /[\d.]/.test(expr[pos])) pos++;
+    const str = expr.slice(start, pos);
+    const n = parseFloat(str);
+    if (isNaN(n)) throw new Error('Invalid number');
+    return n;
+  }
+
+  function parseFactor(): number {
+    skipSpaces();
+    if (pos >= expr.length) throw new Error('Unexpected end');
+    if (expr[pos] === '(') {
+      pos++;
+      const val = parseExpr();
+      skipSpaces();
+      if (expr[pos] === ')') pos++;
+      return val;
+    }
+    return parseNumber();
+  }
+
+  function parseTerm(): number {
+    let left = parseFactor();
+    skipSpaces();
+    while (pos < expr.length && (expr[pos] === '*' || expr[pos] === '/')) {
+      const op = expr[pos++];
+      const right = parseFactor();
+      left = op === '*' ? left * right : right !== 0 ? left / right : NaN;
+      skipSpaces();
+    }
+    return left;
+  }
+
+  function parseExpr(): number {
+    let left = parseTerm();
+    skipSpaces();
+    while (pos < expr.length && (expr[pos] === '+' || expr[pos] === '-')) {
+      const op = expr[pos++];
+      const right = parseTerm();
+      left = op === '+' ? left + right : left - right;
+      skipSpaces();
+    }
+    return left;
+  }
+
+  const result = parseExpr();
+  if (pos !== expr.length) throw new Error('Unexpected characters');
+  return result;
 }

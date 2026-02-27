@@ -184,7 +184,7 @@ export default function HomeScreen() {
           <QuickActionCard
             icon="👥"
             label="Team"
-            onPress={() => router.push('/(tabs)/team')}
+            onPress={() => router.push('/(tabs)/social')}
           />
         </View>
 
