@@ -16,6 +16,7 @@ import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { useAuthStore } from '@/store/authStore';
 import { createEmptyContent, serializeDocumentContent } from '@/lib/documents/schemas';
+import { logActivity } from '@/hooks/useActivityLog';
 import type { Document, DocumentType, Approval, ApproverEntry, Notification } from '@/types';
 
 // ─── Document list ────────────────────────────────────────────────────────────
@@ -93,6 +94,11 @@ export function useCreateDocument() {
         { content, version: 1, savedAt: serverTimestamp(), savedBy: user.id }
       );
 
+      logActivity({
+        workspaceId, userId: user.id, userDisplayName: user.displayName,
+        action: 'document_created', resourceType: 'document', resourceId: ref.id, resourceName: name,
+      }).catch(() => {});
+
       return { id: ref.id, ...docData } as unknown as Document;
     },
     onSuccess: (doc) => {
@@ -105,22 +111,33 @@ export function useCreateDocument() {
 
 export function useUpdateDocument() {
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
 
   return useMutation({
     mutationFn: async ({
       id,
       content,
       name,
+      workspaceId,
     }: {
       id: string;
       content?: string;
       name?: string;
+      workspaceId?: string;
     }) => {
       const updates: Record<string, unknown> = { updatedAt: serverTimestamp() };
       if (content !== undefined) updates.content = content;
       if (name !== undefined) updates.name = name;
 
       await updateDoc(doc(db, COLLECTIONS.DOCUMENTS, id), updates);
+
+      // Log rename (not content auto-saves)
+      if (name !== undefined && workspaceId && user) {
+        logActivity({
+          workspaceId, userId: user.id, userDisplayName: user.displayName,
+          action: 'document_renamed', resourceType: 'document', resourceId: id, resourceName: name,
+        }).catch(() => {});
+      }
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['document', id] });
@@ -132,10 +149,27 @@ export function useUpdateDocument() {
 
 export function useDeleteDocument() {
   const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
 
   return useMutation({
-    mutationFn: async ({ id, workspaceId }: { id: string; workspaceId: string }) => {
+    mutationFn: async ({
+      id,
+      workspaceId,
+      name,
+    }: {
+      id: string;
+      workspaceId: string;
+      name?: string;
+    }) => {
       await deleteDoc(doc(db, COLLECTIONS.DOCUMENTS, id));
+
+      if (user && name) {
+        logActivity({
+          workspaceId, userId: user.id, userDisplayName: user.displayName,
+          action: 'document_deleted', resourceType: 'document', resourceId: id, resourceName: name,
+        }).catch(() => {});
+      }
+
       return workspaceId;
     },
     onSuccess: (workspaceId) => {

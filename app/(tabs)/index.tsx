@@ -1,16 +1,19 @@
 import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
-import { useWorkspaces, useWorkspace } from '@/hooks/useWorkspace';
+import { useWorkspaces, useWorkspace, useRenameWorkspace } from '@/hooks/useWorkspace';
 import { useDocuments } from '@/hooks/useDocuments';
 import { useChannels } from '@/hooks/useChannels';
 import { useNotifications } from '@/hooks/useNotifications';
@@ -26,6 +29,10 @@ export default function HomeScreen() {
   const { activeWorkspaceId, setActiveWorkspace } = useUIStore();
   const [showCreateSheet, setShowCreateSheet] = useState(false);
   const [showWorkspacePicker, setShowWorkspacePicker] = useState(false);
+  const [renameTarget, setRenameTarget] = useState<{ id: string; name: string } | null>(null);
+  const [renameText, setRenameText] = useState('');
+
+  const { mutate: renameWorkspace, isPending: isRenaming } = useRenameWorkspace();
 
   const { data: workspaces = [], isLoading: loadingWorkspaces } = useWorkspaces();
   const { data: activeWorkspace } = useWorkspace(activeWorkspaceId);
@@ -129,22 +136,36 @@ export default function HomeScreen() {
         {showWorkspacePicker && (
           <View style={styles.workspaceDropdown}>
             {workspaces.map((ws) => (
-              <TouchableOpacity
+              <View
                 key={ws.id}
                 style={[
                   styles.workspaceDropdownItem,
                   ws.id === activeWorkspaceId && styles.workspaceDropdownItemActive,
                 ]}
-                onPress={() => {
-                  setActiveWorkspace(ws.id);
-                  setShowWorkspacePicker(false);
-                }}
               >
-                <Text style={styles.workspaceDropdownName}>{ws.name}</Text>
+                <TouchableOpacity
+                  style={{ flex: 1 }}
+                  onPress={() => {
+                    setActiveWorkspace(ws.id);
+                    setShowWorkspacePicker(false);
+                  }}
+                >
+                  <Text style={styles.workspaceDropdownName}>{ws.name}</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  style={styles.renameBtn}
+                  onPress={() => {
+                    setRenameTarget({ id: ws.id, name: ws.name });
+                    setRenameText(ws.name);
+                    setShowWorkspacePicker(false);
+                  }}
+                >
+                  <Text style={styles.renameBtnText}>✎</Text>
+                </TouchableOpacity>
                 {ws.id === activeWorkspaceId && (
                   <Text style={styles.checkmark}>✓</Text>
                 )}
-              </TouchableOpacity>
+              </View>
             ))}
             <TouchableOpacity
               style={styles.workspaceDropdownNew}
@@ -234,6 +255,29 @@ export default function HomeScreen() {
           ))
         )}
 
+        {/* Activity Log */}
+        {activeWorkspaceId && (
+          <>
+            <View style={styles.sectionHeader}>
+              <Text style={styles.sectionTitle}>Workspace</Text>
+            </View>
+            <TouchableOpacity
+              style={styles.activityLogRow}
+              onPress={() => router.push('/workspace-log')}
+              activeOpacity={0.7}
+            >
+              <View style={styles.activityLogIcon}>
+                <Text style={{ fontSize: 16 }}>📋</Text>
+              </View>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.activityLogLabel}>Activity Log</Text>
+                <Text style={styles.activityLogDesc}>View all team actions and changes</Text>
+              </View>
+              <Text style={styles.activityLogChevron}>›</Text>
+            </TouchableOpacity>
+          </>
+        )}
+
         <View style={{ height: Spacing.xxl }} />
       </ScrollView>
 
@@ -245,6 +289,57 @@ export default function HomeScreen() {
           setActiveWorkspace(id);
         }}
       />
+
+      {/* Rename Workspace Modal */}
+      <Modal
+        visible={!!renameTarget}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setRenameTarget(null)}
+      >
+        <View style={styles.renameOverlay}>
+          <View style={styles.renameSheet}>
+            <Text style={styles.renameTitle}>Rename Workspace</Text>
+            <TextInput
+              style={styles.renameInput}
+              value={renameText}
+              onChangeText={setRenameText}
+              placeholder="Workspace name"
+              placeholderTextColor={Colors.textDim}
+              maxLength={60}
+              autoFocus
+              selectTextOnFocus
+            />
+            <View style={styles.renameActions}>
+              <TouchableOpacity
+                style={styles.renameCancelBtn}
+                onPress={() => setRenameTarget(null)}
+              >
+                <Text style={styles.renameCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.renameSaveBtn, isRenaming && { opacity: 0.6 }]}
+                disabled={isRenaming || !renameText.trim()}
+                onPress={() => {
+                  if (!renameTarget) return;
+                  renameWorkspace(
+                    { workspaceId: renameTarget.id, name: renameText },
+                    {
+                      onSuccess: () => setRenameTarget(null),
+                      onError: (err: any) =>
+                        Alert.alert('Error', err?.message ?? 'Could not rename workspace.'),
+                    }
+                  );
+                }}
+              >
+                <Text style={styles.renameSaveText}>
+                  {isRenaming ? 'Saving…' : 'Save'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -559,6 +654,110 @@ const styles = StyleSheet.create({
   emptySectionText: {
     color: Colors.textDim,
     fontSize: FontSize.sm,
+  },
+  // Activity Log row
+  activityLogRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.md,
+    padding: Spacing.md,
+    marginBottom: Spacing.sm,
+    gap: Spacing.sm,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  activityLogIcon: {
+    width: 36,
+    height: 36,
+    borderRadius: Radius.sm,
+    backgroundColor: `${Colors.primary}22`,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  activityLogLabel: {
+    color: Colors.text,
+    fontSize: FontSize.md,
+    fontWeight: '600',
+  },
+  activityLogDesc: {
+    color: Colors.textDim,
+    fontSize: FontSize.xs,
+    marginTop: 1,
+  },
+  activityLogChevron: {
+    color: Colors.textMuted,
+    fontSize: 22,
+    fontWeight: '300',
+  },
+  // Rename button in dropdown
+  renameBtn: {
+    padding: 6,
+    marginRight: 4,
+  },
+  renameBtnText: {
+    color: Colors.textMuted,
+    fontSize: 16,
+  },
+  // Rename modal
+  renameOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: Spacing.lg,
+  },
+  renameSheet: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.lg,
+    padding: Spacing.lg,
+    width: '100%',
+    gap: Spacing.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  renameTitle: {
+    color: Colors.text,
+    fontSize: FontSize.lg,
+    fontWeight: '700',
+  },
+  renameInput: {
+    backgroundColor: Colors.surfaceHigh,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 2,
+    color: Colors.text,
+    fontSize: FontSize.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  renameActions: {
+    flexDirection: 'row',
+    justifyContent: 'flex-end',
+    gap: Spacing.sm,
+  },
+  renameCancelBtn: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.md,
+    borderRadius: Radius.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
+  renameCancelText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.md,
+    fontWeight: '600',
+  },
+  renameSaveBtn: {
+    paddingVertical: Spacing.sm,
+    paddingHorizontal: Spacing.lg,
+    borderRadius: Radius.md,
+    backgroundColor: Colors.primary,
+  },
+  renameSaveText: {
+    color: Colors.white,
+    fontSize: FontSize.md,
+    fontWeight: '700',
   },
   // Onboarding
   onboardingCard: {

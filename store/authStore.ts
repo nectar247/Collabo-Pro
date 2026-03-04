@@ -49,30 +49,42 @@ export const useAuthStore = create<AuthState>()(
       error: null,
 
       initialize: () => {
-        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
-          if (firebaseUser) {
-            // Fetch Firestore profile
-            try {
-              const userDoc = await getDoc(
-                doc(db, COLLECTIONS.USERS, firebaseUser.uid)
-              );
-              const userData = userDoc.exists()
-                ? ({ id: userDoc.id, ...userDoc.data() } as User)
-                : null;
+        // Safety net: if Firebase doesn't respond in 5s, stop blocking
+        const timeout = setTimeout(() => {
+          if (get().isLoading) set({ isLoading: false });
+        }, 5000);
 
-              set({
-                firebaseUser,
-                user: userData,
-                isAuthenticated: true,
-                isLoading: false,
-              });
+        const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+          clearTimeout(timeout);
+
+          if (firebaseUser) {
+            // Unblock the loading screen immediately — don't wait for Firestore
+            set({ firebaseUser, isAuthenticated: true, isLoading: false });
+
+            // Fetch Firestore profile in background (won't block the UI)
+            try {
+              const userRef = doc(db, COLLECTIONS.USERS, firebaseUser.uid);
+              const userDoc = await getDoc(userRef);
+
+              if (userDoc.exists()) {
+                set({ user: { id: userDoc.id, ...userDoc.data() } as User });
+              } else {
+                // Auto-create missing profile
+                const newProfile: Omit<User, 'id'> = {
+                  displayName:
+                    firebaseUser.displayName ??
+                    firebaseUser.email?.split('@')[0] ??
+                    'User',
+                  email: firebaseUser.email ?? '',
+                  status: 'online',
+                  workspaces: [],
+                  createdAt: serverTimestamp() as User['createdAt'],
+                };
+                await setDoc(userRef, newProfile);
+                set({ user: { id: firebaseUser.uid, ...newProfile } as User });
+              }
             } catch {
-              set({
-                firebaseUser,
-                user: null,
-                isAuthenticated: true,
-                isLoading: false,
-              });
+              // Silently fail — user is authenticated, just no Firestore profile yet
             }
           } else {
             set({
@@ -83,7 +95,8 @@ export const useAuthStore = create<AuthState>()(
             });
           }
         });
-        return unsubscribe;
+
+        return () => { clearTimeout(timeout); unsubscribe(); };
       },
 
       signIn: async (email, password) => {

@@ -1,4 +1,4 @@
-import { useRef, useState } from 'react';
+import { useState } from 'react';
 import {
   Dimensions,
   Modal,
@@ -29,16 +29,21 @@ export function PresentationEditor({ content, onChange, isReadOnly = false }: Pr
   const [currentSlideIndex, setCurrentSlideIndex] = useState(0);
   const [selectedElementId, setSelectedElementId] = useState<string | null>(null);
   const [isPresentingMode, setIsPresentingMode] = useState(false);
+  const [showNotes, setShowNotes] = useState(false);
 
   const { slides } = content;
   const currentSlide: Slide | undefined = slides[currentSlideIndex];
 
-  // Canvas dimensions
-  const canvasWidth = SCREEN_WIDTH - 90; // account for thumbnail panel
+  // Canvas dimensions (accounts for thumbnail panel width)
+  const canvasWidth = SCREEN_WIDTH - 90;
   const canvasHeight = canvasWidth / CANVAS_ASPECT;
 
   function updateSlides(newSlides: Slide[]) {
     onChange({ ...content, slides: newSlides });
+  }
+
+  function updateCurrentSlide(updates: Partial<Slide>) {
+    updateSlides(slides.map((s, i) => (i === currentSlideIndex ? { ...s, ...updates } : s)));
   }
 
   function addSlide() {
@@ -76,37 +81,33 @@ export function PresentationEditor({ content, onChange, isReadOnly = false }: Pr
       content: 'Double tap to edit',
       style: { fontSize: 18, color: '#FFFFFF' },
     };
-    const updated = slides.map((s, i) =>
-      i === currentSlideIndex
-        ? { ...s, elements: [...s.elements, newEl] }
-        : s
-    );
-    updateSlides(updated);
+    updateCurrentSlide({ elements: [...currentSlide.elements, newEl] });
     setSelectedElementId(newEl.id);
   }
 
   function updateElement(elementId: string, updates: Partial<SlideElement>) {
-    const updated = slides.map((s, i) =>
-      i === currentSlideIndex
-        ? {
-            ...s,
-            elements: s.elements.map((el) =>
-              el.id === elementId ? { ...el, ...updates } : el
-            ),
-          }
-        : s
-    );
-    updateSlides(updated);
+    if (!currentSlide) return;
+    updateCurrentSlide({
+      elements: currentSlide.elements.map((el) =>
+        el.id === elementId ? { ...el, ...updates } : el
+      ),
+    });
   }
 
   function deleteElement(elementId: string) {
-    const updated = slides.map((s, i) =>
-      i === currentSlideIndex
-        ? { ...s, elements: s.elements.filter((el) => el.id !== elementId) }
-        : s
-    );
-    updateSlides(updated);
+    if (!currentSlide) return;
+    updateCurrentSlide({
+      elements: currentSlide.elements.filter((el) => el.id !== elementId),
+    });
     setSelectedElementId(null);
+  }
+
+  // Format toolbar for the selected text element
+  function applyElementStyle(updates: Partial<NonNullable<SlideElement['style']>>) {
+    if (!selectedElementId) return;
+    const el = currentSlide?.elements.find((e) => e.id === selectedElementId);
+    if (!el) return;
+    updateElement(selectedElementId, { style: { ...el.style, ...updates } });
   }
 
   const selectedElement = currentSlide?.elements.find((el) => el.id === selectedElementId);
@@ -115,7 +116,12 @@ export function PresentationEditor({ content, onChange, isReadOnly = false }: Pr
     <View style={styles.container}>
       {/* Toolbar */}
       {!isReadOnly && (
-        <View style={styles.toolbar}>
+        <ScrollView
+          horizontal
+          showsHorizontalScrollIndicator={false}
+          style={styles.toolbarScroll}
+          contentContainerStyle={styles.toolbar}
+        >
           <TouchableOpacity onPress={addTextElement} style={styles.toolbarBtn}>
             <Text style={styles.toolbarBtnText}>+ Text</Text>
           </TouchableOpacity>
@@ -125,7 +131,45 @@ export function PresentationEditor({ content, onChange, isReadOnly = false }: Pr
           <TouchableOpacity onPress={() => setIsPresentingMode(true)} style={styles.toolbarBtn}>
             <Text style={styles.toolbarBtnText}>▷ Present</Text>
           </TouchableOpacity>
-        </View>
+          <TouchableOpacity
+            onPress={() => setShowNotes((v) => !v)}
+            style={[styles.toolbarBtn, showNotes && styles.toolbarBtnActive]}
+          >
+            <Text style={[styles.toolbarBtnText, showNotes && styles.toolbarBtnTextActive]}>
+              Notes
+            </Text>
+          </TouchableOpacity>
+
+          {/* Element style controls (visible when a text element is selected) */}
+          {selectedElement?.type === 'text' && (
+            <>
+              <View style={styles.toolbarDivider} />
+              <TouchableOpacity
+                style={[styles.fmtBtn, selectedElement.style?.bold && styles.fmtBtnActive]}
+                onPress={() => applyElementStyle({ bold: !selectedElement.style?.bold })}
+              >
+                <Text style={[styles.fmtBtnText, selectedElement.style?.bold && styles.fmtBtnTextActive, { fontWeight: '700' }]}>B</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.fmtBtn, selectedElement.style?.italic && styles.fmtBtnActive]}
+                onPress={() => applyElementStyle({ italic: !selectedElement.style?.italic })}
+              >
+                <Text style={[styles.fmtBtnText, selectedElement.style?.italic && styles.fmtBtnTextActive, { fontStyle: 'italic' }]}>I</Text>
+              </TouchableOpacity>
+              {(['left', 'center', 'right'] as const).map((a) => (
+                <TouchableOpacity
+                  key={a}
+                  style={[styles.fmtBtn, (selectedElement.style?.align ?? 'left') === a && styles.fmtBtnActive]}
+                  onPress={() => applyElementStyle({ align: a })}
+                >
+                  <Text style={[styles.fmtBtnText, (selectedElement.style?.align ?? 'left') === a && styles.fmtBtnTextActive]}>
+                    {a === 'left' ? '⬅' : a === 'center' ? '↔' : '➡'}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </>
+          )}
+        </ScrollView>
       )}
 
       <View style={styles.editorArea}>
@@ -152,89 +196,112 @@ export function PresentationEditor({ content, onChange, isReadOnly = false }: Pr
           ))}
         </ScrollView>
 
-        {/* Main canvas */}
-        <View style={styles.canvasWrapper}>
-          {currentSlide && (
-            <View
-              style={[
-                styles.canvas,
-                {
-                  width: canvasWidth,
-                  height: canvasHeight,
-                  backgroundColor: currentSlide.background,
-                },
-              ]}
-            >
-              {currentSlide.elements.map((element) => {
-                const isSelectedEl = element.id === selectedElementId;
-                const x = (element.x / 100) * canvasWidth;
-                const y = (element.y / 100) * canvasHeight;
-                const w = (element.width / 100) * canvasWidth;
-                const h = (element.height / 100) * canvasHeight;
+        {/* Main canvas + notes */}
+        <View style={styles.rightPanel}>
+          <View style={styles.canvasWrapper}>
+            {currentSlide && (
+              <View
+                style={[
+                  styles.canvas,
+                  {
+                    width: canvasWidth,
+                    height: canvasHeight,
+                    backgroundColor: currentSlide.background,
+                  },
+                ]}
+              >
+                {currentSlide.elements.map((element) => {
+                  const isSelectedEl = element.id === selectedElementId;
+                  const x = (element.x / 100) * canvasWidth;
+                  const y = (element.y / 100) * canvasHeight;
+                  const w = (element.width / 100) * canvasWidth;
+                  const h = (element.height / 100) * canvasHeight;
 
-                return (
-                  <TouchableOpacity
-                    key={element.id}
-                    onPress={() => setSelectedElementId(isSelectedEl ? null : element.id)}
-                    style={[
-                      styles.element,
-                      {
-                        left: x, top: y,
-                        width: w, minHeight: h,
-                        borderColor: isSelectedEl ? Colors.primary : 'transparent',
-                      },
-                    ]}
-                    activeOpacity={0.8}
-                  >
-                    {element.type === 'text' ? (
-                      isSelectedEl && !isReadOnly ? (
-                        <TextInput
-                          style={[
-                            styles.elementInput,
-                            {
+                  return (
+                    <TouchableOpacity
+                      key={element.id}
+                      onPress={() => setSelectedElementId(isSelectedEl ? null : element.id)}
+                      style={[
+                        styles.element,
+                        {
+                          left: x, top: y,
+                          width: w, minHeight: h,
+                          borderColor: isSelectedEl ? Colors.primary : 'transparent',
+                          opacity: element.opacity ?? 1,
+                        },
+                      ]}
+                      activeOpacity={0.8}
+                    >
+                      {element.type === 'text' ? (
+                        isSelectedEl && !isReadOnly ? (
+                          <TextInput
+                            style={[
+                              styles.elementInput,
+                              {
+                                fontSize: element.style?.fontSize ?? 16,
+                                fontWeight: element.style?.bold ? '700' : '400',
+                                fontStyle: element.style?.italic ? 'italic' : 'normal',
+                                color: element.style?.color ?? Colors.white,
+                                textAlign: element.style?.align ?? 'left',
+                              },
+                            ]}
+                            value={element.content}
+                            onChangeText={(t) => updateElement(element.id, { content: t })}
+                            multiline
+                            autoFocus
+                          />
+                        ) : (
+                          <Text
+                            style={{
                               fontSize: element.style?.fontSize ?? 16,
                               fontWeight: element.style?.bold ? '700' : '400',
+                              fontStyle: element.style?.italic ? 'italic' : 'normal',
                               color: element.style?.color ?? Colors.white,
-                            },
-                          ]}
-                          value={element.content}
-                          onChangeText={(t) => updateElement(element.id, { content: t })}
-                          multiline
-                          autoFocus
-                        />
-                      ) : (
-                        <Text
-                          style={{
-                            fontSize: element.style?.fontSize ?? 16,
-                            fontWeight: element.style?.bold ? '700' : '400',
-                            color: element.style?.color ?? Colors.white,
-                          }}
-                        >
-                          {element.content}
-                        </Text>
-                      )
-                    ) : null}
-                  </TouchableOpacity>
-                );
-              })}
-            </View>
-          )}
+                              textAlign: element.style?.align ?? 'left',
+                            }}
+                          >
+                            {element.content}
+                          </Text>
+                        )
+                      ) : null}
+                    </TouchableOpacity>
+                  );
+                })}
+              </View>
+            )}
 
-          {/* Element actions bar */}
-          {selectedElement && !isReadOnly && (
-            <View style={styles.elementActions}>
-              <TouchableOpacity
-                onPress={() => deleteElement(selectedElement.id)}
-                style={styles.deleteBtn}
-              >
-                <Text style={styles.deleteBtnText}>Delete Element</Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={() => slides.length > 1 && deleteSlide(currentSlideIndex)}
-                style={styles.deleteBtn}
-              >
-                <Text style={styles.deleteBtnText}>Delete Slide</Text>
-              </TouchableOpacity>
+            {/* Element actions bar */}
+            {selectedElement && !isReadOnly && (
+              <View style={styles.elementActions}>
+                <TouchableOpacity
+                  onPress={() => deleteElement(selectedElement.id)}
+                  style={styles.deleteBtn}
+                >
+                  <Text style={styles.deleteBtnText}>Delete Element</Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={() => slides.length > 1 && deleteSlide(currentSlideIndex)}
+                  style={styles.deleteBtn}
+                >
+                  <Text style={styles.deleteBtnText}>Delete Slide</Text>
+                </TouchableOpacity>
+              </View>
+            )}
+          </View>
+
+          {/* Speaker notes panel */}
+          {showNotes && (
+            <View style={styles.notesPanel}>
+              <Text style={styles.notesLabel}>Speaker Notes</Text>
+              <TextInput
+                style={styles.notesInput}
+                value={currentSlide?.notes ?? ''}
+                onChangeText={(t) => updateCurrentSlide({ notes: t })}
+                multiline
+                placeholder="Add speaker notes for this slide..."
+                placeholderTextColor={Colors.textDim}
+                editable={!isReadOnly}
+              />
             </View>
           )}
         </View>
@@ -269,7 +336,9 @@ export function PresentationEditor({ content, onChange, isReadOnly = false }: Pr
                     style={{
                       fontSize: (el.style?.fontSize ?? 16) * 1.5,
                       fontWeight: el.style?.bold ? '700' : '400',
+                      fontStyle: el.style?.italic ? 'italic' : 'normal',
                       color: el.style?.color ?? Colors.white,
+                      textAlign: el.style?.align ?? 'left',
                     }}
                   >
                     {el.content}
@@ -278,6 +347,15 @@ export function PresentationEditor({ content, onChange, isReadOnly = false }: Pr
               ))}
             </View>
           )}
+
+          {/* Speaker notes overlay in present mode */}
+          {slides[currentSlideIndex]?.notes ? (
+            <View style={styles.presentNotes}>
+              <Text style={styles.presentNotesText} numberOfLines={3}>
+                {slides[currentSlideIndex].notes}
+              </Text>
+            </View>
+          ) : null}
 
           {/* Navigation */}
           <View style={styles.presentNav}>
@@ -320,14 +398,19 @@ export function PresentationEditor({ content, onChange, isReadOnly = false }: Pr
 
 const styles = StyleSheet.create({
   container: { flex: 1, backgroundColor: Colors.background },
-  toolbar: {
-    flexDirection: 'row',
+  toolbarScroll: {
     backgroundColor: Colors.surface,
     borderBottomWidth: StyleSheet.hairlineWidth,
     borderBottomColor: Colors.border,
+    maxHeight: 44,
+    flexShrink: 0,
+  },
+  toolbar: {
+    flexDirection: 'row',
     paddingHorizontal: Spacing.md,
     paddingVertical: Spacing.xs,
     gap: Spacing.sm,
+    alignItems: 'center',
   },
   toolbarBtn: {
     paddingHorizontal: Spacing.md,
@@ -335,7 +418,25 @@ const styles = StyleSheet.create({
     backgroundColor: Colors.surfaceHigh,
     borderRadius: Radius.sm,
   },
+  toolbarBtnActive: { backgroundColor: Colors.primary },
   toolbarBtnText: { color: Colors.text, fontSize: FontSize.sm, fontWeight: '600' },
+  toolbarBtnTextActive: { color: Colors.white },
+  toolbarDivider: {
+    width: 1,
+    height: 20,
+    backgroundColor: Colors.border,
+    marginHorizontal: 2,
+  },
+  fmtBtn: {
+    paddingHorizontal: Spacing.sm,
+    paddingVertical: 3,
+    borderRadius: 4,
+    minWidth: 28,
+    alignItems: 'center',
+  },
+  fmtBtnActive: { backgroundColor: Colors.primary },
+  fmtBtnText: { color: Colors.textMuted, fontSize: FontSize.sm },
+  fmtBtnTextActive: { color: Colors.white },
   editorArea: { flex: 1, flexDirection: 'row' },
   thumbnailPanel: {
     width: 80,
@@ -359,7 +460,8 @@ const styles = StyleSheet.create({
   },
   thumbnailText: { color: Colors.white, fontSize: 5 },
   slideNumber: { color: Colors.textDim, fontSize: FontSize.xs, marginTop: 2 },
-  canvasWrapper: { flex: 1, alignItems: 'center', paddingTop: Spacing.md },
+  rightPanel: { flex: 1, flexDirection: 'column' },
+  canvasWrapper: { alignItems: 'center', paddingTop: Spacing.md },
   canvas: { borderRadius: Radius.sm, overflow: 'hidden', position: 'relative' },
   element: {
     position: 'absolute',
@@ -372,6 +474,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     marginTop: Spacing.sm,
     gap: Spacing.sm,
+    paddingHorizontal: Spacing.md,
   },
   deleteBtn: {
     paddingHorizontal: Spacing.md,
@@ -382,8 +485,43 @@ const styles = StyleSheet.create({
     borderColor: Colors.danger,
   },
   deleteBtnText: { color: Colors.danger, fontSize: FontSize.sm },
+  // Notes panel
+  notesPanel: {
+    borderTopWidth: StyleSheet.hairlineWidth,
+    borderTopColor: Colors.border,
+    backgroundColor: Colors.surface,
+    padding: Spacing.md,
+    minHeight: 100,
+  },
+  notesLabel: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+    fontWeight: '700',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: Spacing.xs,
+  },
+  notesInput: {
+    color: Colors.text,
+    fontSize: FontSize.sm,
+    lineHeight: 20,
+    minHeight: 60,
+  },
+  // Present mode
   presentModal: { flex: 1, backgroundColor: '#000' },
   presentCanvas: { flex: 1, position: 'relative' },
+  presentNotes: {
+    backgroundColor: 'rgba(0,0,0,0.85)',
+    paddingHorizontal: Spacing.xl,
+    paddingVertical: Spacing.sm,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.1)',
+  },
+  presentNotesText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+    fontStyle: 'italic',
+  },
   presentNav: {
     flexDirection: 'row',
     justifyContent: 'space-between',

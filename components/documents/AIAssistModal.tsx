@@ -18,6 +18,7 @@ interface AIAssistModalProps {
   visible: boolean;
   onClose: () => void;
   documentType: DocumentType;
+  workspaceId?: string;
   selectedText?: string;
   onInsert: (text: string) => void;
   onReplace: (text: string) => void;
@@ -35,6 +36,7 @@ export function AIAssistModal({
   visible,
   onClose,
   documentType,
+  workspaceId,
   selectedText,
   onInsert,
   onReplace,
@@ -52,20 +54,32 @@ export function AIAssistModal({
     try {
       let text = '';
       if (activeAction === 'improve' && selectedText) {
-        text = await improveText(selectedText, instruction, documentType);
+        text = await improveText(selectedText, instruction, documentType, workspaceId);
       } else if (activeAction === 'generate') {
-        text = await generateDocumentContent(documentType, instruction);
+        text = await generateDocumentContent(documentType, instruction, workspaceId);
       } else if (activeAction === 'summarize' && selectedText) {
-        text = await summarizeDocument(selectedText);
+        text = await summarizeDocument(selectedText, workspaceId);
       }
       setResult(text);
     } catch (err) {
-      if (err instanceof ClaudeError && err.code === 'NO_API_KEY') {
-        Alert.alert(
-          'No API Key',
-          'To use AI assistance, add your Claude API key in Profile → Settings.',
-          [{ text: 'OK' }]
-        );
+      if (err instanceof ClaudeError) {
+        switch (err.code) {
+          case 'NO_API_KEY':
+            Alert.alert(
+              'No API Key',
+              'To use AI assistance, add your Claude API key in Profile → Settings.',
+              [{ text: 'OK' }]
+            );
+            break;
+          case 'RATE_LIMITED':
+            Alert.alert('Rate Limited', 'Too many requests. Please wait a moment and try again.');
+            break;
+          case 'NETWORK_ERROR':
+            Alert.alert('Network Error', 'Check your internet connection and try again.');
+            break;
+          default:
+            Alert.alert('Error', err.message || 'Failed to get AI response. Please try again.');
+        }
       } else {
         Alert.alert('Error', 'Failed to get AI response. Please try again.');
       }

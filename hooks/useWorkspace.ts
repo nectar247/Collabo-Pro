@@ -8,6 +8,7 @@ import {
   addDoc,
   doc,
   serverTimestamp,
+  Timestamp,
   arrayUnion,
   updateDoc,
 } from 'firebase/firestore';
@@ -15,7 +16,7 @@ import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { useAuthStore } from '@/store/authStore';
 import { useUIStore } from '@/store/uiStore';
-import type { Workspace, WorkspaceMember } from '@/types';
+import type { Workspace, WorkspaceMember, User } from '@/types';
 
 export function useWorkspaces() {
   const user = useAuthStore((s) => s.user);
@@ -82,12 +83,13 @@ export function useCreateWorkspace() {
       name: string;
       description?: string;
     }) => {
+      console.log('[createWorkspace] user:', JSON.stringify(user));
       if (!user) throw new Error('Not authenticated');
 
       const member: WorkspaceMember = {
         userId: user.id,
         role: 'owner',
-        joinedAt: serverTimestamp() as WorkspaceMember['joinedAt'],
+        joinedAt: Timestamp.now(),
       };
 
       const workspaceData = {
@@ -138,5 +140,84 @@ export function useWorkspaceMembers(workspaceId: string | null) {
       return workspace.members ?? [];
     },
     enabled: !!workspaceId,
+  });
+}
+
+export function useRenameWorkspace() {
+  const queryClient = useQueryClient();
+  const user = useAuthStore((s) => s.user);
+
+  return useMutation({
+    mutationFn: async ({ workspaceId, name }: { workspaceId: string; name: string }) => {
+      const trimmed = name.trim();
+      if (!trimmed) throw new Error('Workspace name cannot be empty.');
+      await updateDoc(doc(db, COLLECTIONS.WORKSPACES, workspaceId), { name: trimmed });
+    },
+    onSuccess: (_, { workspaceId }) => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['workspaces', user?.id] });
+    },
+  });
+}
+
+export function useAddWorkspaceMember() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      workspaceId,
+      email,
+    }: {
+      workspaceId: string;
+      email: string;
+    }) => {
+      // Look up user by email
+      const usersSnap = await getDocs(
+        query(collection(db, COLLECTIONS.USERS), where('email', '==', email.toLowerCase().trim()))
+      );
+      if (usersSnap.empty) {
+        throw new Error('No account found with that email address.');
+      }
+      const targetUser = { id: usersSnap.docs[0].id, ...usersSnap.docs[0].data() } as User;
+
+      // Check not already a member
+      const wsSnap = await getDoc(doc(db, COLLECTIONS.WORKSPACES, workspaceId));
+      if (!wsSnap.exists()) throw new Error('Workspace not found.');
+      const ws = wsSnap.data() as Workspace;
+      if ((ws.members ?? []).some((m) => m.userId === targetUser.id)) {
+        throw new Error('This person is already a member of the workspace.');
+      }
+
+      // Add to workspace
+      const newMember: WorkspaceMember = {
+        userId: targetUser.id,
+        role: 'member',
+        joinedAt: Timestamp.now(),
+      };
+      await updateDoc(doc(db, COLLECTIONS.WORKSPACES, workspaceId), {
+        memberIds: arrayUnion(targetUser.id),
+        members: arrayUnion(newMember),
+      });
+
+      // Also add to #general channel if it exists
+      const channelSnap = await getDocs(
+        query(
+          collection(db, COLLECTIONS.CHANNELS),
+          where('workspaceId', '==', workspaceId),
+          where('name', '==', 'general')
+        )
+      );
+      if (!channelSnap.empty) {
+        await updateDoc(doc(db, COLLECTIONS.CHANNELS, channelSnap.docs[0].id), {
+          members: arrayUnion(targetUser.id),
+        });
+      }
+
+      return targetUser;
+    },
+    onSuccess: (_, { workspaceId }) => {
+      queryClient.invalidateQueries({ queryKey: ['workspace', workspaceId] });
+      queryClient.invalidateQueries({ queryKey: ['workspace-members', workspaceId] });
+    },
   });
 }

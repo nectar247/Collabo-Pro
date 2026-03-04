@@ -38,8 +38,10 @@ export function CreateWorkspaceSheet({
           onClose();
           onCreated?.(workspaceId);
         },
-        onError: () =>
-          Alert.alert('Error', 'Could not create workspace. Please try again.'),
+        onError: (err) => {
+          const msg = err instanceof Error ? err.message : String(err);
+          Alert.alert('Error', msg);
+        },
       }
     );
   }

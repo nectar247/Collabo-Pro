@@ -1,4 +1,5 @@
 import { useEffect } from 'react';
+import { StyleSheet, View } from 'react-native';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -9,14 +10,9 @@ import { useAuthStore } from '@/store/authStore';
 const queryClient = new QueryClient();
 
 function AuthGuard() {
-  const { isAuthenticated, isLoading, initialize } = useAuthStore();
+  const { isAuthenticated, isLoading } = useAuthStore();
   const segments = useSegments();
   const router = useRouter();
-
-  useEffect(() => {
-    const unsubscribe = initialize();
-    return unsubscribe;
-  }, []);
 
   useEffect(() => {
     if (isLoading) return;
@@ -32,11 +28,12 @@ function AuthGuard() {
 }
 
 export default function RootLayout() {
-  const { isLoading } = useAuthStore();
+  const { isLoading, initialize } = useAuthStore();
 
-  if (isLoading) {
-    return <LoadingScreen />;
-  }
+  useEffect(() => {
+    const unsubscribe = initialize();
+    return unsubscribe;
+  }, []);
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>
@@ -44,11 +41,21 @@ export default function RootLayout() {
         <StatusBar style="light" />
         <AuthGuard />
         <Stack screenOptions={{ headerShown: false }}>
+          <Stack.Screen name="index" />
           <Stack.Screen name="(auth)" />
           <Stack.Screen name="(tabs)" />
           <Stack.Screen name="channel/[id]" />
           <Stack.Screen name="document/[id]" options={{ presentation: 'modal' }} />
+          <Stack.Screen name="workspace-log" />
         </Stack>
+        {/* LoadingScreen rendered as an overlay so the Stack is always mounted.
+            Conditionally unmounting the Stack caused Expo Router to show a
+            blank screen while it re-initialised the navigation state. */}
+        {isLoading && (
+          <View style={StyleSheet.absoluteFill}>
+            <LoadingScreen />
+          </View>
+        )}
       </QueryClientProvider>
     </GestureHandlerRootView>
   );

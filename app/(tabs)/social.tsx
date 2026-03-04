@@ -1,15 +1,21 @@
+import { useState } from 'react';
 import {
   ActivityIndicator,
+  Alert,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
+  TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useUIStore } from '@/store/uiStore';
-import { useWorkspace, useWorkspaceMembers } from '@/hooks/useWorkspace';
+import { useWorkspace, useWorkspaceMembers, useAddWorkspaceMember } from '@/hooks/useWorkspace';
 import { useAuthStore } from '@/store/authStore';
 import { Avatar } from '@/components/ui/Avatar';
+import { Button } from '@/components/ui/Button';
 import { EmptyState } from '@/components/ui/EmptyState';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import type { WorkspaceMember } from '@/types';
@@ -19,8 +25,29 @@ export default function SocialScreen() {
   const currentUser = useAuthStore((s) => s.user);
   const { data: workspace, isLoading: loadingWorkspace } = useWorkspace(activeWorkspaceId);
   const { data: members = [], isLoading: loadingMembers } = useWorkspaceMembers(activeWorkspaceId);
+  const addMember = useAddWorkspaceMember();
+
+  const [inviteVisible, setInviteVisible] = useState(false);
+  const [inviteEmail, setInviteEmail] = useState('');
 
   const isLoading = loadingWorkspace || loadingMembers;
+
+  function handleInvite() {
+    if (!inviteEmail.trim() || !activeWorkspaceId) return;
+    addMember.mutate(
+      { workspaceId: activeWorkspaceId, email: inviteEmail.trim() },
+      {
+        onSuccess: (user) => {
+          setInviteEmail('');
+          setInviteVisible(false);
+          Alert.alert('Done', `${user.displayName} has been added to the workspace.`);
+        },
+        onError: (err) => {
+          Alert.alert('Error', err instanceof Error ? err.message : 'Could not add member.');
+        },
+      }
+    );
+  }
 
   if (!activeWorkspaceId) {
     return (
@@ -50,6 +77,13 @@ export default function SocialScreen() {
         <View style={styles.memberCountBadge}>
           <Text style={styles.memberCountText}>{members.length}</Text>
         </View>
+        <TouchableOpacity
+          style={styles.inviteButton}
+          onPress={() => setInviteVisible(true)}
+          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+        >
+          <Text style={styles.inviteButtonText}>+ Invite</Text>
+        </TouchableOpacity>
       </View>
 
       {isLoading ? (
@@ -63,6 +97,7 @@ export default function SocialScreen() {
           icon={<Text style={{ fontSize: 48 }}>👤</Text>}
           title="No members yet"
           description="Invite colleagues to collaborate in this workspace."
+          action={{ label: 'Invite Member', onPress: () => setInviteVisible(true) }}
         />
       ) : (
         <ScrollView
@@ -92,6 +127,46 @@ export default function SocialScreen() {
           )}
         </ScrollView>
       )}
+
+      {/* Invite Member Modal */}
+      <Modal
+        visible={inviteVisible}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setInviteVisible(false)}
+      >
+        <TouchableOpacity
+          style={styles.modalOverlay}
+          activeOpacity={1}
+          onPress={() => setInviteVisible(false)}
+        >
+          <View style={styles.modalSheet} onStartShouldSetResponder={() => true}>
+            <Text style={styles.modalTitle}>Invite Member</Text>
+            <Text style={styles.modalSubtitle}>
+              Enter the email address of the person you'd like to add. They must already have an account.
+            </Text>
+            <TextInput
+              style={styles.modalInput}
+              value={inviteEmail}
+              onChangeText={setInviteEmail}
+              placeholder="colleague@example.com"
+              placeholderTextColor={Colors.textDim}
+              autoFocus
+              autoCapitalize="none"
+              keyboardType="email-address"
+              returnKeyType="done"
+              onSubmitEditing={handleInvite}
+            />
+            <Button
+              label="Add to Workspace"
+              onPress={handleInvite}
+              loading={addMember.isPending}
+              disabled={!inviteEmail.trim()}
+              fullWidth
+            />
+          </View>
+        </TouchableOpacity>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -169,11 +244,56 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     paddingHorizontal: Spacing.sm,
+    marginRight: Spacing.sm,
   },
   memberCountText: {
     color: Colors.textMuted,
     fontSize: FontSize.sm,
     fontWeight: '700',
+  },
+  inviteButton: {
+    backgroundColor: Colors.primary,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+  },
+  inviteButtonText: {
+    color: Colors.white,
+    fontSize: FontSize.sm,
+    fontWeight: '700',
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.6)',
+    justifyContent: 'flex-end',
+  },
+  modalSheet: {
+    backgroundColor: Colors.surface,
+    borderTopLeftRadius: Radius.lg,
+    borderTopRightRadius: Radius.lg,
+    padding: Spacing.lg,
+    paddingBottom: Spacing.xxl,
+    gap: Spacing.md,
+  },
+  modalTitle: {
+    fontSize: FontSize.xl,
+    fontWeight: '700',
+    color: Colors.text,
+  },
+  modalSubtitle: {
+    fontSize: FontSize.sm,
+    color: Colors.textMuted,
+    lineHeight: 20,
+  },
+  modalInput: {
+    backgroundColor: Colors.surfaceHigh,
+    borderRadius: Radius.md,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm + 4,
+    color: Colors.text,
+    fontSize: FontSize.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
   },
   list: {
     padding: Spacing.lg,

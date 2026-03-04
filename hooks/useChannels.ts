@@ -17,26 +17,25 @@ import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { useAuthStore } from '@/store/authStore';
 import { encryptForWorkspace, decryptForWorkspace } from '@/lib/encryption';
+import { logActivity } from '@/hooks/useActivityLog';
 import type { Channel, Message } from '@/types';
 
 // ─── Channel list ─────────────────────────────────────────────────────────────
 
 export function useChannels(workspaceId: string | null) {
-  const user = useAuthStore((s) => s.user);
-
   return useQuery({
     queryKey: ['channels', workspaceId],
     queryFn: async () => {
-      if (!workspaceId || !user?.id) return [];
+      if (!workspaceId) return [];
+      // Single-field filter — no composite index required.
       const q = query(
         collection(db, COLLECTIONS.CHANNELS),
-        where('workspaceId', '==', workspaceId),
-        where('members', 'array-contains', user.id)
+        where('workspaceId', '==', workspaceId)
       );
       const snap = await getDocs(q);
       return snap.docs.map((d) => ({ id: d.id, ...d.data() } as Channel));
     },
-    enabled: !!workspaceId && !!user?.id,
+    enabled: !!workspaceId,
   });
 }
 
@@ -181,13 +180,19 @@ export function useCreateChannel() {
     }) => {
       if (!user) throw new Error('Not authenticated');
 
+      const channelName = name.toLowerCase().replace(/\s+/g, '-');
       const ref = await addDoc(collection(db, COLLECTIONS.CHANNELS), {
         workspaceId,
-        name: name.toLowerCase().replace(/\s+/g, '-'),
+        name: channelName,
         type,
         members: [user.id],
         createdAt: serverTimestamp(),
       });
+
+      logActivity({
+        workspaceId, userId: user.id, userDisplayName: user.displayName,
+        action: 'channel_created', resourceType: 'channel', resourceId: ref.id, resourceName: channelName,
+      }).catch(() => {});
 
       return ref.id;
     },

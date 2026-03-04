@@ -10,4 +10,5 @@ export const COLLECTIONS = {
   COMMENTS: 'comments',
   NOTIFICATIONS: 'notifications',
   INVITES: 'invites',
+  ACTIVITY_LOG: 'activity_log',  // Immutable workspace activity log
 } as const;

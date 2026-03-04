@@ -1,5 +1,13 @@
 import { Timestamp } from 'firebase/firestore';
 
+// ─── AI Provider ─────────────────────────────────────────────────────────────
+export type AIProvider = 'anthropic' | 'openai' | 'google';
+
+export interface AIProviderConfig {
+  provider: AIProvider;
+  apiKey: string;
+}
+
 // ─── User ───────────────────────────────────────────────────────────────────
 export interface User {
   id: string;
@@ -99,6 +107,26 @@ export interface ApproverEntry {
   status: 'pending' | 'approved' | 'rejected';
   comment?: string;
   respondedAt?: Timestamp;
+}
+
+// ─── Activity Log ────────────────────────────────────────────────────────────
+export type ActivityAction =
+  | 'document_created'
+  | 'document_renamed'
+  | 'document_deleted'
+  | 'document_shared'
+  | 'channel_created';
+
+export interface ActivityLogEntry {
+  id: string;
+  workspaceId: string;
+  userId: string;
+  userDisplayName: string;
+  action: ActivityAction;
+  resourceType: 'document' | 'channel';
+  resourceId: string;
+  resourceName: string;
+  timestamp: Timestamp;
 }
 
 // ─── Notifications ────────────────────────────────────────────────────────────

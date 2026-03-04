@@ -1,3 +1,6 @@
+// Polyfill Web Crypto API for Hermes — must be the very first import.
+import 'expo-standard-web-crypto';
+
 import { registerRootComponent } from 'expo';
 
 import App from './App';

@@ -255,12 +255,13 @@ const styles = StyleSheet.create({
   },
   typeGrid: {
     flexDirection: 'row',
-    gap: Spacing.md,
+    gap: Spacing.sm,
   },
   typeCard: {
     flex: 1,
     alignItems: 'center',
-    padding: Spacing.md,
+    paddingVertical: Spacing.md,
+    paddingHorizontal: Spacing.xs,
     borderRadius: Radius.md,
     backgroundColor: Colors.surfaceHigh,
     borderWidth: 2,
@@ -276,7 +277,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   typeSymbol: { fontSize: FontSize.lg, fontWeight: '700' },
-  typeLabel: { color: Colors.textMuted, fontSize: FontSize.sm, fontWeight: '600' },
+  typeLabel: { color: Colors.textMuted, fontSize: FontSize.xs, fontWeight: '600' },
   nameInput: {
     backgroundColor: Colors.surfaceHigh,
     borderRadius: Radius.md,

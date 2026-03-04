@@ -1,7 +1,11 @@
 import { initializeApp, getApps, getApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth';
-import { getFirestore } from 'firebase/firestore';
+import { initializeAuth, getAuth } from 'firebase/auth';
+// @ts-expect-error – TypeScript resolves @firebase/auth to its browser types, but Metro
+// uses the react-native export condition at runtime which exports getReactNativePersistence.
+import { getReactNativePersistence } from '@firebase/auth';
+import { initializeFirestore, getFirestore } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
@@ -15,8 +19,29 @@ const firebaseConfig = {
 
 const app = getApps().length === 0 ? initializeApp(firebaseConfig) : getApp();
 
-export const auth = getAuth(app);
-export const db = getFirestore(app);
+// Use initializeAuth with AsyncStorage persistence so auth state survives app restarts.
+// Fall back to getAuth if already initialized (e.g. hot reload).
+export const auth = (() => {
+  try {
+    return initializeAuth(app, {
+      persistence: getReactNativePersistence(AsyncStorage),
+    });
+  } catch {
+    return getAuth(app);
+  }
+})();
+
+// React Native requires long polling — the default WebChannel transport errors out.
+// Fall back to getFirestore on hot reload (already initialized).
+export const db = (() => {
+  try {
+    return initializeFirestore(app, {
+      experimentalForceLongPolling: true,
+    });
+  } catch {
+    return getFirestore(app);
+  }
+})();
 export const storage = getStorage(app);
 
 export default app;

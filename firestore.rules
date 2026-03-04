@@ -1,0 +1,84 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper: is the requester authenticated?
+    function isAuth() {
+      return request.auth != null;
+    }
+
+    // Helper: is the requester a member of the given workspace?
+    function isWorkspaceMember(workspaceId) {
+      return isAuth() &&
+        request.auth.uid in get(/databases/$(database)/documents/workspaces/$(workspaceId)).data.memberIds;
+    }
+
+    // ── Users ────────────────────────────────────────────────────────────────
+    // Any authenticated user can read profiles (needed to show avatars/names).
+    // Only the owner can write their own profile.
+    match /users/{userId} {
+      allow read:  if isAuth();
+      allow write: if isAuth() && request.auth.uid == userId;
+    }
+
+    // ── Workspaces ───────────────────────────────────────────────────────────
+    // Any authenticated user can create a workspace.
+    // Only members can read/update; only the owner can delete.
+    match /workspaces/{workspaceId} {
+      allow create: if isAuth();
+      allow read:   if isAuth() && request.auth.uid in resource.data.memberIds;
+      allow update: if isAuth() && request.auth.uid in resource.data.memberIds;
+      allow delete: if isAuth() && request.auth.uid == resource.data.ownerId;
+    }
+
+    // ── Channels ─────────────────────────────────────────────────────────────
+    // Workspace members can read/create channels.
+    // Channel members can update (e.g. add themselves).
+    match /channels/{channelId} {
+      allow create: if isAuth();
+      allow read:   if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    // ── Messages ─────────────────────────────────────────────────────────────
+    // Any authenticated user in the channel can read/create.
+    // Only the sender can delete their own message.
+    match /messages/{messageId} {
+      allow create: if isAuth();
+      allow read:   if isAuth();
+      allow update: if isAuth() && request.auth.uid == resource.data.senderId;
+      allow delete: if isAuth() && request.auth.uid == resource.data.senderId;
+    }
+
+    // ── Documents ────────────────────────────────────────────────────────────
+    match /documents/{documentId} {
+      allow create: if isAuth();
+      allow read:   if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth();
+    }
+
+    match /document_versions/{versionId} {
+      allow read, write: if isAuth();
+    }
+
+    // ── Approvals ────────────────────────────────────────────────────────────
+    match /approvals/{approvalId} {
+      allow read, write: if isAuth();
+    }
+
+    // ── Notifications ────────────────────────────────────────────────────────
+    match /notifications/{notificationId} {
+      allow read:   if isAuth() && request.auth.uid == resource.data.userId;
+      allow create: if isAuth();
+      allow update: if isAuth() && request.auth.uid == resource.data.userId;
+      allow delete: if isAuth() && request.auth.uid == resource.data.userId;
+    }
+
+    // ── Invites ──────────────────────────────────────────────────────────────
+    match /invites/{inviteId} {
+      allow read, write: if isAuth();
+    }
+  }
+}

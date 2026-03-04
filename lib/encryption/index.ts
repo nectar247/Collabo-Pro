@@ -1,6 +1,12 @@
 import * as SecureStore from 'expo-secure-store';
 
-// ─── AES-256-GCM encryption using Web Crypto API (available in RN 0.74+ / Expo 55) ───
+// ─── AES-256-GCM encryption using Web Crypto API ─────────────────────────────
+// Hermes exposes the Web Crypto API on global.crypto, not as a bare `crypto`
+// global. We grab it once here — and check for subtle so we can degrade
+// gracefully if the polyfill hasn't loaded yet.
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+const _crypto = (global as any).crypto as Crypto | undefined;
+const _subtle = _crypto?.subtle;
 
 export interface EncryptedPayload {
   ciphertext: string; // base64
@@ -29,8 +35,9 @@ function base64ToBuffer(base64: string): ArrayBuffer {
 
 // Import a raw base64 key for AES-GCM operations
 async function importKey(keyBase64: string): Promise<CryptoKey> {
+  if (!_subtle) throw new Error('crypto.subtle unavailable');
   const keyBuffer = base64ToBuffer(keyBase64);
-  return crypto.subtle.importKey(
+  return _subtle.importKey(
     'raw',
     keyBuffer,
     { name: 'AES-GCM', length: 256 },
@@ -41,12 +48,13 @@ async function importKey(keyBase64: string): Promise<CryptoKey> {
 
 // Generate a new random AES-256 key, returned as base64
 export async function generateKey(): Promise<string> {
-  const key = await crypto.subtle.generateKey(
+  if (!_subtle) throw new Error('crypto.subtle unavailable');
+  const key = await _subtle.generateKey(
     { name: 'AES-GCM', length: 256 },
     true,
     ['encrypt', 'decrypt']
   );
-  const exported = await crypto.subtle.exportKey('raw', key);
+  const exported = await _subtle.exportKey('raw', key);
   return bufferToBase64(exported);
 }
 
@@ -55,12 +63,13 @@ export async function encryptMessage(
   plaintext: string,
   keyBase64: string
 ): Promise<EncryptedPayload> {
+  if (!_subtle || !_crypto) throw new Error('crypto.subtle unavailable');
   const encoder = new TextEncoder();
   const data = encoder.encode(plaintext);
-  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const iv = _crypto.getRandomValues(new Uint8Array(12));
   const cryptoKey = await importKey(keyBase64);
 
-  const encrypted = await crypto.subtle.encrypt(
+  const encrypted = await _subtle.encrypt(
     { name: 'AES-GCM', iv },
     cryptoKey,
     data
@@ -77,8 +86,9 @@ export async function decryptMessage(
   payload: EncryptedPayload,
   keyBase64: string
 ): Promise<string> {
+  if (!_subtle) throw new Error('crypto.subtle unavailable');
   const cryptoKey = await importKey(keyBase64);
-  const decrypted = await crypto.subtle.decrypt(
+  const decrypted = await _subtle.decrypt(
     { name: 'AES-GCM', iv: base64ToBuffer(payload.iv) },
     cryptoKey,
     base64ToBuffer(payload.ciphertext)
@@ -125,15 +135,22 @@ export async function encryptForWorkspace(
   plaintext: string,
   workspaceId: string
 ): Promise<string> {
-  const key = await getWorkspaceKey(workspaceId);
-  const payload = await encryptMessage(plaintext, key);
-  return serializeEncrypted(payload);
+  // Degrade gracefully when Web Crypto API is unavailable (e.g. missing polyfill).
+  if (!_subtle) return plaintext;
+  try {
+    const key = await getWorkspaceKey(workspaceId);
+    const payload = await encryptMessage(plaintext, key);
+    return serializeEncrypted(payload);
+  } catch {
+    return plaintext;
+  }
 }
 
 export async function decryptForWorkspace(
   storedContent: string,
   workspaceId: string
 ): Promise<string> {
+  if (!_subtle) return storedContent;
   try {
     const key = await getWorkspaceKey(workspaceId);
     const payload = deserializeEncrypted(storedContent);
