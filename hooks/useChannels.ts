@@ -12,6 +12,9 @@ import {
   orderBy,
   limit,
   getDoc,
+  updateDoc,
+  arrayUnion,
+  arrayRemove,
 } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
@@ -72,10 +75,16 @@ export function useChannel(channelId: string | null) {
 
 // ─── Real-time messages ───────────────────────────────────────────────────────
 
+interface ReplyMeta {
+  replyToId: string;
+  replyToSenderName: string;
+  replyToPreview: string;
+}
+
 interface UseMessagesReturn {
   messages: (Message & { decryptedContent: string })[];
   isLoading: boolean;
-  sendMessage: (content: string) => Promise<void>;
+  sendMessage: (content: string, replyMeta?: ReplyMeta) => Promise<void>;
   isSending: boolean;
 }
 
@@ -140,7 +149,7 @@ export function useMessages(channelId: string | null): UseMessagesReturn {
     return unsubscribe;
   }, [channelId, workspaceId]);
 
-  const sendMessage = async (content: string) => {
+  const sendMessage = async (content: string, replyMeta?: ReplyMeta) => {
     if (!channelId || !user || !content.trim()) return;
     setIsSending(true);
 
@@ -157,6 +166,7 @@ export function useMessages(channelId: string | null): UseMessagesReturn {
           senderName: user.displayName,
           content: encryptedContent,
           createdAt: serverTimestamp(),
+          ...(replyMeta ?? {}),
         }
       );
     } finally {
@@ -205,4 +215,26 @@ export function useCreateChannel() {
       queryClient.invalidateQueries({ queryKey: ['channels', workspaceId] });
     },
   });
+}
+
+// ─── React to a message ───────────────────────────────────────────────────────
+
+export function useReactToMessage(channelId: string | null) {
+  const user = useAuthStore((s) => s.user);
+
+  return async (messageId: string, emoji: string) => {
+    if (!channelId || !user) return;
+    const msgRef = doc(db, COLLECTIONS.CHANNELS, channelId, COLLECTIONS.MESSAGES, messageId);
+    // Fetch current reactions to determine toggle direction
+    const snap = await getDoc(msgRef);
+    const reactions: Record<string, string[]> = (snap.data()?.reactions ?? {}) as Record<string, string[]>;
+    const current = reactions[emoji] ?? [];
+    const alreadyReacted = current.includes(user.id);
+
+    await updateDoc(msgRef, {
+      [`reactions.${emoji}`]: alreadyReacted
+        ? arrayRemove(user.id)
+        : arrayUnion(user.id),
+    });
+  };
 }

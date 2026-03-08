@@ -1,13 +1,16 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { collection, doc, setDoc, deleteDoc, onSnapshot, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { MessageBubble } from './MessageBubble';
 import { MessageInput } from './MessageInput';
-import { useMessages } from '@/hooks/useChannels';
+import { useMessages, useReactToMessage, useChannel } from '@/hooks/useChannels';
 import { useAuthStore } from '@/store/authStore';
+import { useWorkspaceMembers } from '@/hooks/useWorkspace';
+import { useUserProfiles } from '@/hooks/useUserProfiles';
 import { Colors, FontSize, Spacing } from '@/constants/theme';
+import type { Message } from '@/types';
 
 interface ChatScreenProps {
   channelId: string;
@@ -17,6 +20,20 @@ export function ChatScreen({ channelId }: ChatScreenProps) {
   const { messages, isLoading, sendMessage, isSending } = useMessages(channelId);
   const user = useAuthStore((s) => s.user);
   const flatListRef = useRef<FlatList>(null);
+  const reactToMessage = useReactToMessage(channelId);
+
+  // Reply state
+  const [replyTo, setReplyTo] = useState<(Message & { decryptedContent: string }) | null>(null);
+
+  // @ mention members
+  const channelData = useChannel(channelId);
+  const workspaceId = channelData.data?.workspaceId ?? null;
+  const { data: memberEntries = [] } = useWorkspaceMembers(workspaceId);
+  const memberIds = memberEntries.map((m: any) => (typeof m === 'string' ? m : m.userId));
+  const profileMap = useUserProfiles(memberIds);
+  const mentionMembers = memberIds
+    .filter((uid: string) => uid !== user?.id)
+    .map((uid: string) => ({ id: uid, displayName: profileMap.get(uid) ?? uid.slice(0, 8) }));
 
   // ── Typing indicators ─────────────────────────────────────────────────────
   const [typingUsers, setTypingUsers] = useState<string[]>([]);
@@ -79,6 +96,17 @@ export function ChatScreen({ channelId }: ChatScreenProps) {
     }
   }, [messages.length]);
 
+  async function handleSendMessage(content: string) {
+    await sendMessage(content, replyTo
+      ? {
+        replyToId: replyTo.id,
+        replyToSenderName: replyTo.senderName ?? replyTo.senderId.slice(0, 8),
+        replyToPreview: replyTo.decryptedContent.slice(0, 80),
+      }
+      : undefined);
+    setReplyTo(null);
+  }
+
   if (isLoading) {
     return (
       <View style={styles.center}>
@@ -108,6 +136,9 @@ export function ChatScreen({ channelId }: ChatScreenProps) {
                   : undefined
               }
               showSender={showSender && !isOwn}
+              currentUserId={user?.id}
+              onReact={(msgId, emoji) => reactToMessage(msgId, emoji).catch(() => {})}
+              onReply={setReplyTo}
             />
           );
         }}
@@ -125,11 +156,25 @@ export function ChatScreen({ channelId }: ChatScreenProps) {
         <Text style={styles.typingIndicator}>{typingLabel}</Text>
       ) : null}
 
+      {/* Reply preview bar */}
+      {replyTo && (
+        <View style={styles.replyBar}>
+          <View style={styles.replyBarContent}>
+            <Text style={styles.replyBarLabel}>Replying to {replyTo.senderName ?? 'message'}</Text>
+            <Text style={styles.replyBarPreview} numberOfLines={1}>{replyTo.decryptedContent}</Text>
+          </View>
+          <TouchableOpacity onPress={() => setReplyTo(null)} style={styles.replyBarClose}>
+            <Text style={styles.replyBarCloseText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
+
       <MessageInput
-        onSendMessage={sendMessage}
+        onSendMessage={handleSendMessage}
         isLoading={isSending}
         onTyping={handleTyping}
         onStopTyping={handleStopTyping}
+        mentionMembers={mentionMembers}
       />
     </View>
   );
@@ -174,5 +219,37 @@ const styles = StyleSheet.create({
     fontStyle: 'italic',
     paddingHorizontal: Spacing.md,
     paddingBottom: 4,
+  },
+  replyBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: Colors.surface,
+    borderTopWidth: 1,
+    borderTopColor: Colors.border,
+    borderLeftWidth: 3,
+    borderLeftColor: Colors.primary,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+  },
+  replyBarContent: {
+    flex: 1,
+  },
+  replyBarLabel: {
+    color: Colors.primary,
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  replyBarPreview: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+  },
+  replyBarClose: {
+    padding: 4,
+    marginLeft: Spacing.sm,
+  },
+  replyBarCloseText: {
+    color: Colors.textMuted,
+    fontSize: 16,
   },
 });

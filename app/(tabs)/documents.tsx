@@ -59,6 +59,8 @@ export default function DocumentsTab() {
   const [newFolderModalVisible, setNewFolderModalVisible] = useState(false);
   const [newFolderName, setNewFolderName] = useState('');
   const [queuedCount, setQueuedCount] = useState(0);
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchActive, setSearchActive] = useState(false);
 
   const { isConnected } = useNetworkStatus();
 
@@ -67,6 +69,9 @@ export default function DocumentsTab() {
   }, [isConnected]);
 
   const filtered = documents.filter((d) => {
+    if (searchQuery.trim()) {
+      return d.name.toLowerCase().includes(searchQuery.toLowerCase());
+    }
     if (filter !== 'all' && d.type !== filter) return false;
     if (activeFolderId !== null) return d.folderId === activeFolderId;
     return !d.folderId; // root level: no folder
@@ -160,6 +165,12 @@ export default function DocumentsTab() {
             </View>
           )}
           <TouchableOpacity
+            onPress={() => { setSearchActive((v) => !v); setSearchQuery(''); }}
+            style={styles.folderButton}
+          >
+            <Text style={styles.folderButtonText}>{searchActive ? '✕' : '🔍'}</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
             onPress={() => setNewFolderModalVisible(true)}
             style={styles.folderButton}
           >
@@ -173,6 +184,22 @@ export default function DocumentsTab() {
           </TouchableOpacity>
         </View>
       </View>
+
+      {/* Search bar */}
+      {searchActive && (
+        <View style={styles.searchBar}>
+          <TextInput
+            style={styles.searchInput}
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+            placeholder="Search documents..."
+            placeholderTextColor={Colors.textDim}
+            autoFocus
+            returnKeyType="search"
+            clearButtonMode="while-editing"
+          />
+        </View>
+      )}
 
       {/* Filter chips */}
       <ScrollView
@@ -448,4 +475,21 @@ const styles = StyleSheet.create({
   templateDivider: { width: 1, backgroundColor: Colors.border, marginHorizontal: Spacing.xs, alignSelf: 'stretch' },
   syncBadge: { backgroundColor: Colors.warning, borderRadius: 10, paddingHorizontal: 6, paddingVertical: 2 },
   syncBadgeText: { color: '#FFFFFF', fontSize: 11, fontWeight: '700' },
+  searchBar: {
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.sm,
+    borderBottomWidth: StyleSheet.hairlineWidth,
+    borderBottomColor: Colors.border,
+    backgroundColor: Colors.background,
+  },
+  searchInput: {
+    backgroundColor: Colors.surface,
+    borderRadius: Radius.full,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: 8,
+    color: Colors.text,
+    fontSize: FontSize.md,
+    borderWidth: 1,
+    borderColor: Colors.border,
+  },
 });

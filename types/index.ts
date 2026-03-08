@@ -57,6 +57,9 @@ export interface Message {
   content: string;          // Encrypted ciphertext
   attachments?: Attachment[];
   reactions?: Record<string, string[]>;  // emoji -> userIds
+  replyToId?: string;       // id of the message being replied to
+  replyToSenderName?: string;
+  replyToPreview?: string;  // plaintext preview of the replied-to message
   editedAt?: Timestamp;
   createdAt: Timestamp;
 }
