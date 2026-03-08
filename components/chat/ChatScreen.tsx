@@ -5,7 +5,7 @@ import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
 import { MessageBubble } from './MessageBubble';
 import { MessageInput } from './MessageInput';
-import { useMessages, useReactToMessage, useChannel } from '@/hooks/useChannels';
+import { useMessages, useReactToMessage, useChannel, useEditMessage } from '@/hooks/useChannels';
 import { useAuthStore } from '@/store/authStore';
 import { useWorkspaceMembers } from '@/hooks/useWorkspace';
 import { useUserProfiles } from '@/hooks/useUserProfiles';
@@ -24,6 +24,10 @@ export function ChatScreen({ channelId }: ChatScreenProps) {
 
   // Reply state
   const [replyTo, setReplyTo] = useState<(Message & { decryptedContent: string }) | null>(null);
+
+  // Edit state
+  const [editingMessage, setEditingMessage] = useState<(Message & { decryptedContent: string }) | null>(null);
+  const editMessage = useEditMessage(channelId);
 
   // @ mention members
   const channelData = useChannel(channelId);
@@ -96,14 +100,27 @@ export function ChatScreen({ channelId }: ChatScreenProps) {
     }
   }, [messages.length]);
 
-  async function handleSendMessage(content: string) {
-    await sendMessage(content, replyTo
-      ? {
-        replyToId: replyTo.id,
-        replyToSenderName: replyTo.senderName ?? replyTo.senderId.slice(0, 8),
-        replyToPreview: replyTo.decryptedContent.slice(0, 80),
-      }
-      : undefined);
+  async function handleSendMessage(
+    content: string,
+    _replyMeta?: undefined,
+    attachments?: { url: string; name: string; size: number; type: 'image' | 'file' | 'document' }[]
+  ) {
+    if (editingMessage) {
+      await editMessage(editingMessage.id, content, workspaceId).catch(() => {});
+      setEditingMessage(null);
+      return;
+    }
+    await sendMessage(
+      content,
+      replyTo
+        ? {
+          replyToId: replyTo.id,
+          replyToSenderName: replyTo.senderName ?? replyTo.senderId.slice(0, 8),
+          replyToPreview: replyTo.decryptedContent.slice(0, 80),
+        }
+        : undefined,
+      attachments
+    );
     setReplyTo(null);
   }
 
@@ -139,6 +156,7 @@ export function ChatScreen({ channelId }: ChatScreenProps) {
               currentUserId={user?.id}
               onReact={(msgId, emoji) => reactToMessage(msgId, emoji).catch(() => {})}
               onReply={setReplyTo}
+              onEdit={setEditingMessage}
             />
           );
         }}
@@ -155,6 +173,19 @@ export function ChatScreen({ channelId }: ChatScreenProps) {
       {typingLabel ? (
         <Text style={styles.typingIndicator}>{typingLabel}</Text>
       ) : null}
+
+      {/* Edit indicator bar */}
+      {editingMessage && (
+        <View style={styles.replyBar}>
+          <View style={styles.replyBarContent}>
+            <Text style={styles.replyBarLabel}>Editing message</Text>
+            <Text style={styles.replyBarPreview} numberOfLines={1}>{editingMessage.decryptedContent}</Text>
+          </View>
+          <TouchableOpacity onPress={() => setEditingMessage(null)} style={styles.replyBarClose}>
+            <Text style={styles.replyBarCloseText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+      )}
 
       {/* Reply preview bar */}
       {replyTo && (
@@ -175,6 +206,8 @@ export function ChatScreen({ channelId }: ChatScreenProps) {
         onTyping={handleTyping}
         onStopTyping={handleStopTyping}
         mentionMembers={mentionMembers}
+        editingDefaultValue={editingMessage?.decryptedContent}
+        channelId={channelId}
       />
     </View>
   );

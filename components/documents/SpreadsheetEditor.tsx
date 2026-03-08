@@ -19,6 +19,7 @@ import {
   type ChartDef,
   type ConditionalFormat,
   type DataValidation,
+  type MergedCell,
   type NamedRange,
   type PivotTableDef,
   type Sheet,
@@ -164,6 +165,7 @@ const NUM_FORMATS: { label: string; fmt: string }[] = [
 
 export function SpreadsheetEditor({ content, onChange, isReadOnly = false, presenceMembers, onPresenceBlockUpdate }: SpreadsheetEditorProps) {
   const [selectedCell, setSelectedCell] = useState<{ row: number; col: number } | null>(null);
+  const [selectionAnchor, setSelectionAnchor] = useState<{ row: number; col: number } | null>(null);
   const [editingValue, setEditingValue] = useState('');
   const editInputRef = useRef<TextInput>(null);
 
@@ -307,6 +309,69 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
 
   function getRowHeight(row: number): number {
     return sheet.rowHeights?.[row] ?? CELL_HEIGHT;
+  }
+
+  function parseRef(ref: string): { row: number; col: number } | null {
+    const m = ref.match(/^([A-Z]+)(\d+)$/);
+    if (!m) return null;
+    const col = COL_LETTERS.indexOf(m[1]);
+    const row = parseInt(m[2], 10) - 1;
+    return col >= 0 ? { row, col } : null;
+  }
+
+  function getMergeForCell(r: number, c: number): MergedCell | null {
+    const merges = sheet.merges ?? [];
+    for (const m of merges) {
+      const from = parseRef(m.from);
+      const to = parseRef(m.to);
+      if (!from || !to) continue;
+      const minR = Math.min(from.row, to.row);
+      const maxR = Math.max(from.row, to.row);
+      const minC = Math.min(from.col, to.col);
+      const maxC = Math.max(from.col, to.col);
+      if (r >= minR && r <= maxR && c >= minC && c <= maxC) return m;
+    }
+    return null;
+  }
+
+  function isMergeOrigin(r: number, c: number): boolean {
+    const m = getMergeForCell(r, c);
+    if (!m) return false;
+    const from = parseRef(m.from);
+    return from?.row === r && from?.col === c;
+  }
+
+  function isMergedNonOrigin(r: number, c: number): boolean {
+    const m = getMergeForCell(r, c);
+    if (!m) return false;
+    const from = parseRef(m.from);
+    return !(from?.row === r && from?.col === c);
+  }
+
+  function getMergedCellWidth(r: number, c: number): number {
+    const m = getMergeForCell(r, c);
+    if (!m) return getColWidth(c);
+    const from = parseRef(m.from);
+    const to = parseRef(m.to);
+    if (!from || !to) return getColWidth(c);
+    let total = 0;
+    for (let ci = Math.min(from.col, to.col); ci <= Math.max(from.col, to.col); ci++) {
+      total += getColWidth(ci);
+    }
+    return total;
+  }
+
+  function getMergedCellHeight(r: number, c: number): number {
+    const m = getMergeForCell(r, c);
+    if (!m) return getRowHeight(r);
+    const from = parseRef(m.from);
+    const to = parseRef(m.to);
+    if (!from || !to) return getRowHeight(r);
+    let total = 0;
+    for (let ri = Math.min(from.row, to.row); ri <= Math.max(from.row, to.row); ri++) {
+      total += getRowHeight(ri);
+    }
+    return total;
   }
 
   function getCellDisplay(row: number, col: number): string {
@@ -564,6 +629,47 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
     onChange({ ...content, namedRanges: (content.namedRanges ?? []).filter(r => r.name !== name) });
   }
 
+  // ── Merge / unmerge ───────────────────────────────────────────────────────
+
+  function handleMergeCells() {
+    if (!selectedCell || !selectionAnchor) {
+      // Check if selected cell is part of a merge — offer unmerge
+      if (selectedCell && getMergeForCell(selectedCell.row, selectedCell.col)) {
+        const merge = getMergeForCell(selectedCell.row, selectedCell.col)!;
+        const newMerges = (sheet.merges ?? []).filter((m) => m !== merge);
+        updateSheet({ merges: newMerges });
+      }
+      return;
+    }
+    // Merge range from selectedCell to selectionAnchor
+    const from = cellKey(
+      Math.min(selectedCell.row, selectionAnchor.row),
+      Math.min(selectedCell.col, selectionAnchor.col)
+    );
+    const to = cellKey(
+      Math.max(selectedCell.row, selectionAnchor.row),
+      Math.max(selectedCell.col, selectionAnchor.col)
+    );
+    // Remove any existing merges that overlap this range
+    const minR = Math.min(selectedCell.row, selectionAnchor.row);
+    const maxR = Math.max(selectedCell.row, selectionAnchor.row);
+    const minC = Math.min(selectedCell.col, selectionAnchor.col);
+    const maxC = Math.max(selectedCell.col, selectionAnchor.col);
+    const filteredMerges = (sheet.merges ?? []).filter((m) => {
+      const mFrom = parseRef(m.from);
+      const mTo = parseRef(m.to);
+      if (!mFrom || !mTo) return true;
+      return (
+        Math.max(mFrom.row, mTo.row) < minR ||
+        Math.min(mFrom.row, mTo.row) > maxR ||
+        Math.max(mFrom.col, mTo.col) < minC ||
+        Math.min(mFrom.col, mTo.col) > maxC
+      );
+    });
+    updateSheet({ merges: [...filteredMerges, { from, to }] });
+    setSelectionAnchor(null);
+  }
+
   // ── Computed display rows (after filter + sort) ───────────────────────────
 
   const displayRows = useMemo(() => {
@@ -636,6 +742,8 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
         </TouchableOpacity>
         {(() => {
           function renderCell(c: number) {
+            // Skip non-origin merged cells — they are visually covered by the origin cell
+            if (isMergedNonOrigin(r, c)) return null;
             const selected = isSelected(r, c);
             const display = getCellDisplay(r, c);
             const ck = cellKey(r, c);
@@ -651,11 +759,42 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
                   selectCell(r, c);
                   if (hasList) handleCellValidationTap(r, c, dv!);
                 }}
+                onLongPress={() => {
+                  if (!isReadOnly && selectedCell) {
+                    setSelectionAnchor({ row: r, col: c });
+                    Alert.alert(
+                      'Merge Range',
+                      `Merge from ${cellKey(Math.min(selectedCell.row, r), Math.min(selectedCell.col, c))} to ${cellKey(Math.max(selectedCell.row, r), Math.max(selectedCell.col, c))}?`,
+                      [
+                        { text: 'Merge', onPress: () => {
+                          const anchor = { row: r, col: c };
+                          // inline merge since state may not have updated
+                          const from = cellKey(Math.min(selectedCell.row, anchor.row), Math.min(selectedCell.col, anchor.col));
+                          const to = cellKey(Math.max(selectedCell.row, anchor.row), Math.max(selectedCell.col, anchor.col));
+                          const minR2 = Math.min(selectedCell.row, anchor.row);
+                          const maxR2 = Math.max(selectedCell.row, anchor.row);
+                          const minC2 = Math.min(selectedCell.col, anchor.col);
+                          const maxC2 = Math.max(selectedCell.col, anchor.col);
+                          const filtered = (sheet.merges ?? []).filter((m) => {
+                            const mFrom = parseRef(m.from);
+                            const mTo = parseRef(m.to);
+                            if (!mFrom || !mTo) return true;
+                            return (Math.max(mFrom.row, mTo.row) < minR2 || Math.min(mFrom.row, mTo.row) > maxR2 || Math.max(mFrom.col, mTo.col) < minC2 || Math.min(mFrom.col, mTo.col) > maxC2);
+                          });
+                          updateSheet({ merges: [...filtered, { from, to }] });
+                          setSelectionAnchor(null);
+                        }},
+                        { text: 'Cancel', style: 'cancel', onPress: () => setSelectionAnchor(null) },
+                      ]
+                    );
+                  }
+                }}
+                delayLongPress={600}
                 style={[
                   styles.cell,
                   {
-                    width: getColWidth(c),
-                    height: getRowHeight(r),
+                    width: isMergeOrigin(r, c) ? getMergedCellWidth(r, c) : getColWidth(c),
+                    height: isMergeOrigin(r, c) ? getMergedCellHeight(r, c) : getRowHeight(r),
                     backgroundColor: cfStyle?.bgColor ?? cellData?.bgColor ?? Colors.background,
                   },
                   selected && styles.cellSelected,
@@ -746,6 +885,26 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
             }}
           >
             <Text style={[styles.actionBtnText, (sortConfig || filterConfig) ? styles.actionBtnTextActive : undefined]}>⇅ Sort/Filter</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, (selectedCell && getMergeForCell(selectedCell.row, selectedCell.col)) ? styles.actionBtnActive : undefined]}
+            onPress={() => {
+              if (selectedCell && !selectionAnchor) {
+                // If in a merge, offer unmerge
+                if (getMergeForCell(selectedCell.row, selectedCell.col)) {
+                  Alert.alert('Unmerge Cells', 'Remove this cell merge?', [
+                    { text: 'Unmerge', onPress: () => handleMergeCells() },
+                    { text: 'Cancel', style: 'cancel' },
+                  ]);
+                } else {
+                  Alert.alert('Merge Cells', 'Long-press another cell to set the merge range, then tap ⊡ Merge again.', [{ text: 'OK' }]);
+                }
+              } else {
+                handleMergeCells();
+              }
+            }}
+          >
+            <Text style={[styles.actionBtnText, (selectedCell && getMergeForCell(selectedCell.row, selectedCell.col)) ? styles.actionBtnTextActive : undefined]}>⊡ Merge</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, (!!sheet.frozenRows || !!sheet.frozenCols) && styles.actionBtnActive]}

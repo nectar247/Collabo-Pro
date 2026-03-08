@@ -81,10 +81,17 @@ interface ReplyMeta {
   replyToPreview: string;
 }
 
+interface SendAttachment {
+  url: string;
+  name: string;
+  size: number;
+  type: 'image' | 'file' | 'document';
+}
+
 interface UseMessagesReturn {
   messages: (Message & { decryptedContent: string })[];
   isLoading: boolean;
-  sendMessage: (content: string, replyMeta?: ReplyMeta) => Promise<void>;
+  sendMessage: (content: string, replyMeta?: ReplyMeta, attachments?: SendAttachment[]) => Promise<void>;
   isSending: boolean;
 }
 
@@ -149,8 +156,8 @@ export function useMessages(channelId: string | null): UseMessagesReturn {
     return unsubscribe;
   }, [channelId, workspaceId]);
 
-  const sendMessage = async (content: string, replyMeta?: ReplyMeta) => {
-    if (!channelId || !user || !content.trim()) return;
+  const sendMessage = async (content: string, replyMeta?: ReplyMeta, attachments?: SendAttachment[]) => {
+    if (!channelId || !user || (!content.trim() && !attachments?.length)) return;
     setIsSending(true);
 
     try {
@@ -167,6 +174,7 @@ export function useMessages(channelId: string | null): UseMessagesReturn {
           content: encryptedContent,
           createdAt: serverTimestamp(),
           ...(replyMeta ?? {}),
+          ...(attachments?.length ? { attachments } : {}),
         }
       );
     } finally {
@@ -236,5 +244,23 @@ export function useReactToMessage(channelId: string | null) {
         ? arrayRemove(user.id)
         : arrayUnion(user.id),
     });
+  };
+}
+
+// ─── Edit a message ───────────────────────────────────────────────────────────
+
+export function useEditMessage(channelId: string | null) {
+  const user = useAuthStore((s) => s.user);
+
+  return async (messageId: string, newContent: string, workspaceId: string | null) => {
+    if (!channelId || !user) return;
+    const encrypted = workspaceId
+      ? await encryptForWorkspace(newContent.trim(), workspaceId)
+      : newContent.trim();
+
+    await updateDoc(
+      doc(db, COLLECTIONS.CHANNELS, channelId, COLLECTIONS.MESSAGES, messageId),
+      { content: encrypted, editedAt: serverTimestamp() }
+    );
   };
 }

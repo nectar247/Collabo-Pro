@@ -1,4 +1,5 @@
 import { ref, uploadString, getDownloadURL } from 'firebase/storage';
+import * as FileSystem from 'expo-file-system';
 import { storage } from '@/lib/firebase/config';
 
 /**
@@ -7,6 +8,19 @@ import { storage } from '@/lib/firebase/config';
  * @param path    Storage path, e.g. "documents/doc123/images/img456.jpg"
  */
 export async function uploadImageBase64(base64: string, path: string): Promise<string> {
+  const storageRef = ref(storage, path);
+  await uploadString(storageRef, base64, 'base64');
+  return getDownloadURL(storageRef);
+}
+
+/**
+ * Upload any file from a local URI (image or document) to Firebase Storage.
+ * Reads the file as base64 using expo-file-system and uploads it.
+ */
+export async function uploadFileUri(uri: string, path: string): Promise<string> {
+  const base64 = await FileSystem.readAsStringAsync(uri, {
+    encoding: FileSystem.EncodingType.Base64,
+  });
   const storageRef = ref(storage, path);
   await uploadString(storageRef, base64, 'base64');
   return getDownloadURL(storageRef);

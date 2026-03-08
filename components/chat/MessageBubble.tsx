@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Clipboard, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
+import { Alert, Clipboard, Image, Linking, Modal, ScrollView, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import { Avatar } from '@/components/ui/Avatar';
 import { formatTime } from '@/utils/time';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
@@ -16,6 +16,7 @@ interface MessageBubbleProps {
   currentUserId?: string;
   onReact?: (messageId: string, emoji: string) => void;
   onReply?: (message: Message & { decryptedContent: string }) => void;
+  onEdit?: (message: Message & { decryptedContent: string }) => void;
 }
 
 export function MessageBubble({
@@ -26,11 +27,20 @@ export function MessageBubble({
   currentUserId,
   onReact,
   onReply,
+  onEdit,
 }: MessageBubbleProps) {
   const [emojiPickerOpen, setEmojiPickerOpen] = useState(false);
 
   function handleLongPress() {
     Alert.alert('Message', undefined, [
+      ...(isOwn
+        ? [
+            {
+              text: 'Edit',
+              onPress: () => onEdit?.(message),
+            },
+          ]
+        : []),
       {
         text: 'React',
         onPress: () => setEmojiPickerOpen(true),
@@ -82,9 +92,46 @@ export function MessageBubble({
           activeOpacity={0.85}
           style={[styles.bubble, isOwn ? styles.bubbleOwn : styles.bubbleOther]}
         >
-          <Text style={[styles.content, isOwn && styles.contentOwn]}>
-            {message.decryptedContent}
-          </Text>
+          {!!message.decryptedContent && (
+            <Text style={[styles.content, isOwn && styles.contentOwn]}>
+              {message.decryptedContent}
+            </Text>
+          )}
+
+          {/* Attachments */}
+          {(message.attachments ?? []).map((att, i) => {
+            if (att.type === 'image') {
+              return (
+                <Image
+                  key={i}
+                  source={{ uri: att.url }}
+                  style={styles.attachImage}
+                  resizeMode="cover"
+                />
+              );
+            }
+            return (
+              <TouchableOpacity
+                key={i}
+                style={styles.attachFile}
+                onPress={() => Linking.openURL(att.url).catch(() => {})}
+              >
+                <Text style={styles.attachFileIcon}>📎</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={[styles.attachFileName, isOwn && { color: Colors.white }]} numberOfLines={1}>
+                    {att.name}
+                  </Text>
+                  {att.size > 0 && (
+                    <Text style={styles.attachFileSize}>
+                      {att.size > 1024 * 1024
+                        ? `${(att.size / 1024 / 1024).toFixed(1)} MB`
+                        : `${Math.round(att.size / 1024)} KB`}
+                    </Text>
+                  )}
+                </View>
+              </TouchableOpacity>
+            );
+          })}
         </TouchableOpacity>
 
         {/* Reactions row */}
@@ -284,5 +331,31 @@ const styles = StyleSheet.create({
   },
   emojiBtnText: {
     fontSize: 28,
+  },
+  attachImage: {
+    width: 200,
+    height: 150,
+    borderRadius: Radius.md,
+    marginTop: 4,
+  },
+  attachFile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(0,0,0,0.12)',
+    borderRadius: Radius.md,
+    padding: Spacing.sm,
+    marginTop: 4,
+    gap: 8,
+  },
+  attachFileIcon: { fontSize: 20 },
+  attachFileName: {
+    color: Colors.textMuted,
+    fontSize: FontSize.sm,
+    fontWeight: '600',
+  },
+  attachFileSize: {
+    color: Colors.textDim,
+    fontSize: FontSize.xs,
+    marginTop: 1,
   },
 });

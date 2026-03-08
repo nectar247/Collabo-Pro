@@ -1,6 +1,7 @@
 import { Text } from 'react-native';
 import { Tabs } from 'expo-router';
 import { Colors } from '@/constants/theme';
+import { useNotifications } from '@/hooks/useNotifications';
 
 function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
   return (
@@ -9,6 +10,8 @@ function TabIcon({ icon, focused }: { icon: string; focused: boolean }) {
 }
 
 export default function TabsLayout() {
+  const { unreadCount } = useNotifications();
+
   return (
     <Tabs
       screenOptions={{
@@ -36,6 +39,14 @@ export default function TabsLayout() {
         options={{
           title: 'Chat',
           tabBarIcon: ({ focused }) => <TabIcon icon="💬" focused={focused} />,
+        }}
+      />
+      <Tabs.Screen
+        name="notifications"
+        options={{
+          title: 'Inbox',
+          tabBarIcon: ({ focused }) => <TabIcon icon="🔔" focused={focused} />,
+          tabBarBadge: unreadCount > 0 ? unreadCount : undefined,
         }}
       />
       <Tabs.Screen
