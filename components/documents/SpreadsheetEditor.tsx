@@ -171,6 +171,9 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
   const [sortConfig, setSortConfig] = useState<{ col: number; dir: 'asc' | 'desc' } | null>(null);
   const [filterConfig, setFilterConfig] = useState<{ col: number; value: string } | null>(null);
   const [filterInputOpen, setFilterInputOpen] = useState(false);
+  const [sortFilterModalOpen, setSortFilterModalOpen] = useState(false);
+  const [sfSelectedCol, setSfSelectedCol] = useState(0);
+  const [sfFilterValue, setSfFilterValue] = useState('');
 
   // ── Conditional format modal state ────────────────────────────────────────
   const [cfModalOpen, setCfModalOpen] = useState(false);
@@ -224,6 +227,7 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
   const sheet: Sheet = content.sheets[activeIndex] ?? content.sheets[0];
   const { rows, cols, cells, colWidths } = sheet;
   const frozenRows = sheet.frozenRows ?? 0;
+  const frozenCols = sheet.frozenCols ?? 0;
 
   // ── Helper: write changes back to the active sheet ────────────────────────
   function updateSheet(sheetUpdates: Partial<Sheet>) {
@@ -590,6 +594,8 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
 
   const frozenDisplayRows = displayRows.filter(r => r < frozenRows);
   const scrollableDisplayRows = displayRows.filter(r => r >= frozenRows);
+  const frozenVisibleCols = visibleCols.filter(c => c < frozenCols);
+  const scrollableVisibleCols = frozenCols > 0 ? visibleCols.filter(c => c >= frozenCols) : visibleCols;
 
   const isSelected = (r: number, c: number) =>
     selectedCell?.row === r && selectedCell?.col === c;
@@ -628,56 +634,68 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
             />
           )}
         </TouchableOpacity>
-        {visibleCols.map((c) => {
-          const selected = isSelected(r, c);
-          const display = getCellDisplay(r, c);
-          const ck = cellKey(r, c);
-          const cellData = cells[ck];
-          const cfStyle = getCellConditionalStyle(r, c);
-          const dv = getCellValidation(r, c);
-          const hasList = dv?.type === 'list' && !isReadOnly;
-          const cellPresence = (presenceMembers ?? []).find((m) => m.blockId === ck);
-          return (
-            <TouchableOpacity
-              key={c}
-              onPress={() => {
-                selectCell(r, c);
-                if (hasList) handleCellValidationTap(r, c, dv!);
-              }}
-              style={[
-                styles.cell,
-                {
-                  width: getColWidth(c),
-                  height: getRowHeight(r),
-                  backgroundColor: cfStyle?.bgColor ?? cellData?.bgColor ?? Colors.background,
-                },
-                selected && styles.cellSelected,
-                cellPresence && { borderWidth: 2, borderColor: cellPresence.color },
-              ]}
-              activeOpacity={0.7}
-            >
-              <Text
+        {(() => {
+          function renderCell(c: number) {
+            const selected = isSelected(r, c);
+            const display = getCellDisplay(r, c);
+            const ck = cellKey(r, c);
+            const cellData = cells[ck];
+            const cfStyle = getCellConditionalStyle(r, c);
+            const dv = getCellValidation(r, c);
+            const hasList = dv?.type === 'list' && !isReadOnly;
+            const cellPresence = (presenceMembers ?? []).find((m) => m.blockId === ck);
+            return (
+              <TouchableOpacity
+                key={c}
+                onPress={() => {
+                  selectCell(r, c);
+                  if (hasList) handleCellValidationTap(r, c, dv!);
+                }}
                 style={[
-                  styles.cellText,
-                  cellData?.bold && { fontWeight: '700' },
-                  cellData?.italic && { fontStyle: 'italic' },
-                  cellData?.underline && { textDecorationLine: 'underline' },
-                  cellData?.strikethrough && { textDecorationLine: 'line-through' },
-                  { textAlign: cellData?.align ?? 'left' },
-                  cfStyle?.color ? { color: cfStyle.color } : cellData?.color ? { color: cellData.color } : {},
-                  cellData?.fontSize ? { fontSize: cellData.fontSize } : {},
-                  hasList && { paddingRight: 14 },
+                  styles.cell,
+                  {
+                    width: getColWidth(c),
+                    height: getRowHeight(r),
+                    backgroundColor: cfStyle?.bgColor ?? cellData?.bgColor ?? Colors.background,
+                  },
+                  selected && styles.cellSelected,
+                  cellPresence && { borderWidth: 2, borderColor: cellPresence.color },
                 ]}
-                numberOfLines={cellData?.wrapText ? undefined : 1}
+                activeOpacity={0.7}
               >
-                {display}
-              </Text>
-              {hasList && (
-                <Text style={styles.dvIndicator}>▼</Text>
+                <Text
+                  style={[
+                    styles.cellText,
+                    cellData?.bold && { fontWeight: '700' },
+                    cellData?.italic && { fontStyle: 'italic' },
+                    cellData?.underline && { textDecorationLine: 'underline' },
+                    cellData?.strikethrough && { textDecorationLine: 'line-through' },
+                    { textAlign: cellData?.align ?? 'left' },
+                    cfStyle?.color ? { color: cfStyle.color } : cellData?.color ? { color: cellData.color } : {},
+                    cellData?.fontSize ? { fontSize: cellData.fontSize } : {},
+                    hasList && { paddingRight: 14 },
+                  ]}
+                  numberOfLines={cellData?.wrapText ? undefined : 1}
+                >
+                  {display}
+                </Text>
+                {hasList && (
+                  <Text style={styles.dvIndicator}>▼</Text>
+                )}
+              </TouchableOpacity>
+            );
+          }
+          return (
+            <>
+              {frozenVisibleCols.length > 0 && (
+                <View style={styles.frozenColsStrip}>
+                  {frozenVisibleCols.map((c) => renderCell(c))}
+                </View>
               )}
-            </TouchableOpacity>
+              {scrollableVisibleCols.map((c) => renderCell(c))}
+            </>
           );
-        })}
+        })()}
       </View>
     );
   }
@@ -718,6 +736,16 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
             }}
           >
             <Text style={styles.actionBtnText}>🎨 Cond. Format</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.actionBtn, (sortConfig || filterConfig) ? styles.actionBtnActive : undefined]}
+            onPress={() => {
+              setSfSelectedCol(selectedCell?.col ?? 0);
+              setSfFilterValue(filterConfig?.col === (selectedCell?.col ?? 0) ? filterConfig.value : '');
+              setSortFilterModalOpen(true);
+            }}
+          >
+            <Text style={[styles.actionBtnText, (sortConfig || filterConfig) ? styles.actionBtnTextActive : undefined]}>⇅ Sort/Filter</Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionBtn, (!!sheet.frozenRows || !!sheet.frozenCols) && styles.actionBtnActive]}
@@ -1104,6 +1132,91 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
           </TouchableOpacity>
         )}
       </ScrollView>
+
+      {/* ── Sort/Filter Modal ── */}
+      <Modal visible={sortFilterModalOpen} transparent animationType="slide" onRequestClose={() => setSortFilterModalOpen(false)}>
+        <TouchableOpacity style={styles.modalOverlay} activeOpacity={1} onPress={() => setSortFilterModalOpen(false)} />
+        <View style={styles.modalSheet}>
+          <Text style={styles.modalTitle}>Sort / Filter</Text>
+
+          <Text style={styles.modalLabel}>Column</Text>
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginBottom: Spacing.sm }}>
+            <View style={{ flexDirection: 'row', gap: 6 }}>
+              {visibleCols.map((c) => (
+                <TouchableOpacity
+                  key={c}
+                  onPress={() => setSfSelectedCol(c)}
+                  style={[styles.cfConditionChip, sfSelectedCol === c && styles.cfConditionChipActive]}
+                >
+                  <Text style={[styles.cfConditionText, sfSelectedCol === c && styles.cfConditionTextActive]}>
+                    {COL_LETTERS[c] ?? String(c + 1)}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+          </ScrollView>
+
+          <Text style={styles.modalLabel}>Sort</Text>
+          <View style={styles.chartTypeRow}>
+            <TouchableOpacity
+              style={[styles.chartTypeBtn, sortConfig?.col === sfSelectedCol && sortConfig?.dir === 'asc' && styles.chartTypeBtnActive]}
+              onPress={() => setSortConfig({ col: sfSelectedCol, dir: 'asc' })}
+            >
+              <Text style={[styles.chartTypeBtnText, sortConfig?.col === sfSelectedCol && sortConfig?.dir === 'asc' && styles.chartTypeBtnTextActive]}>
+                A → Z
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              style={[styles.chartTypeBtn, sortConfig?.col === sfSelectedCol && sortConfig?.dir === 'desc' && styles.chartTypeBtnActive]}
+              onPress={() => setSortConfig({ col: sfSelectedCol, dir: 'desc' })}
+            >
+              <Text style={[styles.chartTypeBtnText, sortConfig?.col === sfSelectedCol && sortConfig?.dir === 'desc' && styles.chartTypeBtnTextActive]}>
+                Z → A
+              </Text>
+            </TouchableOpacity>
+          </View>
+
+          <Text style={styles.modalLabel}>Filter value</Text>
+          <TextInput
+            style={styles.modalInput}
+            value={sfFilterValue}
+            onChangeText={setSfFilterValue}
+            placeholder="Type to filter…"
+            placeholderTextColor={Colors.textDim}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <View style={styles.modalActions}>
+            <TouchableOpacity
+              onPress={() => {
+                setSortConfig(null);
+                setFilterConfig(null);
+                setFilterInputOpen(false);
+                setSfFilterValue('');
+                setSortFilterModalOpen(false);
+              }}
+              style={styles.modalCancelBtn}
+            >
+              <Text style={styles.modalCancelText}>Clear All</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => {
+                if (sfFilterValue.trim()) {
+                  setFilterConfig({ col: sfSelectedCol, value: sfFilterValue.trim() });
+                } else {
+                  setFilterConfig(null);
+                }
+                setFilterInputOpen(false);
+                setSortFilterModalOpen(false);
+              }}
+              style={styles.modalSaveBtn}
+            >
+              <Text style={styles.modalSaveText}>Apply</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
 
       {/* ── Conditional Format Modal ── */}
       <Modal visible={cfModalOpen} transparent animationType="slide" onRequestClose={() => setCfModalOpen(false)}>
@@ -1716,6 +1829,11 @@ const styles = StyleSheet.create({
   frozenRowsContainer: {
     borderBottomWidth: 2,
     borderBottomColor: Colors.primary,
+  },
+  frozenColsStrip: {
+    flexDirection: 'row',
+    borderRightWidth: 2,
+    borderRightColor: Colors.primary,
   },
 
   // Data grid
