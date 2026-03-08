@@ -15,4 +15,5 @@ export const COLLECTIONS = {
   DOCUMENT_SUGGESTIONS: 'document_suggestions', // track-changes suggestions
   TEMPLATES: 'templates',                       // user-saved reusable document templates
   FOLDERS: 'folders',                           // workspace document folders
+  TYPING: 'typing',                             // typing indicators: typing/{channelId}/users/{userId}
 } as const;

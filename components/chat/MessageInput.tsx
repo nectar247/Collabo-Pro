@@ -13,22 +13,36 @@ interface MessageInputProps {
   onSendMessage: (content: string) => Promise<void> | void;
   isLoading?: boolean;
   placeholder?: string;
+  onTyping?: () => void;
+  onStopTyping?: () => void;
 }
 
 export function MessageInput({
   onSendMessage,
   isLoading = false,
   placeholder = 'Message...',
+  onTyping,
+  onStopTyping,
 }: MessageInputProps) {
   const [text, setText] = useState('');
   const [sending, setSending] = useState(false);
 
   const canSend = text.trim().length > 0 && !isLoading && !sending;
 
+  function handleChangeText(value: string) {
+    setText(value);
+    if (value.length > 0) {
+      onTyping?.();
+    } else {
+      onStopTyping?.();
+    }
+  }
+
   async function handleSend() {
     if (!canSend) return;
     const message = text.trim();
     setText('');
+    onStopTyping?.();
     setSending(true);
     try {
       await onSendMessage(message);
@@ -43,7 +57,7 @@ export function MessageInput({
         <TextInput
           style={styles.input}
           value={text}
-          onChangeText={setText}
+          onChangeText={handleChangeText}
           placeholder={placeholder}
           placeholderTextColor={Colors.textDim}
           multiline

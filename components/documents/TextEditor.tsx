@@ -17,6 +17,7 @@ import Animated, { useSharedValue, useAnimatedStyle, runOnJS, withSpring } from 
 import * as ImagePicker from 'expo-image-picker';
 import * as Clipboard from 'expo-clipboard';
 import * as Speech from 'expo-speech';
+import { printAsync } from 'expo-print';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
 import { uploadImageBase64, mimeToExt } from '@/lib/firebase/storage';
 import { useAuthStore } from '@/store/authStore';
@@ -718,6 +719,46 @@ export function TextEditor({
     });
   }
 
+  // ── Export as PDF ──────────────────────────────────────────────────────────
+  async function handleExportPdf() {
+    try {
+      function escHtml(t: string) {
+        return t.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+      }
+      const body = blocks.map((b) => {
+        if (b.type === 'divider') return '<hr/>';
+        if (b.type === 'page_break') return '<div style="page-break-after:always"></div>';
+        if (b.type === 'table' && b.tableData) {
+          const rows = b.tableData.cells.map((row, ri) =>
+            `<tr>${row.map((c) => `<${ri === 0 ? 'th' : 'td'} style="border:1px solid #ccc;padding:4px 8px">${escHtml(c)}</${ri === 0 ? 'th' : 'td'}>`).join('')}</tr>`
+          ).join('');
+          return `<table style="border-collapse:collapse;width:100%;margin:0.8em 0">${rows}</table>`;
+        }
+        if (b.type === 'image') return b.imageUri ? `<img src="${b.imageUri}" style="max-width:100%;"/>` : '';
+        const t = escHtml(b.text ?? '');
+        switch (b.type) {
+          case 'heading1': return `<h1>${t}</h1>`;
+          case 'heading2': return `<h2>${t}</h2>`;
+          case 'heading3': return `<h3>${t}</h3>`;
+          case 'heading': { const lv = (b as any).level ?? 1; return `<h${lv}>${t}</h${lv}>`; }
+          case 'quote': return `<blockquote style="border-left:4px solid #6366f1;padding:0.5em 1em;color:#555">${t}</blockquote>`;
+          case 'code': case 'code_block': return `<pre><code>${t}</code></pre>`;
+          case 'bullet': return `<ul><li>${t}</li></ul>`;
+          case 'numbered': return `<ol><li>${t}</li></ol>`;
+          default: return `<p>${t}</p>`;
+        }
+      }).join('\n');
+      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8">
+        <style>body{font-family:Georgia,serif;font-size:16px;line-height:1.6;max-width:800px;margin:40px auto;padding:0 24px;color:#1a1a1a}
+        h1{font-size:2em}h2{font-size:1.5em}h3{font-size:1.17em}
+        pre{background:#1e293b;color:#e2e8f0;padding:1em;border-radius:6px;font-family:monospace}
+        @page{size:A4;margin:25mm}</style></head><body>${body}</body></html>`;
+      await printAsync({ html });
+    } catch (err: any) {
+      Alert.alert('PDF Export Failed', err?.message ?? 'Could not generate PDF.');
+    }
+  }
+
   // ── Paste plain text from clipboard ──────────────────────────────────────
   async function handlePastePlainText() {
     try {
@@ -1105,6 +1146,11 @@ export function TextEditor({
             <Text style={[styles.actionBarBtnText, isSpeaking && styles.actionBarBtnTextActive]}>
               {isSpeaking ? '⏹' : '🔊'}
             </Text>
+          </TouchableOpacity>
+
+          {/* Export as PDF */}
+          <TouchableOpacity onPress={handleExportPdf} style={styles.actionBarBtn}>
+            <Text style={styles.actionBarBtnText}>⎙</Text>
           </TouchableOpacity>
         </ScrollView>
       )}
@@ -2102,6 +2148,13 @@ export function TextEditor({
                           disabled={block.tableData!.cols <= 1}
                         >
                           <Text style={[styles.tableActionBtnText, { color: block.tableData!.cols <= 1 ? Colors.textDim : Colors.textMuted }]}>− Col</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity
+                          onPress={() => deleteTableRow(block.id, block.tableData!.rows - 1)}
+                          style={[styles.tableActionBtn, block.tableData!.rows <= 1 && styles.tableDeleteBtn]}
+                          disabled={block.tableData!.rows <= 1}
+                        >
+                          <Text style={[styles.tableActionBtnText, { color: block.tableData!.rows <= 1 ? Colors.textDim : Colors.textMuted }]}>− Row</Text>
                         </TouchableOpacity>
                         {/* Column width / merge controls — shown when a cell is focused */}
                         {focusedCell?.blockId === block.id && (

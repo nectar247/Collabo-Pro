@@ -255,6 +255,48 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
     onChange({ ...content, sheets: newSheets, activeSheet: newSheets.length - 1 });
   }
 
+  function renameSheet(index: number) {
+    Alert.prompt(
+      'Rename Sheet',
+      'Enter a new name:',
+      (newName) => {
+        if (!newName?.trim()) return;
+        const newSheets = content.sheets.map((s, i) =>
+          i === index ? { ...s, name: newName.trim() } : s
+        );
+        onChange({ ...content, sheets: newSheets });
+      },
+      'plain-text',
+      content.sheets[index]?.name,
+    );
+  }
+
+  function deleteSheet(index: number) {
+    if (content.sheets.length <= 1) {
+      Alert.alert('Cannot Delete', 'A spreadsheet must have at least one sheet.');
+      return;
+    }
+    Alert.alert('Delete Sheet', `Delete "${content.sheets[index]?.name}"?`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete', style: 'destructive', onPress: () => {
+          const newSheets = content.sheets.filter((_, i) => i !== index);
+          const newActive = Math.min(activeIndex, newSheets.length - 1);
+          onChange({ ...content, sheets: newSheets, activeSheet: newActive });
+        },
+      },
+    ]);
+  }
+
+  function handleSheetLongPress(index: number) {
+    if (isReadOnly) return;
+    Alert.alert(content.sheets[index]?.name ?? 'Sheet', undefined, [
+      { text: 'Rename', onPress: () => renameSheet(index) },
+      { text: 'Delete', style: 'destructive', onPress: () => deleteSheet(index) },
+      { text: 'Cancel', style: 'cancel' },
+    ]);
+  }
+
   function getColWidth(col: number): number {
     return colWidths[col] ?? DEFAULT_COL_WIDTH;
   }
@@ -678,16 +720,36 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
             <Text style={styles.actionBtnText}>🎨 Cond. Format</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.actionBtn, !!sheet.frozenRows && styles.actionBtnActive]}
-            onPress={() => updateSheet({ frozenRows: sheet.frozenRows ? undefined : (selectedCell ? selectedCell.row + 1 : 1) })}
+            style={[styles.actionBtn, (!!sheet.frozenRows || !!sheet.frozenCols) && styles.actionBtnActive]}
+            onPress={() => {
+              const hasFrozen = sheet.frozenRows || sheet.frozenCols;
+              if (hasFrozen) {
+                updateSheet({ frozenRows: undefined, frozenCols: undefined });
+                return;
+              }
+              Alert.alert('Freeze Panes', 'What would you like to freeze?', [
+                {
+                  text: 'Rows',
+                  onPress: () => updateSheet({ frozenRows: selectedCell ? selectedCell.row + 1 : 1 }),
+                },
+                {
+                  text: 'Columns',
+                  onPress: () => updateSheet({ frozenCols: selectedCell ? selectedCell.col + 1 : 1 }),
+                },
+                {
+                  text: 'Both',
+                  onPress: () => updateSheet({
+                    frozenRows: selectedCell ? selectedCell.row + 1 : 1,
+                    frozenCols: selectedCell ? selectedCell.col + 1 : 1,
+                  }),
+                },
+                { text: 'Cancel', style: 'cancel' },
+              ]);
+            }}
           >
-            <Text style={[styles.actionBtnText, !!sheet.frozenRows && styles.actionBtnTextActive]}>❄ Freeze Rows</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.actionBtn, !!sheet.frozenCols && styles.actionBtnActive]}
-            onPress={() => updateSheet({ frozenCols: sheet.frozenCols ? undefined : (selectedCell ? selectedCell.col + 1 : 1) })}
-          >
-            <Text style={[styles.actionBtnText, !!sheet.frozenCols && styles.actionBtnTextActive]}>❄ Freeze Cols</Text>
+            <Text style={[styles.actionBtnText, (!!sheet.frozenRows || !!sheet.frozenCols) && styles.actionBtnTextActive]}>
+              {sheet.frozenRows || sheet.frozenCols ? '❄ Unfreeze' : '❄ Freeze'}
+            </Text>
           </TouchableOpacity>
           <TouchableOpacity
             style={styles.actionBtn}
@@ -1028,6 +1090,8 @@ export function SpreadsheetEditor({ content, onChange, isReadOnly = false, prese
             key={i}
             style={[styles.sheetTab, i === activeIndex && styles.sheetTabActive]}
             onPress={() => switchSheet(i)}
+            onLongPress={() => handleSheetLongPress(i)}
+            delayLongPress={500}
           >
             <Text style={[styles.sheetTabText, i === activeIndex && styles.sheetTabTextActive]}>
               {s.name}

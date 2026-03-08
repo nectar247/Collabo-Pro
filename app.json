@@ -4,7 +4,7 @@
     "slug": "collabo-pro",
     "version": "1.0.0",
     "scheme": "collabo-pro",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "automatic",
     "splash": {
