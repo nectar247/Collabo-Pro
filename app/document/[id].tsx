@@ -22,12 +22,21 @@ import { VoiceDictationBar } from '@/components/documents/VoiceDictationBar';
 import { AIAssistModal } from '@/components/documents/AIAssistModal';
 import { ImportExportMenu } from '@/components/documents/ImportExportMenu';
 import { ChatScreen } from '@/components/chat/ChatScreen';
-import { useDocument, useUpdateDocument, useCreateDocument } from '@/hooks/useDocuments';
+import { VersionHistorySheet } from '@/components/documents/VersionHistorySheet';
+import { CommentsPanel } from '@/components/documents/CommentsPanel';
+import { ShareDocumentSheet } from '@/components/documents/ShareDocumentSheet';
+import { useRealtimeDocument, useUpdateDocument, useCreateDocument, useSaveConflictDraft } from '@/hooks/useDocuments';
+import { useSaveAsTemplate } from '@/hooks/useTemplates';
+import { useComments } from '@/hooks/useComments';
+import { useDocumentSuggestions, useCreateSuggestion, useRespondToSuggestion } from '@/hooks/useDocumentSuggestions';
+import { useNetworkStatus } from '@/hooks/useNetworkStatus';
+import { useWritePresence, usePresenceMembers } from '@/hooks/useDocumentPresence';
 import { useChannels, useCreateChannel } from '@/hooks/useChannels';
 import { useUIStore } from '@/store/uiStore';
 import { useAuthStore } from '@/store/authStore';
 import { logActivity } from '@/hooks/useActivityLog';
 import { debounce } from '@/utils/debounce';
+import { enqueueWrite, getQueuedCount } from '@/lib/offlineQueue';
 import {
   parseDocumentContent,
   serializeDocumentContent,
@@ -37,16 +46,30 @@ import {
   type PresentationContent,
 } from '@/lib/documents/schemas';
 import { Colors, FontSize, Radius, Spacing } from '@/constants/theme';
-import type { Channel, Document } from '@/types';
+import type { Channel, Document, DocumentSuggestion } from '@/types';
 
 const CHAT_PANEL_HEIGHT = 320;
 
 export default function DocumentEditorScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { data: document, isLoading } = useDocument(id ?? null);
+  const { data: document, isLoading, isCached } = useRealtimeDocument(id ?? null);
+  const { isConnected } = useNetworkStatus();
   const { mutate: updateDocument } = useUpdateDocument();
+  const saveConflictDraft = useSaveConflictDraft();
   const { editorMode, setEditorMode } = useUIStore();
   const user = useAuthStore((s) => s.user);
+
+  // Always-on comment subscription (for inline highlighting)
+  const { comments } = useComments(id ?? null);
+
+  // Track changes
+  const { suggestions } = useDocumentSuggestions(id ?? null);
+  const createSuggestion = useCreateSuggestion();
+  const respondToSuggestion = useRespondToSuggestion();
+
+  // Real-time presence
+  const { updateBlock: updatePresenceBlock } = useWritePresence(id ?? null);
+  const presenceMembers = usePresenceMembers(id ?? null);
 
   const [content, setContent] = useState<DocumentContent | null>(null);
   const [saveStatus, setSaveStatus] = useState<'saved' | 'saving' | 'unsaved'>('saved');
@@ -60,8 +83,40 @@ export default function DocumentEditorScreen() {
   const [importExportVisible, setImportExportVisible] = useState(false);
   const [saveAsVisible, setSaveAsVisible] = useState(false);
   const [saveAsName, setSaveAsName] = useState('');
+  const [saveAsTemplateVisible, setSaveAsTemplateVisible] = useState(false);
+  const [templateName, setTemplateName] = useState('');
+  const [templateDesc, setTemplateDesc] = useState('');
+  const [conflictToast, setConflictToast] = useState(false);
+  const [versionHistoryVisible, setVersionHistoryVisible] = useState(false);
+  const [commentsPanelVisible, setCommentsPanelVisible] = useState(false);
+  const [shareSheetVisible, setShareSheetVisible] = useState(false);
+  const [pendingAnchor, setPendingAnchor] = useState<{ blockId: string; text: string; anchorStart?: number; anchorEnd?: number } | null>(null);
+  const [queuedCount, setQueuedCount] = useState(0);
+  const [suggestionMode, setSuggestionMode] = useState(false);
+
+  const isDirtyRef = useRef(false);
+  // Ref so debouncedSave (which is memoized once) can always read current connectivity
+  const isConnectedRef = useRef(isConnected);
+
+  // ── Undo / Redo ─────────────────────────────────────────────────────────
+  const historyRef = useRef<DocumentContent[]>([]);
+  const historyIdxRef = useRef(-1);
+  const isUndoRedoRef = useRef(false);
+  const [canUndo, setCanUndo] = useState(false);
+  const [canRedo, setCanRedo] = useState(false);
 
   const createDocument = useCreateDocument();
+  const saveAsTemplate = useSaveAsTemplate();
+
+  // Keep connectivity ref up-to-date for use inside memoized debouncedSave
+  useEffect(() => {
+    isConnectedRef.current = isConnected;
+  }, [isConnected]);
+
+  // Refresh queue count whenever connectivity changes (global flush is handled by useOfflineSync)
+  useEffect(() => {
+    getQueuedCount().then(setQueuedCount);
+  }, [isConnected]);
 
   const { data: channels = [] } = useChannels(document?.workspaceId ?? null);
   const createChannel = useCreateChannel();
@@ -91,23 +146,56 @@ export default function DocumentEditorScreen() {
     }
   }, [channels, document?.name, document?.workspaceId]);
 
-  // Parse content once document loads
+  // Handle document loads and live remote updates
   useEffect(() => {
-    if (document) {
-      setContent(parseDocumentContent(document.content, document.type));
+    if (!document) return;
+    const remoteContent = parseDocumentContent(document.content, document.type);
+
+    if (!content) {
+      // First load — always apply
+      setContent(remoteContent);
       setTitleValue(document.name);
+      return;
     }
-  }, [document?.id]);
+
+    if (!isDirtyRef.current) {
+      // No unsaved local edits — apply remote silently
+      setContent(remoteContent);
+    } else {
+      // User has unsaved edits — rescue their version as a conflict-draft, then apply remote
+      if (id) {
+        saveConflictDraft(id, serializeDocumentContent(content)).catch(() => {});
+      }
+      setContent(remoteContent);
+      isDirtyRef.current = false;
+      setConflictToast(true);
+      setTimeout(() => setConflictToast(false), 4000);
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [document?.content]);
 
   // Auto-save with debounce
   const debouncedSave = useMemo(
     () =>
       debounce((newContent: DocumentContent) => {
         if (!id) return;
+
+        // Offline — enqueue and surface the count
+        if (!isConnectedRef.current) {
+          enqueueWrite(id, serializeDocumentContent(newContent))
+            .then(() => getQueuedCount())
+            .then(setQueuedCount)
+            .catch(() => {});
+          return;
+        }
+
         updateDocument(
           { id, content: serializeDocumentContent(newContent) },
           {
-            onSuccess: () => setSaveStatus('saved'),
+            onSuccess: () => {
+              setSaveStatus('saved');
+              isDirtyRef.current = false;
+            },
             onError: () => setSaveStatus('unsaved'),
           }
         );
@@ -121,7 +209,51 @@ export default function DocumentEditorScreen() {
   function handleContentChange(newContent: DocumentContent) {
     setContent(newContent);
     setSaveStatus('saving');
+    isDirtyRef.current = true;
+
+    if (!isUndoRedoRef.current) {
+      // Trim any redo history after current position
+      historyRef.current = historyRef.current.slice(0, historyIdxRef.current + 1);
+      historyRef.current.push(newContent);
+      if (historyRef.current.length > 50) {
+        historyRef.current.shift();
+      } else {
+        historyIdxRef.current++;
+      }
+      setCanUndo(historyIdxRef.current > 0);
+      setCanRedo(false);
+    }
+    isUndoRedoRef.current = false;
+
     debouncedSave(newContent);
+  }
+
+  function handleUndo() {
+    if (historyIdxRef.current <= 0) return;
+    historyIdxRef.current--;
+    const prev = historyRef.current[historyIdxRef.current];
+    if (!prev) return;
+    isUndoRedoRef.current = true;
+    setContent(prev);
+    setSaveStatus('saving');
+    isDirtyRef.current = true;
+    debouncedSave(prev);
+    setCanUndo(historyIdxRef.current > 0);
+    setCanRedo(true);
+  }
+
+  function handleRedo() {
+    if (historyIdxRef.current >= historyRef.current.length - 1) return;
+    historyIdxRef.current++;
+    const next = historyRef.current[historyIdxRef.current];
+    if (!next) return;
+    isUndoRedoRef.current = true;
+    setContent(next);
+    setSaveStatus('saving');
+    isDirtyRef.current = true;
+    debouncedSave(next);
+    setCanUndo(true);
+    setCanRedo(historyIdxRef.current < historyRef.current.length - 1);
   }
 
   function handleTitleSave() {
@@ -204,6 +336,37 @@ export default function DocumentEditorScreen() {
     setSaveAsVisible(true);
   }
 
+  function handleSaveAsTemplate() {
+    if (!document) return;
+    setTemplateName(document.name);
+    setTemplateDesc('');
+    setSaveAsTemplateVisible(true);
+  }
+
+  function confirmSaveAsTemplate() {
+    if (!document || !content || !templateName.trim()) return;
+    const icon = document.type === 'text' ? '📄' : document.type === 'spreadsheet' ? '⊞' : '▷';
+    saveAsTemplate.mutate(
+      {
+        name: templateName.trim(),
+        description: templateDesc.trim() || `${document.type} template`,
+        icon,
+        type: document.type,
+        content: serializeDocumentContent(content),
+        workspaceId: document.workspaceId,
+      },
+      {
+        onSuccess: () => {
+          setSaveAsTemplateVisible(false);
+          setTemplateName('');
+          setTemplateDesc('');
+          Alert.alert('Saved', 'Template saved. It will appear in the New Document picker.');
+        },
+        onError: () => Alert.alert('Error', 'Failed to save template. Try again.'),
+      }
+    );
+  }
+
   function confirmSaveAs() {
     if (!document || !content || !saveAsName.trim()) return;
     const serialized = serializeDocumentContent(content);
@@ -247,6 +410,68 @@ export default function DocumentEditorScreen() {
     }
   }
 
+  // ── Comment anchors for inline highlighting ──────────────────────────────
+  const commentAnchors = useMemo(
+    () =>
+      (comments ?? [])
+        .filter((c) => c.anchorBlockId && c.anchorText && !c.resolved)
+        .map((c) => ({ blockId: c.anchorBlockId!, anchorText: c.anchorText! })),
+    [comments]
+  );
+
+  // ── Suggestion handlers ───────────────────────────────────────────────────
+  function handleSuggestChange(blockId: string, originalText: string, suggestedText: string) {
+    if (!document || !user) return;
+    createSuggestion.mutate({
+      documentId: document.id,
+      workspaceId: document.workspaceId,
+      blockId,
+      originalText,
+      suggestedText,
+      docOwnerId: document.ownerId,
+      docName: document.name,
+    });
+  }
+
+  function handleAcceptSuggestion(suggestionId: string, blockId: string, suggestedText: string) {
+    if (!content || document?.type !== 'text') return;
+    const textContent = content as TextDocumentContent;
+    const updated: TextDocumentContent = {
+      ...textContent,
+      blocks: textContent.blocks.map((b) =>
+        b.id === blockId ? { ...b, text: suggestedText } : b
+      ),
+    };
+    handleContentChange(updated);
+    respondToSuggestion.mutate({ suggestionId, status: 'accepted' });
+  }
+
+  function handleRejectSuggestion(suggestionId: string) {
+    respondToSuggestion.mutate({ suggestionId, status: 'rejected' });
+  }
+
+  // ── Comment request from text selection ──────────────────────────────────
+  function handleCommentRequest(blockId: string, selectedText: string, anchorStart?: number, anchorEnd?: number) {
+    setPendingAnchor({ blockId, text: selectedText, anchorStart, anchorEnd });
+    setCommentsPanelVisible(true);
+  }
+
+  // ── Permission resolution ────────────────────────────────────────────────
+  const isOwner = document?.ownerId === user?.id;
+  const userPermission = (() => {
+    if (!document || !user) return 'view' as const;
+    if (document.ownerId === user.id) return 'edit' as const;
+    const collab = document.collaborators?.find((c) => c.userId === user.id);
+    // If no collaborators list exists yet, default to edit (open workspace access)
+    if (!collab && (!document.collaborators || document.collaborators.length === 0)) return 'edit' as const;
+    return (collab?.permission ?? 'view') as 'view' | 'comment' | 'edit';
+  })();
+
+  // Merge explicit view mode toggle with permission gate
+  const effectiveReadOnly = editorMode === 'view' || userPermission === 'view' || userPermission === 'comment';
+  const canEdit = userPermission === 'edit' || document?.ownerId === user?.id;
+  const canComment = userPermission !== 'view' || document?.ownerId === user?.id;
+
   function renderEditor(doc: Document) {
     if (!content) return null;
     switch (doc.type) {
@@ -255,8 +480,20 @@ export default function DocumentEditorScreen() {
           <TextEditor
             content={content as TextDocumentContent}
             onChange={handleContentChange}
-            isReadOnly={editorMode === 'view'}
+            isReadOnly={effectiveReadOnly}
             onFocusedTextChange={(text) => setSelectedText(text || undefined)}
+            onCommentRequest={canComment ? handleCommentRequest : undefined}
+            commentAnchors={commentAnchors}
+            suggestionMode={suggestionMode}
+            suggestions={suggestions}
+            onSuggestChange={handleSuggestChange}
+            onAcceptSuggestion={canEdit ? handleAcceptSuggestion : undefined}
+            onRejectSuggestion={canEdit ? handleRejectSuggestion : undefined}
+            canReviewSuggestions={canEdit}
+            presenceMembers={presenceMembers}
+            onPresenceBlockUpdate={updatePresenceBlock}
+            workspaceId={document?.workspaceId}
+            comments={comments}
           />
         );
       case 'spreadsheet':
@@ -264,7 +501,9 @@ export default function DocumentEditorScreen() {
           <SpreadsheetEditor
             content={content as import('@/lib/documents/schemas').SpreadsheetContent}
             onChange={handleContentChange}
-            isReadOnly={editorMode === 'view'}
+            isReadOnly={effectiveReadOnly}
+            presenceMembers={presenceMembers}
+            onPresenceBlockUpdate={updatePresenceBlock}
           />
         );
       case 'presentation':
@@ -272,7 +511,7 @@ export default function DocumentEditorScreen() {
           <PresentationEditor
             content={content as import('@/lib/documents/schemas').PresentationContent}
             onChange={handleContentChange}
-            isReadOnly={editorMode === 'view'}
+            isReadOnly={effectiveReadOnly}
           />
         );
     }
@@ -327,9 +566,53 @@ export default function DocumentEditorScreen() {
           <Text style={styles.saveStatus}>
             {saveStatus === 'saving' ? 'Saving...' : saveStatus === 'saved' ? 'Saved ✓' : '● Unsaved'}
           </Text>
+          {/* Permission badge — shown to non-owners with restricted access */}
+          {!isOwner && userPermission !== 'edit' && (
+            <Text style={styles.permBadge}>
+              {userPermission === 'view' ? '👁 View only' : '💬 Comment only'}
+            </Text>
+          )}
         </View>
 
+        {/* Presence avatars — other users in this document */}
+        {presenceMembers.length > 0 && (
+          <View style={styles.presenceRow}>
+            {presenceMembers.slice(0, 3).map((m, i) => (
+              <View
+                key={m.userId}
+                style={[styles.avatar, { backgroundColor: m.color, marginLeft: i === 0 ? 0 : -6 }]}
+              >
+                <Text style={styles.avatarText}>{m.displayName[0].toUpperCase()}</Text>
+              </View>
+            ))}
+            {presenceMembers.length > 3 && (
+              <View style={[styles.avatar, { backgroundColor: Colors.surfaceHigh, marginLeft: -6 }]}>
+                <Text style={[styles.avatarText, { color: Colors.textMuted }]}>
+                  +{presenceMembers.length - 3}
+                </Text>
+              </View>
+            )}
+          </View>
+        )}
+
         <View style={styles.actions}>
+          {/* Undo / Redo */}
+          <TouchableOpacity
+            onPress={handleUndo}
+            style={[styles.actionBtn, !canUndo && { opacity: 0.35 }]}
+            disabled={!canUndo}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.actionIcon}>↩</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleRedo}
+            style={[styles.actionBtn, !canRedo && { opacity: 0.35 }]}
+            disabled={!canRedo}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.actionIcon}>↪</Text>
+          </TouchableOpacity>
           {document.type === 'text' && (
             <TouchableOpacity
               onPress={() => setEditorMode(editorMode === 'dictate' ? 'edit' : 'dictate')}
@@ -346,6 +629,37 @@ export default function DocumentEditorScreen() {
           >
             <Text style={styles.actionIcon}>⧉</Text>
           </TouchableOpacity>
+          <TouchableOpacity
+            onPress={handleSaveAsTemplate}
+            style={styles.actionBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.actionIcon}>🗂</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setVersionHistoryVisible(true)}
+            style={styles.actionBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.actionIcon}>🕐</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            onPress={() => setCommentsPanelVisible(true)}
+            style={styles.actionBtn}
+            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+          >
+            <Text style={styles.actionIcon}>📝</Text>
+          </TouchableOpacity>
+          {/* Share / Permissions — owner only */}
+          {document.ownerId === user?.id && (
+            <TouchableOpacity
+              onPress={() => setShareSheetVisible(true)}
+              style={styles.actionBtn}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.actionIcon}>👥</Text>
+            </TouchableOpacity>
+          )}
           <TouchableOpacity
             onPress={() => setImportExportVisible(true)}
             style={styles.actionBtn}
@@ -381,8 +695,46 @@ export default function DocumentEditorScreen() {
           >
             <Text style={styles.actionIcon}>{editorMode === 'view' ? '✏️' : '👁'}</Text>
           </TouchableOpacity>
+          {canComment && document.type === 'text' && (
+            <TouchableOpacity
+              onPress={() => setSuggestionMode((v) => !v)}
+              style={[styles.actionBtn, suggestionMode && { backgroundColor: `${Colors.warning}33` }]}
+              hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+            >
+              <Text style={styles.actionIcon}>💡</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </View>
+
+      {/* Offline banner */}
+      {!isConnected && (
+        <View style={styles.offlineBanner}>
+          <Text style={styles.offlineBannerText}>
+            {queuedCount > 0
+              ? `✎ ${queuedCount} edit${queuedCount > 1 ? 's' : ''} queued — will sync when online`
+              : '⚡ Offline — edits will sync when connected'}
+          </Text>
+        </View>
+      )}
+
+      {/* Conflict toast — shown when remote update overwrites dirty local edits */}
+      {conflictToast && (
+        <View style={styles.conflictToast}>
+          <Text style={styles.conflictToastText}>
+            Updated by a collaborator — your edits are in Version History
+          </Text>
+        </View>
+      )}
+
+      {/* Suggestion mode banner */}
+      {suggestionMode && (
+        <View style={styles.suggestionBanner}>
+          <Text style={styles.suggestionBannerText}>
+            💡 Suggesting — your edits will be sent for review
+          </Text>
+        </View>
+      )}
 
       {/* Split layout: document on top, channel chat on bottom */}
       <KeyboardAvoidingView
@@ -489,6 +841,102 @@ export default function DocumentEditorScreen() {
           }}
         />
       )}
+
+      {/* Version History */}
+      {id && document && (
+        <VersionHistorySheet
+          visible={versionHistoryVisible}
+          onClose={() => setVersionHistoryVisible(false)}
+          docId={id}
+          docType={document.type}
+          onRestore={(restoredContent) => {
+            handleContentChange(restoredContent);
+            setVersionHistoryVisible(false);
+          }}
+        />
+      )}
+
+      {/* Comments */}
+      {id && document && (
+        <CommentsPanel
+          visible={commentsPanelVisible}
+          onClose={() => {
+            setCommentsPanelVisible(false);
+            setPendingAnchor(null);
+          }}
+          documentId={id}
+          workspaceId={document.workspaceId}
+          docOwnerId={document.ownerId}
+          docName={document.name}
+          canComment={canComment}
+          pendingAnchor={pendingAnchor}
+        />
+      )}
+
+      {/* Share & Permissions */}
+      {id && document && shareSheetVisible && (
+        <ShareDocumentSheet
+          visible={shareSheetVisible}
+          onClose={() => setShareSheetVisible(false)}
+          docId={id}
+          workspaceId={document.workspaceId}
+          ownerId={document.ownerId}
+          collaborators={document.collaborators ?? []}
+        />
+      )}
+
+      {/* Save as Template Modal */}
+      <Modal
+        visible={saveAsTemplateVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setSaveAsTemplateVisible(false)}
+      >
+        <View style={styles.saveAsOverlay}>
+          <View style={styles.saveAsSheet}>
+            <Text style={styles.saveAsTitle}>Save as Template</Text>
+            <Text style={styles.saveAsSubtitle}>
+              Appears in the New Document picker for your workspace.
+            </Text>
+            <TextInput
+              style={styles.saveAsInput}
+              value={templateName}
+              onChangeText={setTemplateName}
+              placeholder="Template name"
+              placeholderTextColor={Colors.textDim}
+              autoFocus
+              selectTextOnFocus
+            />
+            <TextInput
+              style={[styles.saveAsInput, { marginTop: Spacing.sm }]}
+              value={templateDesc}
+              onChangeText={setTemplateDesc}
+              placeholder="Short description (optional)"
+              placeholderTextColor={Colors.textDim}
+            />
+            <View style={styles.saveAsActions}>
+              <TouchableOpacity
+                style={styles.saveAsCancelBtn}
+                onPress={() => setSaveAsTemplateVisible(false)}
+              >
+                <Text style={styles.saveAsCancelText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[
+                  styles.saveAsSaveBtn,
+                  (saveAsTemplate.isPending || !templateName.trim()) && { opacity: 0.5 },
+                ]}
+                disabled={saveAsTemplate.isPending || !templateName.trim()}
+                onPress={confirmSaveAsTemplate}
+              >
+                <Text style={styles.saveAsSaveText}>
+                  {saveAsTemplate.isPending ? 'Saving…' : 'Save Template'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
 
       {/* Save As Modal */}
       <Modal
@@ -599,6 +1047,11 @@ const styles = StyleSheet.create({
     fontSize: FontSize.xs,
     marginTop: 1,
   },
+  permBadge: {
+    color: Colors.textDim,
+    fontSize: FontSize.xs,
+    marginTop: 1,
+  },
   actions: {
     flexDirection: 'row',
     gap: Spacing.xs,
@@ -617,6 +1070,70 @@ const styles = StyleSheet.create({
     backgroundColor: `${Colors.primary}22`,
   },
   actionIcon: { fontSize: 18 },
+  // Presence avatars
+  presenceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: Spacing.xs,
+  },
+  avatar: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1.5,
+    borderColor: Colors.background,
+  },
+  avatarText: {
+    color: Colors.white,
+    fontSize: 10,
+    fontWeight: '700',
+  },
+  // Offline banner
+  offlineBanner: {
+    backgroundColor: `${Colors.surfaceHigh}`,
+    borderBottomWidth: 1,
+    borderBottomColor: Colors.border,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  offlineBannerText: {
+    color: Colors.textMuted,
+    fontSize: FontSize.xs,
+    fontWeight: '500',
+  },
+  // Conflict toast
+  conflictToast: {
+    backgroundColor: `${Colors.warning}22`,
+    borderBottomWidth: 1,
+    borderBottomColor: `${Colors.warning}55`,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+  },
+  conflictToastText: {
+    color: Colors.warning,
+    fontSize: FontSize.xs,
+    fontWeight: '500',
+    textAlign: 'center',
+  },
+  // Suggestion mode banner
+  suggestionBanner: {
+    backgroundColor: `${Colors.warning}22`,
+    borderBottomWidth: 1,
+    borderBottomColor: `${Colors.warning}55`,
+    paddingHorizontal: Spacing.md,
+    paddingVertical: Spacing.xs + 2,
+    alignItems: 'center',
+  },
+  suggestionBannerText: {
+    color: Colors.warning,
+    fontSize: FontSize.xs,
+    fontWeight: '600',
+  },
   // Split layout
   splitContainer: { flex: 1 },
   editorContainer: { flex: 1 },

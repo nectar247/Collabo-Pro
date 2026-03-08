@@ -22,9 +22,13 @@ import type {
 import {
   exportSpreadsheetAsXlsx,
   exportSpreadsheetAsCsv,
+  exportSpreadsheetAsPdf,
   exportTextAsHtml,
   exportTextAsTxt,
+  exportTextAsPdf,
+  exportTextAsDocx,
   exportPresentationAsHtml,
+  exportPresentationAsPdf,
 } from '@/lib/exporters';
 
 // Importers
@@ -33,6 +37,8 @@ import {
   importSpreadsheetFromCsv,
   importTextFromTxt,
   importTextFromHtml,
+  importDocx,
+  importPptx,
 } from '@/lib/importers';
 
 interface ImportExportMenuProps {
@@ -92,6 +98,13 @@ export function ImportExportMenu({
             action: () => exportSpreadsheetAsXlsx(sc, docName),
           },
           {
+            label: 'PDF Document',
+            ext: '.pdf',
+            icon: '🖨️',
+            description: 'Print-ready table — opens on any device',
+            action: () => exportSpreadsheetAsPdf(sc, docName),
+          },
+          {
             label: 'CSV (active sheet)',
             ext: '.csv',
             icon: '📋',
@@ -103,6 +116,20 @@ export function ImportExportMenu({
       case 'text': {
         const tc = content as TextDocumentContent;
         return [
+          {
+            label: 'PDF Document',
+            ext: '.pdf',
+            icon: '🖨️',
+            description: 'Print-ready — preserves fonts, headings, and layout',
+            action: () => exportTextAsPdf(tc, docName),
+          },
+          {
+            label: 'Word Document',
+            ext: '.docx',
+            icon: '📝',
+            description: 'Opens in Microsoft Word, Pages, and Google Docs',
+            action: () => exportTextAsDocx(tc, docName),
+          },
           {
             label: 'HTML Document',
             ext: '.html',
@@ -122,6 +149,13 @@ export function ImportExportMenu({
       case 'presentation': {
         const pc = content as PresentationContent;
         return [
+          {
+            label: 'PDF Slides',
+            ext: '.pdf',
+            icon: '🖨️',
+            description: 'Slides as a print-ready PDF document',
+            action: () => exportPresentationAsPdf(pc, docName),
+          },
           {
             label: 'HTML Slideshow',
             ext: '.html',
@@ -164,6 +198,16 @@ export function ImportExportMenu({
       case 'text':
         return [
           {
+            label: 'Word Document',
+            ext: '.docx',
+            icon: '📝',
+            description: 'Import headings, paragraphs, and rich formatting from .docx',
+            action: async () => {
+              const result = await importDocx();
+              if (result) { onImport(result); onClose(); }
+            },
+          },
+          {
             label: 'HTML File',
             ext: '.html',
             icon: '🌐',
@@ -185,7 +229,18 @@ export function ImportExportMenu({
           },
         ];
       case 'presentation':
-        return []; // no client-side presentation import yet
+        return [
+          {
+            label: 'PowerPoint',
+            ext: '.pptx',
+            icon: '🖥️',
+            description: 'Import slides and text from .pptx',
+            action: async () => {
+              const result = await importPptx();
+              if (result) { onImport(result); onClose(); }
+            },
+          },
+        ];
     }
   })();
 

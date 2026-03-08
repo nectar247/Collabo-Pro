@@ -81,13 +81,43 @@ export interface Document {
   collaborators: DocumentCollaborator[];
   status: 'draft' | 'review' | 'approved' | 'archived';
   version: number;
+  folderId?: string;         // optional folder the document belongs to
   createdAt: Timestamp;
   updatedAt: Timestamp;
+}
+
+// ─── Folders ─────────────────────────────────────────────────────────────────
+export interface Folder {
+  id: string;
+  workspaceId: string;
+  name: string;
+  ownerId: string;
+  createdAt: Timestamp;
 }
 
 export interface DocumentCollaborator {
   userId: string;
   permission: 'view' | 'comment' | 'edit';
+}
+
+// ─── Real-time Collaboration ─────────────────────────────────────────────────
+export interface DocumentPresenceEntry {
+  userId: string;
+  displayName: string;
+  photoURL?: string;
+  color: string;       // deterministic hex from palette
+  lastSeen: Timestamp;
+  blockId?: string | null;  // which block/cell this user is currently editing
+}
+
+export interface DocumentVersion {
+  id: string;
+  content: string;     // JSON stringified document content
+  version: number;
+  savedAt: Timestamp;
+  savedBy: string;     // userId
+  savedByName: string; // display name at save time
+  label: 'initial' | 'auto-save' | 'conflict-draft' | 'manual';
 }
 
 // ─── Workflow / Approvals ─────────────────────────────────────────────────────
@@ -129,11 +159,59 @@ export interface ActivityLogEntry {
   timestamp: Timestamp;
 }
 
+// ─── Comments ────────────────────────────────────────────────────────────────
+export interface CommentReply {
+  id: string;
+  userId: string;
+  userDisplayName: string;
+  text: string;
+  createdAt: Timestamp;
+}
+
+export interface Comment {
+  id: string;
+  documentId: string;
+  workspaceId: string;
+  userId: string;
+  userDisplayName: string;
+  text: string;
+  resolved: boolean;
+  resolvedBy?: string;
+  resolvedAt?: Timestamp;
+  replies: CommentReply[];
+  createdAt: Timestamp;
+  anchorBlockId?: string;
+  anchorText?: string;
+  anchorStart?: number;   // char position start within block.text
+  anchorEnd?: number;     // char position end within block.text
+}
+
+// ─── Track Changes / Suggested Edits ─────────────────────────────────────────
+export interface DocumentSuggestion {
+  id: string;
+  documentId: string;
+  workspaceId: string;
+  blockId: string;
+  originalText: string;
+  suggestedText: string;
+  userId: string;
+  userDisplayName: string;
+  createdAt: Timestamp;
+  status: 'pending' | 'accepted' | 'rejected';
+}
+
 // ─── Notifications ────────────────────────────────────────────────────────────
 export interface Notification {
   id: string;
   userId: string;
-  type: 'message' | 'mention' | 'approval_request' | 'approval_response' | 'document_shared';
+  type:
+    | 'message'
+    | 'mention'
+    | 'approval_request'
+    | 'approval_response'
+    | 'document_shared'
+    | 'document_edited'
+    | 'comment_added';
   title: string;
   body: string;
   data?: Record<string, string>;

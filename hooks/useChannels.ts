@@ -105,8 +105,9 @@ export function useMessages(channelId: string | null): UseMessagesReturn {
 
     const unsubscribe = onSnapshot(
       q,
-      async (snap) => {
-        const decryptedMessages = await Promise.all(
+      (snap) => {
+        // onSnapshot callback must be synchronous — handle async work with a chained Promise
+        Promise.all(
           snap.docs.map(async (d) => {
             const msg = { id: d.id, ...d.data() } as Message;
             let decryptedContent = msg.content;
@@ -121,10 +122,14 @@ export function useMessages(channelId: string | null): UseMessagesReturn {
 
             return { ...msg, decryptedContent };
           })
-        );
-
-        setMessages(decryptedMessages);
-        setIsLoading(false);
+        )
+          .then((decryptedMessages) => {
+            setMessages(decryptedMessages);
+            setIsLoading(false);
+          })
+          .catch(() => {
+            setIsLoading(false);
+          });
       },
       (err) => {
         console.warn('useMessages: Firestore snapshot error', err);

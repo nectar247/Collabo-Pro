@@ -57,10 +57,26 @@ service cloud.firestore {
       allow read:   if isAuth();
       allow update: if isAuth();
       allow delete: if isAuth();
+
+      // Version history subcollection
+      match /document_versions/{versionId} {
+        allow read, write: if isAuth();
+      }
+
+      // Real-time presence subcollection
+      match /presence/{userId} {
+        allow read:   if isAuth();
+        allow write:  if isAuth() && request.auth.uid == userId;
+        allow delete: if isAuth() && request.auth.uid == userId;
+      }
     }
 
-    match /document_versions/{versionId} {
-      allow read, write: if isAuth();
+    // ── Comments ─────────────────────────────────────────────────────────────
+    match /comments/{commentId} {
+      allow read:   if isAuth();
+      allow create: if isAuth();
+      allow update: if isAuth();
+      allow delete: if isAuth() && request.auth.uid == resource.data.userId;
     }
 
     // ── Approvals ────────────────────────────────────────────────────────────

@@ -27,6 +27,8 @@ export type BlockType =
   | 'code_block'
   | 'divider'               // horizontal rule
   | 'page_break'
+  | 'image'                 // embedded image block
+  | 'table'                 // grid table — data in block.tableData
   // ── Legacy types (kept for full backward compatibility) ──────────────────
   | 'paragraph'
   | 'heading1'
@@ -49,6 +51,14 @@ export interface TextBlock {
   bold?: boolean;
   italic?: boolean;
   underline?: boolean;
+  strikethrough?: boolean;
+  superscript?: boolean;
+  subscript?: boolean;
+  color?: string;           // hex text color, e.g. "#EF4444"
+  highlight?: string;       // hex background highlight color
+  fontFamily?: string;      // e.g. 'serif', 'monospace', 'Georgia'
+  textDirection?: 'ltr' | 'rtl';
+  fontSize?: number;        // pt — overrides the block-type default
 
   // ── Rich per-run formatting (optional — used by imports) ─────────────────
   // When present, preserves per-character formatting from .docx etc.
@@ -61,17 +71,71 @@ export interface TextBlock {
   // ── List item (type === 'list_item') ─────────────────────────────────────
   listType?: 'bullet' | 'ordered' | 'task';
   listLevel?: number;       // nesting depth, 0-based
+  listStyle?: 'disc' | 'circle' | 'square' | 'decimal' | 'lower-alpha' | 'upper-alpha' | 'lower-roman' | 'upper-roman';
   checked?: boolean;        // task list checkbox state
+
+  // ── Named anchor ─────────────────────────────────────────────────────────
+  bookmark?: string;        // named jump point, shown in outline
 
   // ── Paragraph formatting ─────────────────────────────────────────────────
   align?: 'left' | 'center' | 'right' | 'justify';
   indent?: number;          // 0-8 indent levels
   spacing?: { before: number; after: number; line: number };
 
+  // ── Image block (type === 'image') ───────────────────────────────────────
+  imageUri?: string;        // Firebase Storage download URL or local URI
+
+  // ── Table block (type === 'table') ───────────────────────────────────────
+  tableData?: {
+    rows: number;
+    cols: number;
+    cells: string[][];      // cells[row][col] = cell text
+    colWidths?: number[];   // per-column widths in px (default 110)
+    cellStyles?: Record<string, { bgColor?: string }>; // key: "ri,ci"
+    merges?: Array<{ row: number; col: number; colSpan: number }>; // horizontal cell merges
+  };
+
+  // ── Hyperlink (block-level) ───────────────────────────────────────────────
+  linkUrl?: string;         // when set, the block text becomes a tappable link
+
+  // ── Divider style (type === 'divider') ───────────────────────────────────
+  dividerStyle?: 'thin' | 'thick' | 'dashed' | 'dotted';
+
+  // ── Paragraph shading (full block background color) ───────────────────────
+  shading?: string;         // hex background for the whole block
+
+  // ── Image caption ────────────────────────────────────────────────────────
+  imageCaption?: string;
+
+  // ── Footnote reference ───────────────────────────────────────────────────
+  footnoteRef?: string;     // marker like "1", "2", "a" — renders as superscript [1]
+
+  // ── Inline @mentions ─────────────────────────────────────────────────────
+  mentions?: Array<{ userId: string; displayName: string; start: number; end: number }>;
+
   // ── Passthrough ──────────────────────────────────────────────────────────
   // Attributes from an external format (e.g. .docx) that we cannot yet edit
   // are stored here so they survive a round-trip unchanged.
   _passthrough?: Record<string, unknown>;
+}
+
+export interface Annotation {
+  id: string;
+  path: string;           // SVG path d attribute: "M x,y L x,y ..."
+  color: string;          // hex stroke color
+  strokeWidth: number;    // 2 | 4 | 6
+}
+
+export interface Suggestion {
+  id: string;
+  userId: string;
+  displayName: string;
+  timestamp: number;        // ms since epoch
+  blockId: string;
+  type: 'text_change' | 'block_insert' | 'block_delete';
+  originalText?: string;    // block.text before the change
+  proposedText?: string;    // what the user typed (new text)
+  newBlock?: TextBlock;     // for block_insert suggestions
 }
 
 export interface TextDocumentContent {
@@ -81,6 +145,16 @@ export interface TextDocumentContent {
   defaultFontSize?: number;
   pageSize?: 'A4' | 'Letter' | 'Legal';
   margins?: { top: number; right: number; bottom: number; left: number };
+  // Headers, footers, page numbers
+  header?: string;
+  footer?: string;
+  showPageNumbers?: boolean;
+  // Footnotes / endnotes
+  footnotes?: Array<{ id: string; marker: string; text: string }>;
+  // Drawing / annotation strokes
+  annotations?: Annotation[];
+  // Track changes / suggested edits
+  suggestions?: Suggestion[];
 }
 
 // ─── Spreadsheet (Excel-like) ─────────────────────────────────────────────────
@@ -125,6 +199,32 @@ export interface MergedCell {
   to: string;    // e.g. "B2"
 }
 
+export interface ConditionalFormat {
+  range: string;      // e.g. "A1:C10"
+  condition: 'gt' | 'lt' | 'eq' | 'ne' | 'not_empty' | 'contains';
+  value?: string;
+  color?: string;     // text colour (hex)
+  bgColor?: string;   // background colour (hex)
+}
+
+export interface DataValidation {
+  range: string;            // e.g. "B2:B10"
+  type: 'list' | 'number_range';
+  values?: string[];        // for list type: allowed values
+  min?: number;             // for number_range
+  max?: number;             // for number_range
+  errorMessage?: string;
+}
+
+export interface ChartDef {
+  id: string;
+  type: 'bar' | 'line' | 'pie';
+  title?: string;
+  dataRange: string;    // e.g. "B2:B6"
+  labelRange?: string;  // e.g. "A2:A6"
+  colors?: string[];
+}
+
 export interface Sheet {
   name: string;
   rows: number;
@@ -138,6 +238,10 @@ export interface Sheet {
   hiddenRows?: number[];
   hiddenCols?: number[];
   tabColor?: string;
+  conditionalFormats?: ConditionalFormat[];
+  charts?: ChartDef[];
+  validations?: DataValidation[];
+  pivotTables?: PivotTableDef[];
 }
 
 export interface NamedRange {
@@ -146,10 +250,20 @@ export interface NamedRange {
   ref: string;              // e.g. "A1:C10"
 }
 
+export interface PivotTableDef {
+  id: string;
+  name: string;
+  sourceSheet: number;       // index into content.sheets
+  rowField: string;          // column letter for row grouping (e.g. "A")
+  valueField: string;        // column letter for numeric values (e.g. "B")
+  aggregation: 'sum' | 'count' | 'avg' | 'max' | 'min';
+}
+
 export interface SpreadsheetContent {
   sheets: Sheet[];
   activeSheet: number;
   namedRanges?: NamedRange[];
+  pivotTables?: PivotTableDef[];
 }
 
 // ─── Presentation (PowerPoint-like) ──────────────────────────────────────────
@@ -197,6 +311,14 @@ export interface SlideElement {
   src?: string;
   alt?: string;
   objectFit?: 'cover' | 'contain' | 'fill';
+
+  // ── Per-element animation ─────────────────────────────────────────────────
+  animation?: {
+    type: 'fade' | 'slide' | 'zoom' | 'bounce';
+    direction?: 'left' | 'right' | 'up' | 'down'; // for 'slide' type
+    duration?: number;   // ms, default 400
+    delay?: number;      // ms, default 0
+  };
 
   _passthrough?: Record<string, unknown>;
 }

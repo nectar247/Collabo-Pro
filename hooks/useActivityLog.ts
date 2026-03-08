@@ -55,7 +55,7 @@ export function useActivityLog(workspaceId: string | null) {
     const unsubscribe = onSnapshot(q, (snap) => {
       setEntries(snap.docs.map((d) => ({ id: d.id, ...d.data() } as ActivityLogEntry)));
       setIsLoading(false);
-    });
+    }, () => { setIsLoading(false); });
 
     return unsubscribe;
   }, [workspaceId]);

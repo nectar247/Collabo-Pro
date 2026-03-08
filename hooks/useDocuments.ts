@@ -1,23 +1,54 @@
+import { useEffect, useState } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import {
   collection,
   query,
   where,
+  orderBy,
+  limit,
   getDocs,
   getDoc,
   addDoc,
   updateDoc,
   deleteDoc,
   doc,
+  onSnapshot,
   serverTimestamp,
-  arrayUnion,
 } from 'firebase/firestore';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { db } from '@/lib/firebase/config';
 import { COLLECTIONS } from '@/lib/firebase/collections';
+import { sendNotification } from '@/lib/notifications/push';
 import { useAuthStore } from '@/store/authStore';
 import { createEmptyContent, serializeDocumentContent } from '@/lib/documents/schemas';
 import { logActivity } from '@/hooks/useActivityLog';
-import type { Document, DocumentType, Approval, ApproverEntry, Notification } from '@/types';
+import type { Document, DocumentType, DocumentVersion, DocumentCollaborator, Approval, ApproverEntry, Notification } from '@/types';
+
+// ─── AsyncStorage document cache ─────────────────────────────────────────────
+
+const DOC_CACHE_KEY = (id: string) => `@collabo_doc_${id}`;
+const CACHE_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+async function persistDocument(document: Document): Promise<void> {
+  try {
+    await AsyncStorage.setItem(
+      DOC_CACHE_KEY(document.id),
+      JSON.stringify({ document, cachedAt: Date.now() }),
+    );
+  } catch { /* non-critical */ }
+}
+
+async function loadCachedDocument(docId: string): Promise<Document | null> {
+  try {
+    const raw = await AsyncStorage.getItem(DOC_CACHE_KEY(docId));
+    if (!raw) return null;
+    const { document, cachedAt } = JSON.parse(raw) as { document: Document; cachedAt: number };
+    if (Date.now() - cachedAt > CACHE_TTL_MS) return null;
+    return document;
+  } catch {
+    return null;
+  }
+}
 
 // ─── Document list ────────────────────────────────────────────────────────────
 
@@ -49,6 +80,52 @@ export function useDocument(documentId: string | null) {
     },
     enabled: !!documentId,
   });
+}
+
+// ─── Real-time document (onSnapshot + AsyncStorage offline cache) ─────────────
+
+export function useRealtimeDocument(docId: string | null) {
+  const [document, setDocument] = useState<Document | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isCached, setIsCached] = useState(false);
+
+  useEffect(() => {
+    if (!docId) { setIsLoading(false); return; }
+
+    // 1. Load from cache immediately so the UI shows something while we connect
+    loadCachedDocument(docId).then((cached) => {
+      if (cached) {
+        setDocument(cached);
+        setIsCached(true);
+        setIsLoading(false);
+      }
+    });
+
+    // 2. Subscribe to live Firestore updates
+    const ref = doc(db, COLLECTIONS.DOCUMENTS, docId);
+    const unsubscribe = onSnapshot(
+      ref,
+      (snap) => {
+        if (snap.exists()) {
+          const fresh = { id: snap.id, ...snap.data() } as Document;
+          setDocument(fresh);
+          setIsCached(false);
+          persistDocument(fresh); // keep cache up-to-date
+        } else {
+          setDocument(null);
+        }
+        setIsLoading(false);
+      },
+      () => {
+        // onSnapshot error (e.g. offline after cache miss) — keep whatever we have
+        setIsLoading(false);
+      },
+    );
+
+    return unsubscribe;
+  }, [docId]);
+
+  return { data: document, isLoading, isCached };
 }
 
 // ─── Create document ──────────────────────────────────────────────────────────
@@ -99,7 +176,7 @@ export function useCreateDocument() {
         action: 'document_created', resourceType: 'document', resourceId: ref.id, resourceName: name,
       }).catch(() => {});
 
-      return { id: ref.id, ...docData } as unknown as Document;
+      return { id: ref.id, workspaceId, name, type, content, ownerId: user.id, collaborators: [], status: 'draft', version: 1 } as unknown as Document;
     },
     onSuccess: (doc) => {
       queryClient.invalidateQueries({ queryKey: ['documents', doc.workspaceId] });
@@ -125,11 +202,52 @@ export function useUpdateDocument() {
       name?: string;
       workspaceId?: string;
     }) => {
+      const docRef = doc(db, COLLECTIONS.DOCUMENTS, id);
       const updates: Record<string, unknown> = { updatedAt: serverTimestamp() };
       if (content !== undefined) updates.content = content;
       if (name !== undefined) updates.name = name;
 
-      await updateDoc(doc(db, COLLECTIONS.DOCUMENTS, id), updates);
+      // Increment version counter when saving content
+      let newVersion: number | undefined;
+      let ownerId: string | undefined;
+      let docName: string | undefined;
+      if (content !== undefined) {
+        const snap = await getDoc(docRef);
+        const data = snap.data();
+        newVersion = (data?.version ?? 0) + 1;
+        ownerId = data?.ownerId as string | undefined;
+        docName = data?.name as string | undefined;
+        updates.version = newVersion;
+      }
+
+      await updateDoc(docRef, updates);
+
+      // Save version snapshot on every content auto-save
+      if (content !== undefined && newVersion !== undefined && user) {
+        await addDoc(
+          collection(db, COLLECTIONS.DOCUMENTS, id, COLLECTIONS.DOCUMENT_VERSIONS),
+          {
+            content,
+            version: newVersion,
+            savedAt: serverTimestamp(),
+            savedBy: user.id,
+            savedByName: user.displayName,
+            label: 'auto-save',
+          }
+        );
+
+        // Notify document owner when a *collaborator* (not the owner) saves
+        if (ownerId && ownerId !== user.id && docName) {
+          sendNotification({
+            recipientId: ownerId,
+            type: 'document_edited',
+            title: `✏️ "${docName}" was edited`,
+            body: `${user.displayName} made changes to your document.`,
+            data: { documentId: id },
+            dedupKey: id, // 5-minute cooldown — prevents auto-save flooding
+          }).catch(() => {});
+        }
+      }
 
       // Log rename (not content auto-saves)
       if (name !== undefined && workspaceId && user) {
@@ -141,6 +259,68 @@ export function useUpdateDocument() {
     },
     onSuccess: (_, { id }) => {
       queryClient.invalidateQueries({ queryKey: ['document', id] });
+    },
+  });
+}
+
+// ─── Conflict draft + version history ────────────────────────────────────────
+
+/** Saves the user's local content as a conflict-draft when remote overwrites it */
+export function useSaveConflictDraft() {
+  const user = useAuthStore((s) => s.user);
+  return async (docId: string, content: string) => {
+    if (!user) return;
+    const snap = await getDoc(doc(db, COLLECTIONS.DOCUMENTS, docId));
+    const currentVersion = snap.data()?.version ?? 0;
+    await addDoc(
+      collection(db, COLLECTIONS.DOCUMENTS, docId, COLLECTIONS.DOCUMENT_VERSIONS),
+      {
+        content,
+        version: currentVersion,
+        savedAt: serverTimestamp(),
+        savedBy: user.id,
+        savedByName: user.displayName,
+        label: 'conflict-draft',
+      }
+    );
+  };
+}
+
+/** Fetches the last 50 versions of a document, newest first */
+export function useDocumentVersions(docId: string | null) {
+  return useQuery({
+    queryKey: ['document-versions', docId],
+    queryFn: async () => {
+      if (!docId) return [];
+      const q = query(
+        collection(db, COLLECTIONS.DOCUMENTS, docId, COLLECTIONS.DOCUMENT_VERSIONS),
+        orderBy('savedAt', 'desc'),
+        limit(50)
+      );
+      const snap = await getDocs(q);
+      return snap.docs.map((d) => ({ id: d.id, ...d.data() })) as DocumentVersion[];
+    },
+    enabled: !!docId,
+  });
+}
+
+// ─── Collaborator permissions ─────────────────────────────────────────────────
+
+export function useUpdateDocumentCollaborators() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({
+      docId,
+      collaborators,
+    }: {
+      docId: string;
+      collaborators: DocumentCollaborator[];
+    }) => {
+      await updateDoc(doc(db, COLLECTIONS.DOCUMENTS, docId), { collaborators });
+    },
+    onSuccess: (_, { docId }) => {
+      queryClient.invalidateQueries({ queryKey: ['document', docId] });
     },
   });
 }

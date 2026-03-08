@@ -168,26 +168,66 @@ export async function exportSpreadsheetAsCsv(
 
 function blockToHtml(block: TextBlock): string {
   let inner = escapeHtml(block.text);
-  if (block.bold) inner = `<strong>${inner}</strong>`;
-  if (block.italic) inner = `<em>${inner}</em>`;
-  if (block.underline) inner = `<u>${inner}</u>`;
 
-  const alignStyle =
-    block.align && block.align !== 'left'
-      ? ` style="text-align:${block.align}"`
+  // Inline formatting (order matters: outermost applied last)
+  if (block.strikethrough) inner = `<s>${inner}</s>`;
+  if (block.underline)     inner = `<u>${inner}</u>`;
+  if (block.superscript)   inner = `<sup>${inner}</sup>`;
+  if (block.subscript)     inner = `<sub>${inner}</sub>`;
+  if (block.italic)        inner = `<em>${inner}</em>`;
+  if (block.bold)          inner = `<strong>${inner}</strong>`;
+
+  // Inline style attributes (color, highlight, font, size)
+  const spans: string[] = [];
+  if (block.color)      spans.push(`color:${block.color}`);
+  if (block.highlight)  spans.push(`background-color:${block.highlight}`);
+  if (block.fontFamily) spans.push(`font-family:${block.fontFamily}`);
+  if (block.fontSize)   spans.push(`font-size:${block.fontSize}pt`);
+  if (block.linkUrl)    inner = `<a href="${escapeHtml(block.linkUrl)}">${inner}</a>`;
+  if (spans.length)     inner = `<span style="${spans.join(';')}">${inner}</span>`;
+
+  // Block-level styles
+  const blockStyles: string[] = [];
+  if (block.align && block.align !== 'left') blockStyles.push(`text-align:${block.align}`);
+  if (block.spacing?.line) blockStyles.push(`line-height:${block.spacing.line}`);
+  if (block.spacing?.before) blockStyles.push(`margin-top:${block.spacing.before}pt`);
+  if (block.spacing?.after)  blockStyles.push(`margin-bottom:${block.spacing.after}pt`);
+  if (block.textDirection === 'rtl') blockStyles.push('direction:rtl');
+  if (block.indent) blockStyles.push(`padding-left:${block.indent * 24}px`);
+  const styleAttr = blockStyles.length ? ` style="${blockStyles.join(';')}"` : '';
+
+  // Anchor for bookmarks
+  const anchor = block.bookmark ? `<a id="${escapeHtml(block.bookmark)}"></a>` : '';
+
+  // Divider style
+  if (block.type === 'divider') {
+    const hrStyle = block.dividerStyle === 'thick' ? ' style="border-top-width:3px"'
+      : block.dividerStyle === 'dashed' ? ' style="border-top-style:dashed"'
+      : block.dividerStyle === 'dotted' ? ' style="border-top-style:dotted"'
       : '';
+    return `<hr${hrStyle}/>\n`;
+  }
+
+  // Table block
+  if (block.type === 'table' && block.tableData) {
+    const { cells } = block.tableData;
+    const rowsHtml = cells.map((row, ri) => {
+      const tag = ri === 0 ? 'th' : 'td';
+      return `<tr>${row.map((c) => `<${tag} style="border:1px solid #ccc;padding:6px 10px">${escapeHtml(c)}</${tag}>`).join('')}</tr>`;
+    }).join('\n');
+    return `<table style="border-collapse:collapse;width:100%;margin:0.8em 0">\n${rowsHtml}\n</table>\n`;
+  }
 
   switch (block.type) {
-    case 'heading1':  return `<h1${alignStyle}>${inner}</h1>\n`;
-    case 'heading2':  return `<h2${alignStyle}>${inner}</h2>\n`;
-    case 'heading3':  return `<h3${alignStyle}>${inner}</h3>\n`;
-    case 'heading':   return `<h${block.level ?? 1}${alignStyle}>${inner}</h${block.level ?? 1}>\n`;
-    case 'quote':     return `<blockquote>${inner}</blockquote>\n`;
+    case 'heading1':  return `${anchor}<h1${styleAttr}>${inner}</h1>\n`;
+    case 'heading2':  return `${anchor}<h2${styleAttr}>${inner}</h2>\n`;
+    case 'heading3':  return `${anchor}<h3${styleAttr}>${inner}</h3>\n`;
+    case 'heading':   { const lv = block.level ?? 1; return `${anchor}<h${lv}${styleAttr}>${inner}</h${lv}>\n`; }
+    case 'quote':     return `<blockquote${styleAttr}>${inner}</blockquote>\n`;
     case 'code':
     case 'code_block':return `<pre><code>${inner}</code></pre>\n`;
-    case 'divider':   return `<hr/>\n`;
     case 'page_break':return `<div style="page-break-after:always"></div>\n`;
-    default:          return `<p${alignStyle}>${inner}</p>\n`;
+    default:          return `${anchor}<p${styleAttr}>${inner}</p>\n`;
   }
 }
 
@@ -198,22 +238,36 @@ function textContentToHtml(content: TextDocumentContent, title: string): string 
 
   while (i < blocks.length) {
     const b = blocks[i];
+    const isTask = b.type === 'list_item' && b.listType === 'task';
     const isBullet =
       b.type === 'bullet' ||
-      (b.type === 'list_item' && b.listType !== 'ordered');
+      (b.type === 'list_item' && b.listType !== 'ordered' && b.listType !== 'task');
     const isNumbered =
       b.type === 'numbered' ||
       (b.type === 'list_item' && b.listType === 'ordered');
 
-    if (isBullet) {
+    if (isTask) {
+      // Task list
+      body += '<ul style="list-style:none;padding-left:0">\n';
+      while (i < blocks.length) {
+        const bi = blocks[i];
+        if (!(bi.type === 'list_item' && bi.listType === 'task')) break;
+        const checked = bi.checked ? ' checked' : '';
+        const indent = bi.listLevel ? ` style="margin-left:${bi.listLevel * 24}px"` : '';
+        body += `  <li${indent}><input type="checkbox"${checked} disabled> ${escapeHtml(bi.text)}</li>\n`;
+        i++;
+      }
+      body += '</ul>\n';
+    } else if (isBullet) {
       body += '<ul>\n';
       while (i < blocks.length) {
         const bi = blocks[i];
         const still =
           bi.type === 'bullet' ||
-          (bi.type === 'list_item' && bi.listType !== 'ordered');
+          (bi.type === 'list_item' && bi.listType !== 'ordered' && bi.listType !== 'task');
         if (!still) break;
-        body += `  <li>${escapeHtml(bi.text)}</li>\n`;
+        const indent = bi.listLevel ? ` style="margin-left:${bi.listLevel * 24}px"` : '';
+        body += `  <li${indent}>${escapeHtml(bi.text)}</li>\n`;
         i++;
       }
       body += '</ul>\n';
@@ -225,7 +279,8 @@ function textContentToHtml(content: TextDocumentContent, title: string): string 
           bi.type === 'numbered' ||
           (bi.type === 'list_item' && bi.listType === 'ordered');
         if (!still) break;
-        body += `  <li>${escapeHtml(bi.text)}</li>\n`;
+        const indent = bi.listLevel ? ` style="margin-left:${bi.listLevel * 24}px"` : '';
+        body += `  <li${indent}>${escapeHtml(bi.text)}</li>\n`;
         i++;
       }
       body += '</ol>\n';
@@ -308,12 +363,9 @@ export async function exportTextAsTxt(
   await shareFile(text, `${docName}.txt`, 'text/plain');
 }
 
-// ─── Presentation → .html slideshow ──────────────────────────────────────────
+// ─── Presentation → HTML (internal builder reused by both HTML and PDF exports) ─
 
-export async function exportPresentationAsHtml(
-  content: PresentationContent,
-  docName: string
-): Promise<void> {
+function presentationToHtml(content: PresentationContent, title: string): string {
   const slidesHtml = content.slides
     .map(
       (slide, i) => `
@@ -338,11 +390,11 @@ export async function exportPresentationAsHtml(
     )
     .join('\n');
 
-  const html = `<!DOCTYPE html>
+  return `<!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <title>${escapeHtml(docName)}</title>
+  <title>${escapeHtml(title)}</title>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { background: #000; font-family: sans-serif; overflow: hidden; }
@@ -391,6 +443,211 @@ ${slidesHtml}
 </script>
 </body>
 </html>`;
+}
 
+export async function exportPresentationAsHtml(
+  content: PresentationContent,
+  docName: string
+): Promise<void> {
+  const html = presentationToHtml(content, docName);
   await shareFile(html, `${docName}.html`, 'text/html');
+}
+
+// ─── Spreadsheet → HTML table (internal, used by PDF export) ─────────────────
+
+const COL_LETTERS_EXPORT = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+
+function spreadsheetToHtml(content: SpreadsheetContent, title: string): string {
+  const sheet = content.sheets[content.activeSheet ?? 0];
+
+  let header = '<tr><th class="corner"></th>';
+  for (let c = 0; c < sheet.cols; c++) {
+    header += `<th>${COL_LETTERS_EXPORT[c] ?? String(c + 1)}</th>`;
+  }
+  header += '</tr>';
+
+  let rows = '';
+  for (let r = 0; r < sheet.rows; r++) {
+    rows += `<tr><th class="rn">${r + 1}</th>`;
+    for (let c = 0; c < sheet.cols; c++) {
+      const cell = sheet.cells[cellKey(r, c)];
+      const val = cell ? (cell.computed ?? cell.raw) : '';
+      const s = [
+        cell?.bold ? 'font-weight:700' : '',
+        cell?.italic ? 'font-style:italic' : '',
+        cell?.underline ? 'text-decoration:underline' : '',
+        `text-align:${cell?.align ?? 'left'}`,
+        cell?.color ? `color:${cell.color}` : '',
+        cell?.bgColor ? `background:${cell.bgColor}` : '',
+      ].filter(Boolean).join(';');
+      rows += `<td style="${s}">${escapeHtml(val)}</td>`;
+    }
+    rows += '</tr>';
+  }
+
+  return `<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>${escapeHtml(title)}</title>
+  <style>
+    body { font-family: Arial, sans-serif; font-size: 11px; margin: 16px; color: #1a1a1a; }
+    h2 { font-size: 14px; margin-bottom: 8px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #d1d5db; padding: 3px 6px; min-width: 50px; }
+    th { background: #f1f5f9; font-weight: 600; text-align: center; }
+    th.corner { width: 28px; }
+    th.rn { width: 28px; color: #64748b; font-weight: 400; }
+  </style>
+</head>
+<body>
+  <h2>${escapeHtml(title)}</h2>
+  <table><tbody>${header}${rows}</tbody></table>
+</body>
+</html>`;
+}
+
+// ─── PDF helper (shares a PDF file URI via expo-sharing / Linking) ────────────
+
+async function sharePdfUri(pdfUri: string, fileName: string): Promise<void> {
+  try {
+    // eslint-disable-next-line @typescript-eslint/no-var-requires
+    const Sharing = require('expo-sharing');
+    const available = await Sharing.isAvailableAsync();
+    if (available) {
+      await Sharing.shareAsync(pdfUri, { mimeType: 'application/pdf', dialogTitle: `Export ${fileName}` });
+      return;
+    }
+  } catch {
+    // Native module absent — fall through
+  }
+  const canOpen = await Linking.canOpenURL(pdfUri).catch(() => false);
+  if (canOpen) await Linking.openURL(pdfUri);
+}
+
+// ─── Text Document → .pdf ─────────────────────────────────────────────────────
+
+export async function exportTextAsPdf(
+  content: TextDocumentContent,
+  docName: string
+): Promise<void> {
+  const html = textContentToHtml(content, docName);
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Print = require('expo-print');
+  const { uri } = await Print.printToFileAsync({ html });
+  await sharePdfUri(uri, `${docName}.pdf`);
+}
+
+// ─── Spreadsheet → .pdf ───────────────────────────────────────────────────────
+
+export async function exportSpreadsheetAsPdf(
+  content: SpreadsheetContent,
+  docName: string
+): Promise<void> {
+  const html = spreadsheetToHtml(content, docName);
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Print = require('expo-print');
+  const { uri } = await Print.printToFileAsync({ html });
+  await sharePdfUri(uri, `${docName}.pdf`);
+}
+
+// ─── Presentation → .pdf ─────────────────────────────────────────────────────
+
+export async function exportPresentationAsPdf(
+  content: PresentationContent,
+  docName: string
+): Promise<void> {
+  const html = presentationToHtml(content, docName);
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const Print = require('expo-print');
+  const { uri } = await Print.printToFileAsync({ html });
+  await sharePdfUri(uri, `${docName}.pdf`);
+}
+
+// ─── Text Document → .docx ───────────────────────────────────────────────────
+
+export async function exportTextAsDocx(
+  content: TextDocumentContent,
+  docName: string
+): Promise<void> {
+  // eslint-disable-next-line @typescript-eslint/no-var-requires
+  const {
+    Document,
+    Packer,
+    Paragraph,
+    TextRun,
+    HeadingLevel,
+    AlignmentType,
+  } = require('docx');
+
+  const headingMap: Record<string, unknown> = {
+    heading1: HeadingLevel.HEADING_1,
+    heading2: HeadingLevel.HEADING_2,
+    heading3: HeadingLevel.HEADING_3,
+    heading: HeadingLevel.HEADING_1,
+  };
+
+  const alignMap: Record<string, unknown> = {
+    left: AlignmentType.LEFT,
+    center: AlignmentType.CENTER,
+    right: AlignmentType.RIGHT,
+    justify: AlignmentType.JUSTIFIED,
+  };
+
+  const isBulletBlock = (type: string, listType?: string) =>
+    type === 'bullet' || (type === 'list_item' && listType !== 'ordered');
+  const isNumberedBlock = (type: string, listType?: string) =>
+    type === 'numbered' || (type === 'list_item' && listType === 'ordered');
+
+  const paragraphs = content.blocks.map((block) => {
+    const para: Record<string, unknown> = {
+      children: [
+        new TextRun({
+          text: block.text,
+          bold: block.bold ?? false,
+          italics: block.italic ?? false,
+          underline: block.underline ? {} : undefined,
+        }),
+      ],
+    };
+
+    if (headingMap[block.type]) {
+      para.heading = headingMap[block.type];
+    } else if (isBulletBlock(block.type, block.listType)) {
+      para.bullet = { level: block.listLevel ?? 0 };
+    } else if (isNumberedBlock(block.type, block.listType)) {
+      para.numbering = { reference: 'default-numbering', level: block.listLevel ?? 0 };
+    }
+
+    if (block.align && alignMap[block.align]) {
+      para.alignment = alignMap[block.align];
+    }
+
+    return new Paragraph(para);
+  });
+
+  const doc = new Document({
+    numbering: {
+      config: [
+        {
+          reference: 'default-numbering',
+          levels: Array.from({ length: 9 }, (_, i) => ({
+            level: i,
+            format: 'decimal',
+            text: `%${i + 1}.`,
+            alignment: AlignmentType.LEFT,
+          })),
+        },
+      ],
+    },
+    sections: [{ children: paragraphs }],
+  });
+
+  const b64: string = await Packer.toBase64String(doc);
+  await shareFile(
+    b64,
+    `${docName}.docx`,
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'base64'
+  );
 }

@@ -49,7 +49,7 @@ export function useNotifications(): UseNotificationsReturn {
 
       setNotifications(items);
       setIsLoading(false);
-    });
+    }, () => { setIsLoading(false); });
 
     return unsubscribe;
   }, [user?.id]);

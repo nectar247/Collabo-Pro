@@ -3,7 +3,7 @@ import { initializeAuth, getAuth } from 'firebase/auth';
 // @ts-expect-error – TypeScript resolves @firebase/auth to its browser types, but Metro
 // uses the react-native export condition at runtime which exports getReactNativePersistence.
 import { getReactNativePersistence } from '@firebase/auth';
-import { initializeFirestore, getFirestore } from 'firebase/firestore';
+import { initializeFirestore, getFirestore, memoryLocalCache } from 'firebase/firestore';
 import { getStorage } from 'firebase/storage';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
@@ -37,6 +37,7 @@ export const db = (() => {
   try {
     return initializeFirestore(app, {
       experimentalForceLongPolling: true,
+      localCache: memoryLocalCache(),
     });
   } catch {
     return getFirestore(app);

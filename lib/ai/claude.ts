@@ -365,6 +365,26 @@ Provide a concise 2-3 sentence summary of the provided document content.`;
   return callAI(systemPrompt, [{ role: 'user', content }], 512, workspaceId);
 }
 
+export const TRANSLATE_LANGUAGES = [
+  'Spanish', 'French', 'German', 'Chinese (Simplified)',
+  'Arabic', 'Japanese', 'Portuguese', 'Italian', 'Russian',
+] as const;
+
+export type TranslateLanguage = typeof TRANSLATE_LANGUAGES[number];
+
+export async function translateDocument(
+  text: string,
+  targetLanguage: TranslateLanguage,
+  workspaceId?: string
+): Promise<string> {
+  const systemPrompt = `You are a professional translator.
+Translate the following text to ${targetLanguage}.
+Preserve the original structure exactly: each paragraph must remain on its own line, separated by a blank line.
+Translate only — do not add explanations, preamble, or notes.
+Return only the translated text, nothing else.`;
+  return callAI(systemPrompt, [{ role: 'user', content: text }], 4096, workspaceId);
+}
+
 // ─── Conversational AI chat ───────────────────────────────────────────────────
 
 const CHAT_SYSTEM_PROMPT = `You are an AI assistant embedded in Collabo-Pro — a secure team collaboration app.
